@@ -1,0 +1,200 @@
+---
+title: "iBiogeobears Analysis Report"
+format:
+  html:
+    toc: true
+  pdf:
+    toc: true
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+tables_dir <- normalizePath(file.path("..", "tables"), mustWork = FALSE)
+logs_dir <- normalizePath(file.path("..", "logs"), mustWork = FALSE)
+figures_dir <- normalizePath(file.path("..", "figures"), mustWork = FALSE)
+
+read_table_if_exists <- function(filename) {
+  path <- file.path(tables_dir, filename)
+  if (!file.exists(path)) {
+    return(NULL)
+  }
+  utils::read.csv(path, check.names = FALSE)
+}
+
+input_validation <- read_table_if_exists("input_validation.csv")
+model_status <- read_table_if_exists("model_run_status.csv")
+if (is.null(model_status)) {
+  model_status <- read_table_if_exists("model_run_plan.csv")
+}
+model_comparison <- read_table_if_exists("model_comparison.csv")
+model_parameters <- read_table_if_exists("model_parameters.csv")
+root_state_probabilities <- read_table_if_exists("root_state_probabilities.csv")
+
+figure_path <- function(name) {
+  path <- file.path(figures_dir, paste0(name, ".png"))
+  if (file.exists(path)) path else NULL
+}
+
+print_table <- function(x, digits = 4) {
+  if (is.null(x) || nrow(x) == 0L) {
+    cat("No table was generated for this section.\n")
+    return(invisible(NULL))
+  }
+  numeric_cols <- vapply(x, is.numeric, logical(1))
+  x[numeric_cols] <- lapply(x[numeric_cols], round, digits = digits)
+  knitr::kable(x)
+}
+```
+
+## Analysis Summary
+
+This report summarizes a single-clade BioGeoBEARS workflow managed by
+`iBiogeobears`. Raw BioGeoBEARS outputs are stored separately from derived
+tables, figures, and reports.
+
+## Input Validation
+
+```{r}
+print_table(input_validation)
+```
+
+## Model Run Status
+
+```{r}
+status_cols <- c("model", "status", "logLik", "num_params", "warning_count", "raw_output_dir", "log_file", "error_message")
+if (!is.null(model_status)) {
+  print_table(model_status[intersect(status_cols, names(model_status))])
+} else {
+  print_table(NULL)
+}
+```
+
+## Model Run Warnings
+
+Warnings emitted by BioGeoBEARS and its optimizer are summarized here. Full
+stdout/stderr output remains available in each model-specific log file.
+
+```{r}
+if (!is.null(model_status) && all(c("warning_count", "warning_messages") %in% names(model_status))) {
+  warning_rows <- model_status[!is.na(model_status$warning_count) & model_status$warning_count > 0L, , drop = FALSE]
+  if (nrow(warning_rows) > 0L) {
+    print_table(warning_rows[intersect(c("model", "warning_count", "warning_messages", "log_file"), names(warning_rows))])
+  } else {
+    cat("No model-level warnings were captured during BioGeoBEARS execution.\n")
+  }
+} else {
+  cat("Warning summary columns are not available for this run.\n")
+}
+```
+
+## Model Comparison
+
+Model comparison should be interpreted as evidence about statistical fit, not
+as an automatic biological conclusion. Results involving `+J` founder-event
+speciation models should be reported alongside non-`+J` alternatives and
+sensitivity summaries.
+
+```{r}
+comparison_cols <- c(
+  "model", "model_family", "has_j", "logLik", "num_params", "AIC",
+  "AICc", "delta_aicc", "aicc_weight", "caution_flag",
+  "interpretation_note"
+)
+if (!is.null(model_comparison)) {
+  print_table(model_comparison[intersect(comparison_cols, names(model_comparison))])
+} else {
+  print_table(NULL)
+}
+```
+
+```{r}
+model_comparison_png <- figure_path("model_comparison")
+if (!is.null(model_comparison_png)) {
+  knitr::include_graphics(model_comparison_png)
+}
+```
+
+## Parameter Estimates
+
+```{r}
+parameter_cols <- c("model", "parameter", "type", "is_free", "est", "min", "max", "desc")
+if (!is.null(model_parameters)) {
+  free_or_core <- model_parameters$is_free | model_parameters$parameter %in% c("d", "e", "j")
+  parameter_rows <- model_parameters[free_or_core, intersect(parameter_cols, names(model_parameters)), drop = FALSE]
+  print_table(parameter_rows)
+} else {
+  print_table(NULL)
+}
+```
+
+## Root State Probabilities
+
+```{r}
+if (!is.null(root_state_probabilities)) {
+  root_rows <- root_state_probabilities[order(root_state_probabilities$model, -root_state_probabilities$probability), , drop = FALSE]
+  root_rows <- utils::head(root_rows, 12L)
+  print_table(root_rows)
+} else {
+  print_table(NULL)
+}
+```
+
+```{r}
+root_state_png <- figure_path("root_state_probabilities")
+if (!is.null(root_state_png)) {
+  knitr::include_graphics(root_state_png)
+}
+```
+
+## Methodological Cautions
+
+`iBiogeobears` keeps the following cautions visible by default:
+
+- report all fitted models, not only the minimum-AIC model;
+- compare `+J` and non-`+J` model families explicitly;
+- separate statistical model fit from biological interpretation;
+- report uncertainty and stochastic mapping summaries where available;
+- discuss whether founder-event speciation dominates inferred events.
+
+```{r}
+if (!is.null(model_comparison) && "caution_flag" %in% names(model_comparison)) {
+  caution_rows <- model_comparison[model_comparison$caution_flag != "none", , drop = FALSE]
+  if (nrow(caution_rows) > 0L) {
+    print_table(caution_rows[intersect(c("model", "delta_aicc", "caution_flag", "interpretation_note"), names(caution_rows))])
+  } else {
+    cat("No model-specific caution flags were triggered beyond the default interpretation notes.\n")
+  }
+} else {
+  cat("Model comparison output is not available.\n")
+}
+```
+
+## Software and Citation
+
+BioGeoBEARS is authored by Nicholas J. Matzke and must be cited when used.
+In R, run:
+
+```r
+citation("BioGeoBEARS")
+```
+
+`iBiogeobears` does not bundle BioGeoBEARS. It checks for an external
+BioGeoBEARS installation and records package versions and session information in
+the workflow output directory.
+
+```{r}
+citation_path <- file.path(logs_dir, "biogeobears_citation.txt")
+if (file.exists(citation_path)) {
+  citation_lines <- readLines(citation_path, warn = FALSE)
+  if (length(citation_lines) > 0L && any(nzchar(citation_lines))) {
+    cat(paste(citation_lines, collapse = "\n"))
+  } else {
+    cat("BioGeoBEARS citation metadata was not available in this run.")
+  }
+} else {
+  cat("BioGeoBEARS citation metadata was not available in this run.")
+}
+```

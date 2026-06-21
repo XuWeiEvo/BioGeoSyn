@@ -1,0 +1,7 @@
+*.Rcheck/
+*.tar.gz
+iBioGeoBEARS-scaffold.zip
+.RData
+.Rhistory
+.Rproj.user/
+.Ruserdata

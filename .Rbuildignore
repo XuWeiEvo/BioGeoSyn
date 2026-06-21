@@ -1,0 +1,11 @@
+^\.git$
+^\.github$
+^README\.Rmd$
+^pkgdown$
+^doc$
+^Meta$
+^.*\.Rproj$
+^\.Rproj\.user$
+^.*\.Rcheck$
+^.*\.tar\.gz$
+^.*\.zip$

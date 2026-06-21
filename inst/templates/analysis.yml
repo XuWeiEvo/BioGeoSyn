@@ -1,0 +1,52 @@
+project:
+  name: example_clade
+  output_dir: results/example_clade
+
+inputs:
+  tree_file: ../example_data/tree.nwk
+  geography_file: ../example_data/geography.csv
+  regions_file: ../example_data/regions.csv
+  max_range_size: 3
+
+models:
+  run:
+    - DEC
+    - DEC+J
+    - DIVALIKE
+    - DIVALIKE+J
+    - BAYAREALIKE
+    - BAYAREALIKE+J
+
+analysis:
+  run_stochastic_mapping: false
+  time_bins: null
+
+figures:
+  region_colors: null
+  output_formats:
+    - pdf
+    - png
+    - svg
+
+report:
+  formats:
+    - html
+    - pdf
+
+methodology:
+  show_decj_caution: true
+  report_model_uncertainty: true
+  separate_j_and_no_j_comparisons: true
+  auto_declare_best_model: false
+  require_sensitivity_summary: true
+
+advanced:
+  BioGeoBEARS_run_object: null
+  optimizer_settings: null
+  constraints:
+    times_file: null
+    dists_file: null
+    dispersal_multipliers_file: null
+    areas_allowed_file: null
+    areas_adjacency_file: null
+    area_of_areas_file: null
