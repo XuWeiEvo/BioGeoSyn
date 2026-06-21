@@ -107,6 +107,8 @@ model_sensitivity_summary_table <- function(comparison, sensitivity = assess_mod
   rows <- list(
     sensitivity_summary_row(
       summary_item = "best_overall_model",
+      section = "Fit summary",
+      display_label = "Best statistical model",
       answer = best$model[1L],
       models = best$model,
       model_count = nrow(best),
@@ -115,6 +117,8 @@ model_sensitivity_summary_table <- function(comparison, sensitivity = assess_mod
     ),
     sensitivity_summary_row(
       summary_item = "best_overall_is_plus_j",
+      section = "Sensitivity",
+      display_label = "Best model includes +J",
       answer = if (isTRUE(best$has_j[1L])) "yes" else "no",
       models = best$model,
       model_count = nrow(best),
@@ -127,6 +131,8 @@ model_sensitivity_summary_table <- function(comparison, sensitivity = assess_mod
     ),
     sensitivity_summary_row(
       summary_item = "plus_j_models_within_delta_aicc_2",
+      section = "Sensitivity",
+      display_label = "+J model within delta AICc <= 2",
       answer = if (nrow(plus_j_near_best) > 0L) "yes" else "no",
       models = plus_j_near_best$model,
       model_count = nrow(plus_j_near_best),
@@ -139,6 +145,8 @@ model_sensitivity_summary_table <- function(comparison, sensitivity = assess_mod
     ),
     sensitivity_summary_row(
       summary_item = "best_plus_j_model",
+      section = "Paired comparison",
+      display_label = "Best +J model",
       answer = if (!is.null(best_plus_j)) best_plus_j$model[1L] else "not available",
       models = if (!is.null(best_plus_j)) best_plus_j$model else character(),
       model_count = if (!is.null(best_plus_j)) nrow(best_plus_j) else 0L,
@@ -147,6 +155,8 @@ model_sensitivity_summary_table <- function(comparison, sensitivity = assess_mod
     ),
     sensitivity_summary_row(
       summary_item = "best_non_j_model",
+      section = "Paired comparison",
+      display_label = "Best non-+J model",
       answer = if (!is.null(best_non_j)) best_non_j$model[1L] else "not available",
       models = if (!is.null(best_non_j)) best_non_j$model else character(),
       model_count = if (!is.null(best_non_j)) nrow(best_non_j) else 0L,
@@ -155,6 +165,8 @@ model_sensitivity_summary_table <- function(comparison, sensitivity = assess_mod
     ),
     sensitivity_summary_row(
       summary_item = "non_j_models_within_delta_aicc_2",
+      section = "Sensitivity",
+      display_label = "Non-+J model within delta AICc <= 2",
       answer = if (nrow(non_j_near_best) > 0L) "yes" else "no",
       models = non_j_near_best$model,
       model_count = nrow(non_j_near_best),
@@ -167,6 +179,8 @@ model_sensitivity_summary_table <- function(comparison, sensitivity = assess_mod
     ),
     sensitivity_summary_row(
       summary_item = "auto_declare_best_model",
+      section = "Guardrail",
+      display_label = "Automatically declare best biological model",
       answer = "no",
       models = character(),
       model_count = NA_integer_,
@@ -180,9 +194,11 @@ model_sensitivity_summary_table <- function(comparison, sensitivity = assess_mod
   out
 }
 
-sensitivity_summary_row <- function(summary_item, answer, models, model_count, evidence, interpretation_note) {
+sensitivity_summary_row <- function(summary_item, section, display_label, answer, models, model_count, evidence, interpretation_note) {
   data.frame(
     summary_item = summary_item,
+    section = section,
+    display_label = display_label,
     answer = answer %||% NA_character_,
     models = if (length(models) > 0L) paste(models, collapse = "; ") else NA_character_,
     model_count = model_count,

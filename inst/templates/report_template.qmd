@@ -48,6 +48,46 @@ print_table <- function(x, digits = 4) {
   x[numeric_cols] <- lapply(x[numeric_cols], round, digits = digits)
   knitr::kable(x)
 }
+
+answer_for <- function(summary_item) {
+  if (is.null(model_sensitivity) || !"summary_item" %in% names(model_sensitivity)) {
+    return(NA_character_)
+  }
+  value <- model_sensitivity$answer[match(summary_item, model_sensitivity$summary_item)]
+  if (length(value) == 0L || is.na(value)) NA_character_ else as.character(value)
+}
+
+best_model_label <- function() {
+  if (is.null(model_comparison) || nrow(model_comparison) == 0L) {
+    return("Not available")
+  }
+  best <- model_comparison[which.min(model_comparison$AICc), , drop = FALSE]
+  if ("AICc" %in% names(best)) {
+    paste0(best$model[1], " (AICc ", round(best$AICc[1], 4), ")")
+  } else {
+    best$model[1]
+  }
+}
+
+completed_model_count <- function() {
+  if (is.null(model_status) || !"status" %in% names(model_status)) {
+    return("Not available")
+  }
+  paste0(sum(model_status$status == "completed", na.rm = TRUE), " of ", nrow(model_status))
+}
+
+warning_count_total <- function() {
+  if (is.null(model_status) || !"warning_count" %in% names(model_status)) {
+    return("Not available")
+  }
+  as.character(sum(model_status$warning_count, na.rm = TRUE))
+}
+
+j_caution_label <- function() {
+  plus_j_near <- identical(answer_for("plus_j_models_within_delta_aicc_2"), "yes")
+  best_is_j <- identical(answer_for("best_overall_is_plus_j"), "yes")
+  if (plus_j_near || best_is_j) "Yes" else "No"
+}
 ```
 
 ## Analysis Summary
@@ -55,6 +95,31 @@ print_table <- function(x, digits = 4) {
 This report summarizes a single-clade BioGeoBEARS workflow managed by
 `iBiogeobears`. Raw BioGeoBEARS outputs are stored separately from derived
 tables, figures, and reports.
+
+```{r}
+executive_summary <- data.frame(
+  item = c(
+    "Fitted models",
+    "Best statistical model",
+    "+J caution triggered",
+    "Captured warning count",
+    "Tables directory",
+    "Figures directory",
+    "Raw BioGeoBEARS directory"
+  ),
+  value = c(
+    completed_model_count(),
+    best_model_label(),
+    j_caution_label(),
+    warning_count_total(),
+    tables_dir,
+    figures_dir,
+    normalizePath(file.path("..", "raw_biogeobears"), mustWork = FALSE)
+  ),
+  stringsAsFactors = FALSE
+)
+print_table(executive_summary)
+```
 
 ## Input Validation
 
@@ -64,10 +129,23 @@ print_table(input_validation)
 
 ## Model Run Status
 
+### Run Overview
+
 ```{r}
-status_cols <- c("model", "status", "logLik", "num_params", "warning_count", "raw_output_dir", "log_file", "error_message")
+status_cols <- c("model", "status", "logLik", "num_params", "warning_count")
 if (!is.null(model_status)) {
   print_table(model_status[intersect(status_cols, names(model_status))])
+} else {
+  print_table(NULL)
+}
+```
+
+### Output Paths
+
+```{r}
+path_cols <- c("model", "raw_output_dir", "log_file", "error_message")
+if (!is.null(model_status)) {
+  print_table(model_status[intersect(path_cols, names(model_status))])
 } else {
   print_table(NULL)
 }
@@ -98,23 +176,32 @@ as an automatic biological conclusion. Results involving `+J` founder-event
 speciation models should be reported alongside non-`+J` alternatives and
 sensitivity summaries.
 
-```{r}
-comparison_cols <- c(
-  "model", "model_family", "has_j", "logLik", "num_params", "AIC",
-  "AICc", "delta_aicc", "aicc_weight", "caution_flag",
-  "interpretation_note"
-)
-if (!is.null(model_comparison)) {
-  print_table(model_comparison[intersect(comparison_cols, names(model_comparison))])
-} else {
-  print_table(NULL)
-}
-```
+### Fit Metrics
 
 ```{r}
 model_comparison_png <- figure_path("model_comparison")
 if (!is.null(model_comparison_png)) {
   knitr::include_graphics(model_comparison_png)
+}
+```
+
+```{r}
+fit_cols <- c("model", "model_family", "has_j", "logLik", "num_params", "AICc", "delta_aicc", "aicc_weight")
+if (!is.null(model_comparison)) {
+  print_table(model_comparison[intersect(fit_cols, names(model_comparison))])
+} else {
+  print_table(NULL)
+}
+```
+
+### Interpretation Notes
+
+```{r}
+interpretation_cols <- c("model", "caution_flag", "interpretation_note")
+if (!is.null(model_comparison)) {
+  print_table(model_comparison[intersect(interpretation_cols, names(model_comparison))])
+} else {
+  print_table(NULL)
 }
 ```
 
@@ -125,7 +212,7 @@ to guide interpretation, not to automatically declare a biological conclusion.
 
 ```{r}
 sensitivity_cols <- c(
-  "summary_item", "answer", "models", "model_count", "evidence",
+  "section", "display_label", "answer", "models", "model_count", "evidence",
   "interpretation_note"
 )
 if (!is.null(model_sensitivity)) {

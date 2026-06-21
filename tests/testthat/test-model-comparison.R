@@ -20,12 +20,18 @@ test_that("model sensitivity summary is readable as a table", {
 
   expect_true(all(c(
     "summary_item",
+    "section",
+    "display_label",
     "answer",
     "models",
     "model_count",
     "evidence",
     "interpretation_note"
   ) %in% names(sensitivity_table)))
+  expect_equal(
+    sensitivity_table$display_label[match("best_overall_is_plus_j", sensitivity_table$summary_item)],
+    "Best model includes +J"
+  )
   expect_equal(
     sensitivity_table$answer[match("best_overall_is_plus_j", sensitivity_table$summary_item)],
     "yes"
