@@ -24,11 +24,18 @@ It currently supports:
 
 ## Installation
 
-Install the development version from GitHub:
+Install the current development version from GitHub:
 
 ```r
 install.packages("remotes")
 remotes::install_github("XuWeiEvo/iBioGeoBEARS")
+```
+
+Install the 0.1.0 alpha release:
+
+```r
+install.packages("remotes")
+remotes::install_github("XuWeiEvo/iBioGeoBEARS@v0.1.0-alpha")
 ```
 
 BioGeoBEARS must be installed separately; it is not bundled with
