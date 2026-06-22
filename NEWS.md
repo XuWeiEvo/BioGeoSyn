@@ -7,6 +7,8 @@ Development version after the 0.1.0 alpha release.
   views.
 - Added `plot_node_state_summary()` and automatic `node_state_summary` workflow
   figures.
+- Added automatic best-overall, best-non-+J, and best-+J node-state figures
+  where those model classes are available.
 
 # iBiogeobears 0.1.0
 

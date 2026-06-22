@@ -40,6 +40,16 @@ figure_path <- function(name) {
   if (file.exists(path)) path else NULL
 }
 
+include_named_figure <- function(name, caption) {
+  path <- figure_path(name)
+  if (!is.null(path)) {
+    cat("### ", caption, "\n\n", sep = "")
+    print(knitr::include_graphics(path))
+    cat("\n\n")
+  }
+  invisible(path)
+}
+
 print_table <- function(x, digits = 4) {
   if (is.null(x) || nrow(x) == 0L) {
     cat("No table was generated for this section.\n")
@@ -262,9 +272,16 @@ BioGeoBEARS probability location. It is a compact node-level interface for
 downstream plotting and future Shiny views.
 
 ```{r}
-node_state_png <- figure_path("node_state_summary")
-if (!is.null(node_state_png)) {
-  knitr::include_graphics(node_state_png)
+included_node_figures <- c(
+  !is.null(include_named_figure("node_state_summary_best_model", "Best Statistical Model")),
+  !is.null(include_named_figure("node_state_summary_best_non_j", "Best Non-+J Model")),
+  !is.null(include_named_figure("node_state_summary_best_plus_j", "Best +J Model"))
+)
+if (!any(included_node_figures)) {
+  fallback_node_state_png <- figure_path("node_state_summary")
+  if (!is.null(fallback_node_state_png)) {
+    knitr::include_graphics(fallback_node_state_png)
+  }
 }
 ```
 

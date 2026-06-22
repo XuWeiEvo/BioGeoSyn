@@ -71,7 +71,7 @@ test_that("run_workflow exposes model comparison when BioGeoBEARS is available",
   expect_false(is.null(result$model_sensitivity_table))
   expect_false(is.null(result$figure_manifest))
   expect_true(any(result$figure_manifest$figure == "model_comparison" & result$figure_manifest$status == "created"))
-  expect_true(any(result$figure_manifest$figure == "node_state_summary" & result$figure_manifest$status == "created"))
+  expect_true(any(result$figure_manifest$figure == "node_state_summary_best_model" & result$figure_manifest$status == "created"))
   expect_true(all(c(
     "geographic_states",
     "tree_nodes",

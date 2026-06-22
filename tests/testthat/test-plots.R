@@ -52,3 +52,16 @@ test_that("tree_edge_segments creates rectangular phylogram segments", {
   expect_true(any(segments$y == segments$yend))
   expect_true(any(segments$x == segments$xend))
 })
+
+test_that("select_node_state_plot_models returns non-duplicated model roles", {
+  comparison <- data.frame(
+    model = c("DEC", "DEC+J", "DIVALIKE"),
+    has_j = c(FALSE, TRUE, FALSE),
+    AICc = c(10, 12, 11)
+  )
+
+  selected <- select_node_state_plot_models(comparison)
+
+  expect_equal(selected$figure, c("node_state_summary_best_model", "node_state_summary_best_plus_j"))
+  expect_equal(selected$model, c("DEC", "DEC+J"))
+})

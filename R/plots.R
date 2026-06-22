@@ -247,11 +247,14 @@ generate_figures <- function(model_comparison, standardized_tables, project_path
   node_table <- standardized_tables$node_state_summary %||% data.frame()
   tree_nodes <- standardized_tables$tree_nodes %||% data.frame()
   if (nrow(node_table) > 0L && nrow(tree_nodes) > 0L) {
-    plots$node_state_summary <- plot_node_state_summary(
-      tree_nodes = tree_nodes,
-      node_state_summary = node_table,
-      model = model_comparison$model[1L]
-    )
+    node_plot_models <- select_node_state_plot_models(model_comparison)
+    for (i in seq_len(nrow(node_plot_models))) {
+      plots[[node_plot_models$figure[[i]]]] <- plot_node_state_summary(
+        tree_nodes = tree_nodes,
+        node_state_summary = node_table,
+        model = node_plot_models$model[[i]]
+      )
+    }
   }
 
   manifest <- do.call(rbind, lapply(names(plots), function(name) {
@@ -382,4 +385,48 @@ tree_edge_segments <- function(edges) {
     yend = edges$y
   )
   rbind(horizontal, vertical)
+}
+
+select_node_state_plot_models <- function(model_comparison) {
+  if (is.null(model_comparison) || nrow(model_comparison) == 0L) {
+    return(data.frame())
+  }
+  if (!"has_j" %in% names(model_comparison)) {
+    model_comparison$has_j <- is_j_model(model_comparison$model)
+  }
+  if (!"AICc" %in% names(model_comparison)) {
+    model_comparison$AICc <- seq_len(nrow(model_comparison))
+  }
+
+  rows <- list(data.frame(
+    figure = "node_state_summary_best_model",
+    role = "best_overall",
+    model = model_comparison$model[which.min(model_comparison$AICc)],
+    stringsAsFactors = FALSE
+  ))
+
+  non_j <- model_comparison[!model_comparison$has_j, , drop = FALSE]
+  if (nrow(non_j) > 0L) {
+    rows[[length(rows) + 1L]] <- data.frame(
+      figure = "node_state_summary_best_non_j",
+      role = "best_non_j",
+      model = non_j$model[which.min(non_j$AICc)],
+      stringsAsFactors = FALSE
+    )
+  }
+
+  plus_j <- model_comparison[model_comparison$has_j, , drop = FALSE]
+  if (nrow(plus_j) > 0L) {
+    rows[[length(rows) + 1L]] <- data.frame(
+      figure = "node_state_summary_best_plus_j",
+      role = "best_plus_j",
+      model = plus_j$model[which.min(plus_j$AICc)],
+      stringsAsFactors = FALSE
+    )
+  }
+
+  out <- do.call(rbind, rows)
+  out <- out[!duplicated(out$model), , drop = FALSE]
+  row.names(out) <- NULL
+  out
 }
