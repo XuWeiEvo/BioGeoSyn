@@ -8,7 +8,9 @@ plot_node_state_summary(
   tree_nodes,
   node_state_summary,
   model = NULL,
-  location = "branch_top_at_node"
+  location = "branch_top_at_node",
+  label_tips = TRUE,
+  label_internal_nodes = FALSE
 )
 }
 \arguments{
@@ -23,6 +25,11 @@ plot_node_state_summary(
 
 \item{location}{BioGeoBEARS probability location to plot. Defaults to
 \code{"branch_top_at_node"} when available.}
+
+\item{label_tips}{Logical. If \code{TRUE}, label tip nodes.}
+
+\item{label_internal_nodes}{Logical. If \code{TRUE}, label internal nodes by
+node index.}
 }
 \value{
 A ggplot object.

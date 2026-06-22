@@ -126,9 +126,12 @@ plot_root_state_probabilities <- function(root_state_probabilities, top_n = 8L) 
 #'   `node_state_summary`.
 #' @param location BioGeoBEARS probability location to plot. Defaults to
 #'   `"branch_top_at_node"` when available.
+#' @param label_tips Logical. If `TRUE`, label tip nodes.
+#' @param label_internal_nodes Logical. If `TRUE`, label internal nodes by
+#'   node index.
 #' @return A ggplot object.
 #' @export
-plot_node_state_summary <- function(tree_nodes, node_state_summary, model = NULL, location = "branch_top_at_node") {
+plot_node_state_summary <- function(tree_nodes, node_state_summary, model = NULL, location = "branch_top_at_node", label_tips = TRUE, label_internal_nodes = FALSE) {
   node_required <- c("node_index", "node_type", "node_label", "parent_node_index", "edge_length")
   summary_required <- c("model", "location", "node_index", "best_state", "best_probability")
   missing_nodes <- setdiff(node_required, names(tree_nodes))
@@ -159,21 +162,29 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, model = NULL
   ]
   plot_data <- merge(layout, summary_rows, by = "node_index", all.x = TRUE, sort = FALSE)
   plot_data$plot_probability <- ifelse(is.na(plot_data$best_probability), 0, plot_data$best_probability)
+  plot_data$best_state_label <- ifelse(is.na(plot_data$best_state), "not estimated", plot_data$best_state)
 
   edges <- plot_data[!is.na(plot_data$parent_node_index), , drop = FALSE]
   edges <- edges[!is.na(edges$parent_x) & !is.na(edges$parent_y), , drop = FALSE]
-  tip_labels <- plot_data[plot_data$node_type == "tip", , drop = FALSE]
+  edge_segments <- tree_edge_segments(edges)
+  tip_labels <- if (isTRUE(label_tips)) plot_data[plot_data$node_type == "tip", , drop = FALSE] else plot_data[0L, , drop = FALSE]
+  internal_labels <- if (isTRUE(label_internal_nodes)) plot_data[plot_data$node_type == "internal", , drop = FALSE] else plot_data[0L, , drop = FALSE]
+  internal_labels$internal_node_label <- if (nrow(internal_labels) > 0L) {
+    paste0("n", internal_labels$node_index)
+  } else {
+    character(0)
+  }
 
   ggplot2::ggplot() +
     ggplot2::geom_segment(
-      data = edges,
-      ggplot2::aes(x = parent_x, y = parent_y, xend = x, yend = y),
+      data = edge_segments,
+      ggplot2::aes(x = x, y = y, xend = xend, yend = yend),
       linewidth = 0.35,
       colour = "grey45"
     ) +
     ggplot2::geom_point(
       data = plot_data,
-      ggplot2::aes(x = x, y = y, fill = best_state, size = plot_probability),
+      ggplot2::aes(x = x, y = y, fill = best_state_label, size = plot_probability),
       shape = 21,
       colour = "grey20",
       stroke = 0.25,
@@ -184,6 +195,13 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, model = NULL
       ggplot2::aes(x = x, y = y, label = node_label),
       hjust = -0.08,
       size = 3
+    ) +
+    ggplot2::geom_text(
+      data = internal_labels,
+      ggplot2::aes(x = x, y = y, label = internal_node_label),
+      nudge_y = 0.12,
+      size = 2.5,
+      colour = "grey30"
     ) +
     ggplot2::scale_size_continuous(limits = c(0, 1), range = c(1.8, 5.8), name = "Best-state probability") +
     ggplot2::labs(
@@ -345,4 +363,23 @@ layout_tree_nodes <- function(tree_nodes) {
   layout$parent_x <- x[parent_rows]
   layout$parent_y <- y[parent_rows]
   layout
+}
+
+tree_edge_segments <- function(edges) {
+  if (is.null(edges) || nrow(edges) == 0L) {
+    return(data.frame(x = numeric(), y = numeric(), xend = numeric(), yend = numeric()))
+  }
+  horizontal <- data.frame(
+    x = edges$parent_x,
+    y = edges$parent_y,
+    xend = edges$x,
+    yend = edges$parent_y
+  )
+  vertical <- data.frame(
+    x = edges$x,
+    y = edges$parent_y,
+    xend = edges$x,
+    yend = edges$y
+  )
+  rbind(horizontal, vertical)
 }
