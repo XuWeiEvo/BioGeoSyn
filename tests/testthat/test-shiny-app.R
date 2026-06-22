@@ -83,6 +83,45 @@ test_that("download file helper reports missing files clearly", {
   )
 })
 
+test_that("table preview helpers discover and read CSV outputs", {
+  out <- tempfile("ibgb-shiny-tables-")
+  paths <- create_project(out)
+  table_path <- file.path(paths$tables, "model_comparison.csv")
+  utils::write.csv(data.frame(model = "DEC", AICc = 10), table_path, row.names = FALSE)
+  manifest <- data.frame(
+    category = "tables",
+    relative_path = "tables/model_comparison.csv",
+    file_name = "model_comparison.csv",
+    extension = "csv",
+    stringsAsFactors = FALSE
+  )
+  result <- list(project_paths = paths)
+
+  choices <- table_preview_choices(result, manifest)
+  state <- new.env(parent = emptyenv())
+  state$result <- result
+  state$manifest <- manifest
+  input <- list(table_preview = unname(choices[[1L]]))
+  preview <- read_table_preview(input, state)
+
+  expect_equal(names(choices), "tables/model_comparison.csv")
+  expect_equal(resolve_table_preview_path(input, state), as_path(table_path))
+  expect_equal(preview$model, "DEC")
+  expect_equal(preview$AICc, 10)
+})
+
+test_that("table preview helpers return empty data when no tables exist", {
+  paths <- create_project(tempfile("ibgb-shiny-no-tables-"))
+  state <- new.env(parent = emptyenv())
+  state$result <- list(project_paths = paths)
+  state$manifest <- data.frame()
+  input <- list(table_preview = "")
+
+  expect_length(table_preview_choices(state$result, state$manifest), 0L)
+  expect_null(resolve_table_preview_path(input, state))
+  expect_equal(nrow(read_table_preview(input, state)), 0L)
+})
+
 test_that("figure preview helpers discover PNG outputs", {
   out <- tempfile("ibgb-shiny-figures-")
   paths <- create_project(out)

@@ -59,6 +59,12 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             shiny::tabPanel("Models", shiny::tableOutput("model_table")),
             shiny::tabPanel("Manifest", shiny::tableOutput("manifest_table")),
             shiny::tabPanel(
+              "Tables",
+              shiny::selectInput("table_preview", "Table", choices = c("No CSV tables available" = "")),
+              shiny::tableOutput("table_preview_output"),
+              shiny::verbatimTextOutput("table_path_text")
+            ),
+            shiny::tabPanel(
               "Figures",
               shiny::selectInput("figure_preview", "Figure", choices = c("No PNG figures available" = "")),
               shiny::div(class = "ibgb-preview", shiny::imageOutput("figure_image")),
@@ -139,6 +145,7 @@ iBGB_shiny_server <- function(input, output, session) {
           state$validation <- result$validation
           state$model_table <- result$model_run_status
           state$manifest <- result$workflow_manifest
+          update_table_preview_choices(session, state)
           update_figure_preview_choices(session, state)
           append_app_message(state, if (isTRUE(result$dry_run)) "Dry run completed." else "Workflow completed.")
           shiny::incProgress(1)
@@ -152,6 +159,7 @@ iBGB_shiny_server <- function(input, output, session) {
           shiny::withProgress(message = "Rendering report", value = 0, {
           state$report <- render_report(state$result, format = input$report_format)
           state$manifest <- create_workflow_manifest(state$result, write = TRUE)
+          update_table_preview_choices(session, state)
           update_figure_preview_choices(session, state)
           append_app_message(state, paste("Report:", state$report))
           shiny::incProgress(1)
@@ -165,6 +173,7 @@ iBGB_shiny_server <- function(input, output, session) {
           shiny::withProgress(message = "Bundling results", value = 0, {
           state$bundle <- bundle_results(state$result, overwrite = TRUE)
           state$manifest <- create_workflow_manifest(state$result, write = TRUE)
+          update_table_preview_choices(session, state)
           update_figure_preview_choices(session, state)
           append_app_message(state, paste("Bundle:", state$bundle))
           shiny::incProgress(1)
@@ -206,6 +215,19 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$messages_text <- shiny::renderText({
         paste(state$messages, collapse = "\n")
+      })
+
+      output$table_preview_output <- shiny::renderTable({
+        table_head(read_table_preview(input, state), 50L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$table_path_text <- shiny::renderText({
+        path <- resolve_table_preview_path(input, state)
+        if (is.null(path)) {
+          "No CSV table is available for preview."
+        } else {
+          path
+        }
       })
 
       output$figure_image <- shiny::renderImage({
@@ -304,6 +326,73 @@ copy_download_file <- function(src, dest) {
     stop("Unable to prepare download file: ", src, call. = FALSE)
   }
   invisible(dest)
+}
+
+update_table_preview_choices <- function(session, state) {
+  choices <- table_preview_choices(state$result, state$manifest)
+  if (length(choices) == 0L) {
+    shiny::updateSelectInput(session, "table_preview", choices = c("No CSV tables available" = ""), selected = "")
+  } else {
+    shiny::updateSelectInput(session, "table_preview", choices = choices, selected = choices[[1L]])
+  }
+  invisible(choices)
+}
+
+table_preview_choices <- function(result, manifest = NULL) {
+  if (is.null(result) || is.null(result$project_paths$root)) {
+    return(stats::setNames(character(), character()))
+  }
+  root <- result$project_paths$root
+  paths <- character()
+  labels <- character()
+
+  if (!is.null(manifest) && nrow(manifest) > 0L && all(c("category", "relative_path") %in% names(manifest))) {
+    rows <- manifest[
+      manifest$category == "tables" & grepl("[.]csv$", manifest$relative_path, ignore.case = TRUE),
+      ,
+      drop = FALSE
+    ]
+    if (nrow(rows) > 0L) {
+      paths <- file.path(root, rows$relative_path)
+      labels <- rows$relative_path
+    }
+  }
+
+  if (length(paths) == 0L) {
+    tables_dir <- result$project_paths$tables %||% file.path(root, "tables")
+    paths <- list.files(tables_dir, pattern = "[.]csv$", full.names = TRUE)
+    labels <- file.path("tables", basename(paths))
+  }
+
+  exists <- file.exists(paths)
+  paths <- as_path(paths[exists])
+  labels <- labels[exists]
+  if (length(paths) == 0L) {
+    return(stats::setNames(character(), character()))
+  }
+  paths <- paths[order(labels)]
+  labels <- labels[order(labels)]
+  stats::setNames(paths, labels)
+}
+
+resolve_table_preview_path <- function(input, state) {
+  selected <- input$table_preview %||% ""
+  if (nzchar(selected) && file.exists(selected)) {
+    return(as_path(selected))
+  }
+  choices <- table_preview_choices(state$result, state$manifest)
+  if (length(choices) == 0L) {
+    return(NULL)
+  }
+  as_path(choices[[1L]])
+}
+
+read_table_preview <- function(input, state) {
+  path <- resolve_table_preview_path(input, state)
+  if (is.null(path)) {
+    return(data.frame())
+  }
+  utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
 }
 
 update_figure_preview_choices <- function(session, state) {
