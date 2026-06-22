@@ -17,6 +17,32 @@ test_that("create_iBGB_shiny_app builds a Shiny app when shiny is installed", {
   expect_s3_class(app, "shiny.appobj")
 })
 
+test_that("resolve_shiny_config_path prefers uploaded YAML files", {
+  uploaded <- tempfile(fileext = ".yml")
+  writeLines("project:\n  name: uploaded", uploaded)
+  input <- list(
+    config_upload = data.frame(
+      name = "analysis.yml",
+      size = file.info(uploaded)$size,
+      type = "text/yaml",
+      datapath = uploaded,
+      stringsAsFactors = FALSE
+    ),
+    config_path = "fallback.yml"
+  )
+
+  expect_equal(resolve_shiny_config_path(input), uploaded)
+})
+
+test_that("resolve_shiny_config_path requires a config source", {
+  input <- list(config_upload = NULL, config_path = "")
+
+  expect_error(
+    resolve_shiny_config_path(input),
+    "Provide an analysis.yml"
+  )
+})
+
 test_that("run_app_action captures errors in state messages", {
   state <- new.env(parent = emptyenv())
   state$message <- "Ready."
@@ -83,6 +109,30 @@ test_that("Shiny server validates and dry-runs a workflow", {
     expect_true(isTRUE(state$result$dry_run))
     expect_true(file.exists(file.path(state$result$project_paths$tables, "workflow_manifest.csv")))
     expect_match(state$message, "Dry run completed", fixed = TRUE)
+  })
+})
+
+test_that("Shiny server creates an example project from the GUI", {
+  testthat::skip_if_not_installed("shiny")
+
+  example_dir <- tempfile("ibgb-shiny-created-example-")
+
+  shiny::testServer(iBGB_shiny_server, {
+    session$setInputs(example_project_dir = example_dir)
+    session$setInputs(create_example = 1)
+
+    state <- session$userData$state
+    expect_true(file.exists(file.path(example_dir, "analysis.yml")))
+    expect_match(state$message, "Example project:", fixed = TRUE)
+
+    session$setInputs(
+      config_path = file.path(example_dir, "analysis.yml"),
+      output_dir = file.path(example_dir, "results", "example_clade")
+    )
+    session$setInputs(validate = 1)
+
+    expect_true(all(state$validation$ok))
+    expect_match(state$message, "Validation passed", fixed = TRUE)
   })
 })
 

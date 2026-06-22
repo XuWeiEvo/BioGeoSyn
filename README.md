@@ -133,7 +133,8 @@ The Shiny entrypoint is a thin wrapper around the package backend. It validates
 the YAML config, runs `run_workflow()`, renders reports, and bundles results
 without moving scientific logic into Shiny server code. The app also exposes
 the output manifest, status messages, report downloads, and result bundle
-downloads.
+downloads. Users can upload a YAML config or create the bundled example
+project directly from the GUI.
 
 ```r
 install.packages("shiny")

@@ -32,7 +32,10 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
       shiny::sidebarLayout(
         shiny::sidebarPanel(
           shiny::textInput("config_path", "analysis.yml", value = default_config),
+          shiny::fileInput("config_upload", "Upload analysis.yml", accept = c(".yml", ".yaml")),
           shiny::textInput("output_dir", "Output directory", value = default_output),
+          shiny::textInput("example_project_dir", "Example project directory", value = ""),
+          shiny::actionButton("create_example", "Create example project"),
           shiny::checkboxInput("dry_run", "Dry run", value = TRUE),
           shiny::checkboxInput("require_biogeobears", "Require BioGeoBEARS", value = FALSE),
           shiny::checkboxInput("force", "Force execution after validation failure", value = FALSE),
@@ -78,15 +81,32 @@ iBGB_shiny_server <- function(input, output, session) {
       )
   session$userData$state <- state
 
+      current_config_path <- shiny::reactive({
+        resolve_shiny_config_path(input)
+      })
+
       current_output_dir <- shiny::reactive({
         value <- trimws(input$output_dir %||% "")
         if (nzchar(value)) value else NULL
       })
 
+      shiny::observeEvent(input$create_example, {
+        run_app_action(state, {
+          target <- trimws(input$example_project_dir %||% "")
+          if (!nzchar(target)) {
+            target <- tempfile("ibgb-example-project-")
+          }
+          example <- create_example_project(target)
+          shiny::updateTextInput(session, "config_path", value = example$config)
+          shiny::updateTextInput(session, "output_dir", value = example$output_dir)
+          append_app_message(state, paste("Example project:", example$root))
+        })
+      })
+
       shiny::observeEvent(input$validate, {
         run_app_action(state, {
           shiny::withProgress(message = "Validating", value = 0, {
-          cfg <- read_config(input$config_path)
+          cfg <- read_config(current_config_path())
           if (!is.null(current_output_dir())) {
             cfg$project$output_dir <- current_output_dir()
           }
@@ -102,7 +122,7 @@ iBGB_shiny_server <- function(input, output, session) {
         run_app_action(state, {
           shiny::withProgress(message = "Running workflow", value = 0, {
           result <- run_workflow(
-            config = input$config_path,
+            config = current_config_path(),
             output_dir = current_output_dir(),
             dry_run = isTRUE(input$dry_run),
             require_biogeobears = isTRUE(input$require_biogeobears),
@@ -259,6 +279,21 @@ check_shiny_available <- function() {
     stop("The shiny package is required to launch the GUI. Install it with install.packages('shiny').", call. = FALSE)
   }
   invisible(TRUE)
+}
+
+resolve_shiny_config_path <- function(input) {
+  upload <- input$config_upload %||% NULL
+  if (!is.null(upload) && nrow(upload) > 0L && "datapath" %in% names(upload)) {
+    uploaded_path <- upload$datapath[[1L]]
+    if (!is.null(uploaded_path) && file.exists(uploaded_path)) {
+      return(uploaded_path)
+    }
+  }
+  path <- trimws(input$config_path %||% "")
+  if (!nzchar(path)) {
+    stop("Provide an analysis.yml path or upload a YAML config file.", call. = FALSE)
+  }
+  path
 }
 
 planned_model_table <- function(config) {
