@@ -56,3 +56,62 @@ test_that("download file helper reports missing files clearly", {
     "missing file"
   )
 })
+
+test_that("Shiny server validates and dry-runs a workflow", {
+  testthat::skip_if_not_installed("shiny")
+
+  project <- create_example_project(tempfile("ibgb-shiny-server-"))
+
+  shiny::testServer(iBGB_shiny_server, {
+    session$setInputs(
+      config_path = project$config,
+      output_dir = project$output_dir,
+      dry_run = TRUE,
+      require_biogeobears = FALSE,
+      force = FALSE,
+      report_format = "source"
+    )
+
+    session$setInputs(validate = 1)
+    state <- session$userData$state
+    expect_true(all(state$validation$ok))
+    expect_true(nrow(state$model_table) > 0L)
+    expect_match(state$message, "Validation passed", fixed = TRUE)
+
+    session$setInputs(run = 1)
+    expect_s3_class(state$result, "iBGB_workflow_result")
+    expect_true(isTRUE(state$result$dry_run))
+    expect_true(file.exists(file.path(state$result$project_paths$tables, "workflow_manifest.csv")))
+    expect_match(state$message, "Dry run completed", fixed = TRUE)
+  })
+})
+
+test_that("Shiny server renders reports and bundles dry-run results", {
+  testthat::skip_if_not_installed("shiny")
+  testthat::skip_if(Sys.which("zip") == "", "zip utility is not available")
+
+  project <- create_example_project(tempfile("ibgb-shiny-render-"))
+
+  shiny::testServer(iBGB_shiny_server, {
+    session$setInputs(
+      config_path = project$config,
+      output_dir = project$output_dir,
+      dry_run = TRUE,
+      require_biogeobears = FALSE,
+      force = FALSE,
+      report_format = "source"
+    )
+
+    session$setInputs(run = 1)
+    state <- session$userData$state
+    expect_s3_class(state$result, "iBGB_workflow_result")
+
+    session$setInputs(render_report = 1)
+    expect_true(file.exists(state$report))
+    expect_match(state$message, "Report:", fixed = TRUE)
+
+    session$setInputs(bundle = 1)
+    expect_true(file.exists(state$bundle))
+    expect_match(state$message, "Bundle:", fixed = TRUE)
+  })
+})

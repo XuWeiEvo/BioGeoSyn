@@ -60,8 +60,12 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
         )
       )
     ),
-    server = function(input, output, session) {
-      state <- shiny::reactiveValues(
+    server = iBGB_shiny_server
+  )
+}
+
+iBGB_shiny_server <- function(input, output, session) {
+  state <- shiny::reactiveValues(
         result = NULL,
         validation = NULL,
         model_table = NULL,
@@ -72,6 +76,7 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
         messages = "Ready.",
         status_type = "info"
       )
+  session$userData$state <- state
 
       current_output_dir <- shiny::reactive({
         value <- trimws(input$output_dir %||% "")
@@ -192,8 +197,6 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           copy_download_file(src, file)
         }
       )
-    }
-  )
 }
 
 run_app_action <- function(state, expr) {

@@ -19,6 +19,8 @@ Development version after the 0.1.0 alpha release.
   workflow execution, report rendering, and result bundling.
 - Added Shiny status-message error handling plus report and result-bundle
   downloads.
+- Added Shiny server-level tests for validation, dry-run workflow execution,
+  report rendering, and result bundling.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.
 
