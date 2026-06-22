@@ -94,6 +94,7 @@ run_models <- function(config, project_paths, execute = FALSE) {
     node_state_summary = standardized_tables$node_state_summary,
     comparison = comparison
   )
+  standardized_tables$node_state_sensitivity <- node_state_sensitivity
   saveRDS(sensitivity, file.path(project_paths$tables, "model_sensitivity.rds"))
   write_csv_base(sensitivity_table, file.path(project_paths$tables, "model_sensitivity.csv"))
   write_csv_base(node_state_sensitivity, file.path(project_paths$tables, "node_state_sensitivity.csv"))

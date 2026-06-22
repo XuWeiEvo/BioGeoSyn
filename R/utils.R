@@ -4,10 +4,11 @@
 
 if (getRversion() >= "2.15.1") {
   utils::globalVariables(c(
-    "best_state", "best_state_label", "delta_aicc", "event_time", "event_type",
-    "frequency", "internal_node_label", "model", "name", "node_label",
-    "parent_x", "parent_y", "plot_probability", "plus_j", "probability",
-    "state", "x", "xend", "y", "yend"
+    "best_state", "best_state_label", "comparison", "delta_aicc",
+    "event_time", "event_type", "frequency", "internal_node_label", "model",
+    "name", "node_display", "node_label", "parent_x", "parent_y",
+    "plot_probability", "plus_j", "probability", "probability_difference_abs",
+    "state", "state_change", "x", "xend", "y", "yend"
   ))
 }
 

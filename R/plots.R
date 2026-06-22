@@ -219,6 +219,69 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, model = NULL
     )
 }
 
+#' Plot node-state sensitivity between non-+J and +J models
+#'
+#' @param node_state_sensitivity Table from `node_state_sensitivity.csv`.
+#' @param top_n Number of highest-sensitivity nodes to show.
+#' @param location Optional BioGeoBEARS probability location. Defaults to
+#'   `"branch_top_at_node"` when available.
+#' @return A ggplot object.
+#' @export
+plot_node_state_sensitivity <- function(node_state_sensitivity, top_n = 20L, location = NULL) {
+  required <- c(
+    "location", "node_index", "node_label",
+    "non_j_model", "non_j_state", "non_j_probability",
+    "plus_j_model", "plus_j_state", "plus_j_probability",
+    "state_differs", "probability_difference_abs"
+  )
+  missing <- setdiff(required, names(node_state_sensitivity))
+  if (length(missing) > 0L) {
+    stop("node_state_sensitivity is missing required columns: ", paste(missing, collapse = ", "), call. = FALSE)
+  }
+  if (nrow(node_state_sensitivity) == 0L) {
+    stop("node_state_sensitivity must contain at least one row.", call. = FALSE)
+  }
+
+  available_locations <- unique(node_state_sensitivity$location)
+  if (is.null(location)) {
+    location <- if ("branch_top_at_node" %in% available_locations) "branch_top_at_node" else available_locations[1L]
+  }
+  plot_data <- node_state_sensitivity[node_state_sensitivity$location == location, , drop = FALSE]
+  if (nrow(plot_data) == 0L) {
+    stop("No node_state_sensitivity rows are available for location: ", location, call. = FALSE)
+  }
+
+  plot_data$probability_difference_abs <- as.numeric(plot_data$probability_difference_abs)
+  plot_data$state_differs <- as.logical(plot_data$state_differs)
+  plot_data <- plot_data[order(-plot_data$state_differs, -plot_data$probability_difference_abs), , drop = FALSE]
+  plot_data <- utils::head(plot_data, as.integer(top_n))
+  plot_data$node_display <- paste0(plot_data$node_label, " (node ", plot_data$node_index, ")")
+  plot_data$node_display <- stats::reorder(plot_data$node_display, plot_data$probability_difference_abs)
+  plot_data$state_change <- ifelse(plot_data$state_differs, "Best state changed", "Same best state")
+  plot_data$comparison <- paste(plot_data$non_j_state, plot_data$plus_j_state, sep = " -> ")
+  title <- paste0(unique(plot_data$non_j_model)[1L], " vs ", unique(plot_data$plus_j_model)[1L])
+
+  ggplot2::ggplot(plot_data, ggplot2::aes(x = node_display, y = probability_difference_abs, fill = state_change)) +
+    ggplot2::geom_col(width = 0.72, colour = "grey25", linewidth = 0.25) +
+    ggplot2::geom_text(ggplot2::aes(label = comparison), hjust = -0.08, size = 3) +
+    ggplot2::coord_flip(clip = "off") +
+    ggplot2::scale_fill_manual(values = c("Best state changed" = "#d95f02", "Same best state" = "#4c78a8")) +
+    ggplot2::scale_y_continuous(limits = c(0, NA), expand = ggplot2::expansion(mult = c(0, 0.22))) +
+    ggplot2::labs(
+      title = paste("Node-state sensitivity:", title),
+      subtitle = location,
+      x = NULL,
+      y = "Absolute probability difference",
+      fill = "Node sensitivity"
+    ) +
+    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme(
+      panel.grid.major.y = ggplot2::element_blank(),
+      legend.position = "bottom",
+      plot.margin = ggplot2::margin(5.5, 35, 5.5, 5.5)
+    )
+}
+
 #' Generate workflow figures
 #'
 #' Saves model comparison, root-state probability, and node-state summary
@@ -255,6 +318,11 @@ generate_figures <- function(model_comparison, standardized_tables, project_path
         model = node_plot_models$model[[i]]
       )
     }
+  }
+
+  node_sensitivity <- standardized_tables$node_state_sensitivity %||% data.frame()
+  if (nrow(node_sensitivity) > 0L) {
+    plots$node_state_sensitivity <- plot_node_state_sensitivity(node_sensitivity)
   }
 
   manifest <- do.call(rbind, lapply(names(plots), function(name) {

@@ -20,6 +20,68 @@ test_that("plot_node_state_summary returns a ggplot", {
   expect_s3_class(plot, "ggplot")
 })
 
+test_that("plot_node_state_sensitivity returns a ggplot", {
+  node_state_sensitivity <- data.frame(
+    location = rep("branch_top_at_node", 3L),
+    node_index = c(1L, 2L, 3L),
+    node_type = c("tip", "tip", "internal"),
+    node_label = c("sp1", "sp2", "node_3"),
+    non_j_model = rep("DEC", 3L),
+    non_j_state = c("A", "B", "AB"),
+    non_j_probability = c(0.7, 0.8, 0.6),
+    plus_j_model = rep("DEC+J", 3L),
+    plus_j_state = c("A", "AB", "B"),
+    plus_j_probability = c(0.65, 0.7, 0.55),
+    state_differs = c(FALSE, TRUE, TRUE),
+    probability_difference = c(-0.05, -0.1, -0.05),
+    probability_difference_abs = c(0.05, 0.1, 0.05)
+  )
+
+  plot <- plot_node_state_sensitivity(node_state_sensitivity, top_n = 2L)
+
+  expect_s3_class(plot, "ggplot")
+})
+
+test_that("generate_figures writes node-state sensitivity figures", {
+  out <- tempfile("ibgb-figures-")
+  paths <- create_project(out)
+  comparison <- data.frame(
+    model = c("DEC", "DEC+J"),
+    model_family = c("DEC", "DEC"),
+    has_j = c(FALSE, TRUE),
+    logLik = c(-10, -9),
+    num_params = c(2L, 3L),
+    AIC = c(24, 24),
+    AICc = c(30, 36),
+    delta_aicc = c(0, 6),
+    aicc_weight = c(0.95, 0.05),
+    caution_flag = c("none", "none"),
+    interpretation_note = c("", "")
+  )
+  standardized_tables <- list(
+    node_state_sensitivity = data.frame(
+      location = rep("branch_top_at_node", 2L),
+      node_index = c(1L, 2L),
+      node_type = c("tip", "internal"),
+      node_label = c("sp1", "node_2"),
+      non_j_model = rep("DEC", 2L),
+      non_j_state = c("A", "AB"),
+      non_j_probability = c(0.7, 0.6),
+      plus_j_model = rep("DEC+J", 2L),
+      plus_j_state = c("A", "B"),
+      plus_j_probability = c(0.65, 0.55),
+      state_differs = c(FALSE, TRUE),
+      probability_difference = c(-0.05, -0.05),
+      probability_difference_abs = c(0.05, 0.05)
+    )
+  )
+
+  manifest <- generate_figures(comparison, standardized_tables, paths, formats = "png")
+
+  expect_true(any(manifest$figure == "node_state_sensitivity" & manifest$status == "created"))
+  expect_true(file.exists(file.path(paths$figures, "node_state_sensitivity.png")))
+})
+
 test_that("layout_tree_nodes adds plotting coordinates", {
   tree_nodes <- data.frame(
     node_index = c(1L, 2L, 3L),

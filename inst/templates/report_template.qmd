@@ -307,6 +307,13 @@ node. Rows with different best states or large probability differences are the
 most useful places to inspect biological sensitivity.
 
 ```{r}
+node_sensitivity_png <- figure_path("node_state_sensitivity")
+if (!is.null(node_sensitivity_png)) {
+  knitr::include_graphics(node_sensitivity_png)
+}
+```
+
+```{r}
 node_sensitivity_cols <- c(
   "location", "node_index", "node_type", "node_label",
   "non_j_model", "non_j_state", "non_j_probability",

@@ -232,6 +232,9 @@ results/example_clade/
     node_state_summary_best_model.svg
     node_state_summary_best_non_j.png
     node_state_summary_best_plus_j.png
+    node_state_sensitivity.png
+    node_state_sensitivity.pdf
+    node_state_sensitivity.svg
   reports/
     summary_report.qmd
     summary_report.html
@@ -278,6 +281,8 @@ Workflow execution generates:
 - `node_state_summary_best_non_j` and `node_state_summary_best_plus_j`: paired
   node-state plots for +J sensitivity interpretation when those model classes
   are available.
+- `node_state_sensitivity`: ranked node-level differences between the best
+  non-`+J` and best `+J` model.
 
 Figures are written in the formats configured by:
 
