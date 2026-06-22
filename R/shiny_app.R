@@ -23,7 +23,9 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
       shiny::tags$head(
         shiny::tags$style(shiny::HTML(
           ".container-fluid{max-width:1180px} .well{border-radius:4px} ",
-          ".btn{border-radius:4px} .ibgb-status{font-weight:600;margin:8px 0}"
+          ".btn{border-radius:4px} .ibgb-status{font-weight:600;margin:8px 0} ",
+          ".ibgb-status.info{color:#22577a} .ibgb-status.error{color:#b00020} ",
+          ".ibgb-downloads{margin:10px 0 16px 0} .ibgb-downloads .btn{margin-right:6px}"
         ))
       ),
       shiny::titlePanel("iBiogeobears"),
@@ -38,7 +40,13 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           shiny::actionButton("validate", "Validate"),
           shiny::actionButton("run", "Run workflow"),
           shiny::actionButton("render_report", "Render report"),
-          shiny::actionButton("bundle", "Bundle results")
+          shiny::actionButton("bundle", "Bundle results"),
+          shiny::actionButton("open_output", "Open output directory"),
+          shiny::tags$div(
+            class = "ibgb-downloads",
+            shiny::downloadButton("download_report", "Download report"),
+            shiny::downloadButton("download_bundle", "Download bundle")
+          )
         ),
         shiny::mainPanel(
           shiny::uiOutput("status"),
@@ -60,7 +68,9 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
         manifest = NULL,
         report = NULL,
         bundle = NULL,
-        message = "Ready."
+        message = "Ready.",
+        messages = "Ready.",
+        status_type = "info"
       )
 
       current_output_dir <- shiny::reactive({
@@ -69,20 +79,23 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
       })
 
       shiny::observeEvent(input$validate, {
-        shiny::withProgress(message = "Validating", value = 0, {
+        run_app_action(state, {
+          shiny::withProgress(message = "Validating", value = 0, {
           cfg <- read_config(input$config_path)
           if (!is.null(current_output_dir())) {
             cfg$project$output_dir <- current_output_dir()
           }
           state$validation <- validate_inputs(cfg)
           state$model_table <- planned_model_table(cfg)
-          state$message <- if (all(state$validation$ok)) "Validation passed." else "Validation failed."
+          append_app_message(state, if (all(state$validation$ok)) "Validation passed." else "Validation failed.")
           shiny::incProgress(1)
+          })
         })
       })
 
       shiny::observeEvent(input$run, {
-        shiny::withProgress(message = "Running workflow", value = 0, {
+        run_app_action(state, {
+          shiny::withProgress(message = "Running workflow", value = 0, {
           result <- run_workflow(
             config = input$config_path,
             output_dir = current_output_dir(),
@@ -94,33 +107,47 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           state$validation <- result$validation
           state$model_table <- result$model_run_status
           state$manifest <- result$workflow_manifest
-          state$message <- if (isTRUE(result$dry_run)) "Dry run completed." else "Workflow completed."
+          append_app_message(state, if (isTRUE(result$dry_run)) "Dry run completed." else "Workflow completed.")
           shiny::incProgress(1)
+          })
         })
       })
 
       shiny::observeEvent(input$render_report, {
-        require_workflow_result(state$result)
-        shiny::withProgress(message = "Rendering report", value = 0, {
+        run_app_action(state, {
+          require_workflow_result(state$result)
+          shiny::withProgress(message = "Rendering report", value = 0, {
           state$report <- render_report(state$result, format = input$report_format)
           state$manifest <- create_workflow_manifest(state$result, write = TRUE)
-          state$message <- paste("Report:", state$report)
+          append_app_message(state, paste("Report:", state$report))
           shiny::incProgress(1)
+          })
         })
       })
 
       shiny::observeEvent(input$bundle, {
-        require_workflow_result(state$result)
-        shiny::withProgress(message = "Bundling results", value = 0, {
+        run_app_action(state, {
+          require_workflow_result(state$result)
+          shiny::withProgress(message = "Bundling results", value = 0, {
           state$bundle <- bundle_results(state$result, overwrite = TRUE)
           state$manifest <- create_workflow_manifest(state$result, write = TRUE)
-          state$message <- paste("Bundle:", state$bundle)
+          append_app_message(state, paste("Bundle:", state$bundle))
           shiny::incProgress(1)
+          })
+        })
+      })
+
+      shiny::observeEvent(input$open_output, {
+        run_app_action(state, {
+          require_workflow_result(state$result)
+          output_dir <- normalizePath(state$result$project_paths$root, winslash = "/", mustWork = TRUE)
+          utils::browseURL(output_dir)
+          append_app_message(state, paste("Output directory:", output_dir))
         })
       })
 
       output$status <- shiny::renderUI({
-        shiny::tags$div(class = "ibgb-status", state$message)
+        shiny::tags$div(class = paste("ibgb-status", state$status_type), state$message)
       })
 
       output$validation_table <- shiny::renderTable({
@@ -143,15 +170,85 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
       })
 
       output$messages_text <- shiny::renderText({
-        paste(
-          state$message,
-          if (!is.null(state$report)) paste("Report:", state$report) else NULL,
-          if (!is.null(state$bundle)) paste("Bundle:", state$bundle) else NULL,
-          sep = "\n"
-        )
+        paste(state$messages, collapse = "\n")
       })
+
+      output$download_report <- shiny::downloadHandler(
+        filename = function() {
+          basename(resolve_report_file(state))
+        },
+        content = function(file) {
+          src <- resolve_report_file(state)
+          copy_download_file(src, file)
+        }
+      )
+
+      output$download_bundle <- shiny::downloadHandler(
+        filename = function() {
+          basename(resolve_bundle_file(state))
+        },
+        content = function(file) {
+          src <- resolve_bundle_file(state)
+          copy_download_file(src, file)
+        }
+      )
     }
   )
+}
+
+run_app_action <- function(state, expr) {
+  tryCatch(
+    {
+      state$status_type <- "info"
+      force(expr)
+    },
+    error = function(e) {
+      append_app_message(state, paste("Error:", conditionMessage(e)), status_type = "error")
+      NULL
+    }
+  )
+}
+
+append_app_message <- function(state, message, status_type = "info") {
+  message <- as.character(message)
+  state$message <- message
+  state$status_type <- status_type
+  existing <- state$messages %||% character()
+  state$messages <- c(existing, paste(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), message))
+  invisible(message)
+}
+
+resolve_report_file <- function(state) {
+  path <- state$report
+  if (is.null(path) && !is.null(state$result)) {
+    candidates <- file.path(state$result$project_paths$reports, c("summary_report.html", "summary_report.pdf", "summary_report.qmd"))
+    candidates <- candidates[file.exists(candidates)]
+    path <- candidates[1L] %||% NULL
+  }
+  require_existing_file(path, "Render a report before downloading it.")
+}
+
+resolve_bundle_file <- function(state) {
+  if (is.null(state$bundle)) {
+    require_workflow_result(state$result)
+    state$bundle <- bundle_results(state$result, overwrite = TRUE)
+  }
+  require_existing_file(state$bundle, "Bundle results before downloading them.")
+}
+
+require_existing_file <- function(path, message) {
+  if (is.null(path) || length(path) == 0L || is.na(path) || !file.exists(path)) {
+    stop(message, call. = FALSE)
+  }
+  as_path(path)
+}
+
+copy_download_file <- function(src, dest) {
+  ok <- file.copy(src, dest, overwrite = TRUE)
+  if (!isTRUE(ok)) {
+    stop("Unable to prepare download file: ", src, call. = FALSE)
+  }
+  invisible(dest)
 }
 
 check_shiny_available <- function() {

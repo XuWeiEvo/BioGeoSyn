@@ -17,6 +17,8 @@ Development version after the 0.1.0 alpha release.
   `bundle_results()` for portable result sharing.
 - Added a minimal Shiny workflow runner through `launch_app()` for validation,
   workflow execution, report rendering, and result bundling.
+- Added Shiny status-message error handling plus report and result-bundle
+  downloads.
 
 # iBiogeobears 0.1.0
 
