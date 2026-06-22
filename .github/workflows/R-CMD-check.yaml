@@ -13,6 +13,8 @@ permissions:
 jobs:
   R-CMD-check:
     runs-on: ubuntu-latest
+    env:
+      _R_CHECK_FORCE_SUGGESTS_: "false"
 
     steps:
       - name: Checkout repository
