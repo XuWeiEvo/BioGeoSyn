@@ -253,6 +253,44 @@ test_that("shiny_run_summary_cards renders readable status cards", {
   expect_match(html, "ibgb-run-summary-card warning", fixed = TRUE)
 })
 
+test_that("shiny_key_files_table lists common workflow outputs", {
+  empty_state <- new.env(parent = emptyenv())
+  empty_state$result <- NULL
+  empty_state$manifest <- NULL
+  empty_state$bundle <- NULL
+
+  empty_files <- shiny_key_files_table(empty_state)
+  expect_true(all(empty_files$status == "not available"))
+
+  out <- tempfile("ibgb-shiny-key-files-")
+  paths <- create_project(out)
+  report <- file.path(paths$reports, "summary_report.html")
+  bundle <- tempfile(fileext = ".zip")
+  writeLines("<html></html>", report)
+  writeLines("zip", bundle)
+  utils::write.csv(data.frame(item = "Best statistical model", value = "DEC"), file.path(paths$tables, "shiny_run_summary.csv"), row.names = FALSE)
+  utils::write.csv(data.frame(model = "DEC", delta_aicc = 0), file.path(paths$tables, "model_comparison.csv"), row.names = FALSE)
+  utils::write.csv(data.frame(section = "Caution", answer = "not triggered"), file.path(paths$tables, "model_sensitivity.csv"), row.names = FALSE)
+  manifest <- create_workflow_manifest(paths$root, write = TRUE)
+
+  state <- new.env(parent = emptyenv())
+  state$result <- list(project_paths = paths, workflow_manifest = manifest)
+  state$manifest <- manifest
+  state$report <- report
+  state$bundle <- bundle
+
+  key_files <- shiny_key_files_table(state)
+
+  expect_equal(key_files$status[match("Run summary CSV", key_files$file)], "available")
+  expect_equal(key_files$status[match("Model comparison CSV", key_files$file)], "available")
+  expect_equal(key_files$status[match("+J sensitivity CSV", key_files$file)], "available")
+  expect_equal(key_files$status[match("Workflow manifest CSV", key_files$file)], "available")
+  expect_equal(key_files$status[match("Report", key_files$file)], "available")
+  expect_equal(key_files$status[match("Result bundle", key_files$file)], "available")
+  expect_equal(key_files$path[match("Report", key_files$file)], as_path(report))
+  expect_equal(key_files$path[match("Result bundle", key_files$file)], as_path(bundle))
+})
+
 test_that("Shiny result helpers expose comparison, sensitivity, and warnings", {
   state <- new.env(parent = emptyenv())
   state$result <- list(

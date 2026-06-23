@@ -46,6 +46,7 @@ Development version after the 0.1.0 alpha release.
   summary download button.
 - Added Shiny run-summary status cards while keeping the CSV/table summary as
   the shared data source.
+- Added a Shiny key-files table for common result CSVs, reports, and bundles.
 - Added a `shinytest2` browser smoke script for the Shiny workflow runner.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.

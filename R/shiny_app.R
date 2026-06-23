@@ -37,6 +37,7 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           ".ibgb-run-summary-card.good{border-left-color:#2e7d32} .ibgb-run-summary-card.muted{border-left-color:#8c959f} ",
           ".ibgb-run-summary-label{font-size:12px;font-weight:600;color:#57606a;margin-bottom:4px} ",
           ".ibgb-run-summary-value{font-size:15px;font-weight:600;color:#24292f;overflow-wrap:anywhere} ",
+          ".ibgb-key-files-title{font-weight:600;margin:12px 0 6px 0} ",
           ".ibgb-preview img{max-width:100%;height:auto;border:1px solid #ddd} ",
           ".ibgb-figure-dashboard{display:grid;grid-template-columns:1fr;gap:18px} ",
           ".ibgb-figure-dashboard h4{margin:6px 0 8px 0} ",
@@ -94,6 +95,8 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             shiny::tabPanel(
               "Run Summary",
               shiny::uiOutput("run_summary_cards"),
+              shiny::tags$div(class = "ibgb-key-files-title", "Key files"),
+              shiny::tableOutput("key_files_table"),
               shiny::tableOutput("run_summary_table")
             ),
             shiny::tabPanel("Validation", shiny::tableOutput("validation_table")),
@@ -306,6 +309,10 @@ iBGB_shiny_server <- function(input, output, session) {
       output$run_summary_cards <- shiny::renderUI({
         shiny_run_summary_cards(state)
       })
+
+      output$key_files_table <- shiny::renderTable({
+        shiny_key_files_table(state)
+      }, striped = TRUE, bordered = TRUE, na = "")
 
       output$validation_table <- shiny::renderTable({
         state$validation
@@ -747,6 +754,82 @@ shiny_run_summary_card_class <- function(item, value) {
     return("good")
   }
   "info"
+}
+
+shiny_key_files_table <- function(state) {
+  specs <- shiny_key_file_specs()
+  paths <- vapply(specs$relative_path, function(relative_path) {
+    resolve_key_file_path(state, relative_path) %||% NA_character_
+  }, character(1))
+  paths <- unname(paths)
+
+  data.frame(
+    file = specs$display_label,
+    status = ifelse(is.na(paths), "not available", "available"),
+    path = paths,
+    stringsAsFactors = FALSE
+  )
+}
+
+shiny_key_file_specs <- function() {
+  data.frame(
+    display_label = c(
+      "Run summary CSV",
+      "Model comparison CSV",
+      "+J sensitivity CSV",
+      "Workflow manifest CSV",
+      "Report",
+      "Result bundle"
+    ),
+    relative_path = c(
+      "tables/shiny_run_summary.csv",
+      "tables/model_comparison.csv",
+      "tables/model_sensitivity.csv",
+      "tables/workflow_manifest.csv",
+      "reports/summary_report.html",
+      NA_character_
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+resolve_key_file_path <- function(state, relative_path) {
+  result <- state$result
+  if (is.null(result) || is.null(result$project_paths$root)) {
+    return(NULL)
+  }
+  root <- result$project_paths$root
+
+  if (is.na(relative_path)) {
+    bundle <- state$bundle %||% NULL
+    if (!is.null(bundle) && file.exists(bundle)) {
+      return(as_path(bundle))
+    }
+    return(NULL)
+  }
+
+  if (identical(relative_path, "reports/summary_report.html")) {
+    report <- report_preview_path(state)
+    if (!is.null(report)) {
+      return(report)
+    }
+  }
+
+  manifest <- state$manifest %||% result$workflow_manifest %||% NULL
+  if (!is.null(manifest) && nrow(manifest) > 0L && "relative_path" %in% names(manifest) &&
+      relative_path %in% manifest$relative_path) {
+    path <- file.path(root, relative_path)
+    if (file.exists(path)) {
+      return(as_path(path))
+    }
+  }
+
+  path <- file.path(root, relative_path)
+  if (file.exists(path)) {
+    return(as_path(path))
+  }
+
+  NULL
 }
 
 fitted_models_label <- function(model_table, comparison) {

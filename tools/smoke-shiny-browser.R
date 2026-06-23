@@ -48,7 +48,7 @@ required_initial_text <- c(
   "Run Summary",
   "Model Comparison", "+J Sensitivity", "Warnings",
   "Node States", "Node Sensitivity", "Figure Dashboard",
-  "Load existing results", "Download run summary"
+  "Load existing results", "Download run summary", "Key files"
 )
 missing_initial <- required_initial_text[!vapply(required_initial_text, grepl, logical(1), x = body_text, fixed = TRUE)]
 if (length(missing_initial) > 0L) {
@@ -63,6 +63,9 @@ if (!grepl("Loaded existing results", loaded_text, fixed = TRUE)) {
 }
 if (!grepl("Best statistical model", loaded_text, fixed = TRUE)) {
   stop("Run summary did not render the best-model card after loading results.", call. = FALSE)
+}
+if (!grepl("Model comparison CSV", loaded_text, fixed = TRUE)) {
+  stop("Run summary did not render the key-files table after loading results.", call. = FALSE)
 }
 
 app$click("validate")
