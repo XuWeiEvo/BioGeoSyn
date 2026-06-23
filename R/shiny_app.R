@@ -47,7 +47,8 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             shiny::textInput("output_dir", "Output directory", value = default_output),
             shiny::textInput("example_project_dir", "Example project directory", value = ""),
             shiny_action_grid(
-              shiny::actionButton("create_example", "Create example project")
+              shiny::actionButton("create_example", "Create example project"),
+              shiny::actionButton("load_results", "Load existing results")
             )
           ),
           shiny_control_section(
@@ -192,6 +193,23 @@ iBGB_shiny_server <- function(input, output, session) {
           state$validation <- validate_inputs(cfg)
           state$model_table <- planned_model_table(cfg)
           append_app_message(state, if (all(state$validation$ok)) "Validation passed." else "Validation failed.")
+          shiny::incProgress(1)
+          })
+        })
+      })
+
+      shiny::observeEvent(input$load_results, {
+        run_app_action(state, {
+          shiny::withProgress(message = "Loading existing results", value = 0, {
+          result <- load_existing_workflow_result(current_output_dir())
+          state$result <- result
+          state$validation <- result$validation
+          state$model_table <- result$model_run_status
+          state$manifest <- result$workflow_manifest
+          state$report <- report_preview_path(state)
+          update_table_preview_choices(session, state)
+          update_figure_preview_choices(session, state)
+          append_app_message(state, paste("Loaded existing results:", result$project_paths$root))
           shiny::incProgress(1)
           })
         })
@@ -469,6 +487,87 @@ copy_download_file <- function(src, dest) {
     stop("Unable to prepare download file: ", src, call. = FALSE)
   }
   invisible(dest)
+}
+
+load_existing_workflow_result <- function(output_dir, refresh_manifest = TRUE) {
+  output_dir <- trimws(output_dir %||% "")
+  if (!nzchar(output_dir)) {
+    stop("Provide an output directory before loading existing results.", call. = FALSE)
+  }
+  if (!dir.exists(output_dir)) {
+    stop("Workflow output directory does not exist: ", output_dir, call. = FALSE)
+  }
+
+  project_paths <- workflow_project_paths(output_dir)
+  workflow_manifest <- create_workflow_manifest(project_paths$root, write = isTRUE(refresh_manifest))
+  validation <- read_existing_output_table(project_paths, "input_validation.csv") %||% data.frame()
+  model_run_status <- read_existing_output_table(project_paths, "model_run_status.csv") %||%
+    read_existing_output_table(project_paths, "model_run_plan.csv") %||%
+    data.frame()
+  model_comparison <- read_existing_output_table(project_paths, "model_comparison.csv")
+  model_sensitivity_table <- read_existing_output_table(project_paths, "model_sensitivity.csv")
+  node_state_sensitivity <- read_existing_output_table(project_paths, "node_state_sensitivity.csv")
+  figure_manifest <- read_existing_figure_manifest(project_paths)
+
+  standardized_tables <- list(
+    geographic_states = read_existing_output_table(project_paths, "geographic_states.csv") %||% data.frame(),
+    tree_nodes = read_existing_output_table(project_paths, "tree_nodes.csv") %||% data.frame(),
+    parameter_table = read_existing_output_table(project_paths, "model_parameters.csv") %||% data.frame(),
+    ancestral_state_probabilities = read_existing_output_table(project_paths, "ancestral_state_probabilities.csv") %||% data.frame(),
+    root_state_probabilities = read_existing_output_table(project_paths, "root_state_probabilities.csv") %||% data.frame(),
+    node_state_summary = read_existing_output_table(project_paths, "node_state_summary.csv") %||% data.frame(),
+    node_state_sensitivity = node_state_sensitivity %||% data.frame()
+  )
+
+  result <- list(
+    config = NULL,
+    project_paths = project_paths,
+    validation = validation,
+    biogeobears = NULL,
+    model_plan = model_run_status,
+    model_run_status = model_run_status,
+    model_comparison = model_comparison,
+    model_sensitivity = NULL,
+    model_sensitivity_table = model_sensitivity_table,
+    node_state_sensitivity = node_state_sensitivity,
+    standardized_tables = standardized_tables,
+    figure_manifest = figure_manifest,
+    workflow_manifest = workflow_manifest,
+    dry_run = is.null(model_comparison) || nrow(model_comparison) == 0L,
+    force = FALSE,
+    validation_failed = if (nrow(validation) > 0L && "ok" %in% names(validation)) any(!validation$ok) else FALSE
+  )
+  class(result) <- c("iBGB_workflow_result", "list")
+  result
+}
+
+workflow_project_paths <- function(output_dir) {
+  output_dir <- as_path(output_dir)
+  list(
+    root = output_dir,
+    inputs = file.path(output_dir, "inputs"),
+    raw_biogeobears = file.path(output_dir, "raw_biogeobears"),
+    tables = file.path(output_dir, "tables"),
+    figures = file.path(output_dir, "figures"),
+    reports = file.path(output_dir, "reports"),
+    logs = file.path(output_dir, "logs")
+  )
+}
+
+read_existing_output_table <- function(project_paths, filename) {
+  path <- file.path(project_paths$tables, filename)
+  if (!file.exists(path)) {
+    return(NULL)
+  }
+  utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
+}
+
+read_existing_figure_manifest <- function(project_paths) {
+  path <- file.path(project_paths$figures, "figure_manifest.csv")
+  if (!file.exists(path)) {
+    return(data.frame())
+  }
+  utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
 }
 
 shiny_summary_table <- function(state) {

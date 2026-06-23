@@ -104,6 +104,35 @@ test_that("download file helper reports missing files clearly", {
   expect_null(report_preview_path(state))
 })
 
+test_that("load_existing_workflow_result rebuilds Shiny state from output files", {
+  out <- tempfile("ibgb-shiny-load-results-")
+  paths <- create_project(out)
+  report <- file.path(paths$reports, "summary_report.html")
+  model_plot <- file.path(paths$figures, "model_comparison.png")
+  writeLines("<html></html>", report)
+  writeBin(as.raw(c(0x89, 0x50, 0x4e, 0x47)), model_plot)
+
+  utils::write.csv(data.frame(check = "tree_file", ok = TRUE), file.path(paths$tables, "input_validation.csv"), row.names = FALSE)
+  utils::write.csv(data.frame(model = "DEC", status = "completed", warning_count = 0L), file.path(paths$tables, "model_run_status.csv"), row.names = FALSE)
+  utils::write.csv(data.frame(model = "DEC", AICc = 10, delta_aicc = 0), file.path(paths$tables, "model_comparison.csv"), row.names = FALSE)
+  utils::write.csv(data.frame(section = "Summary", display_label = "Best model", answer = "DEC"), file.path(paths$tables, "model_sensitivity.csv"), row.names = FALSE)
+  utils::write.csv(data.frame(model = "DEC", location = "branch_top_at_node", node_index = 1L, best_state = "A", best_probability = 0.9), file.path(paths$tables, "node_state_summary.csv"), row.names = FALSE)
+  utils::write.csv(data.frame(figure = "model_comparison", format = "png", path = model_plot, status = "created"), file.path(paths$figures, "figure_manifest.csv"), row.names = FALSE)
+
+  result <- load_existing_workflow_result(out)
+  state <- new.env(parent = emptyenv())
+  state$result <- result
+  state$manifest <- result$workflow_manifest
+
+  expect_s3_class(result, "iBGB_workflow_result")
+  expect_equal(result$model_run_status$model, "DEC")
+  expect_equal(result$model_comparison$model, "DEC")
+  expect_equal(result$model_sensitivity_table$answer, "DEC")
+  expect_equal(result$standardized_tables$node_state_summary$best_state, "A")
+  expect_true(any(result$workflow_manifest$relative_path == "tables/model_comparison.csv"))
+  expect_equal(shiny_named_figure_path(state, "model_comparison"), as_path(model_plot))
+})
+
 test_that("shiny_summary_table reports workflow status", {
   out <- tempfile("ibgb-shiny-summary-")
   paths <- create_project(out)
@@ -417,6 +446,27 @@ test_that("Shiny server creates an example project from the GUI", {
 
     expect_true(all(state$validation$ok))
     expect_match(state$message, "Validation passed", fixed = TRUE)
+  })
+})
+
+test_that("Shiny server loads existing result directories", {
+  testthat::skip_if_not_installed("shiny")
+
+  paths <- create_project(tempfile("ibgb-shiny-existing-results-"))
+  utils::write.csv(data.frame(check = "tree_file", ok = TRUE), file.path(paths$tables, "input_validation.csv"), row.names = FALSE)
+  utils::write.csv(data.frame(model = "DEC", status = "completed", warning_count = 0L), file.path(paths$tables, "model_run_status.csv"), row.names = FALSE)
+  utils::write.csv(data.frame(model = "DEC", AICc = 10, delta_aicc = 0), file.path(paths$tables, "model_comparison.csv"), row.names = FALSE)
+
+  shiny::testServer(iBGB_shiny_server, {
+    session$setInputs(output_dir = paths$root)
+    session$setInputs(load_results = 1)
+
+    state <- session$userData$state
+    expect_s3_class(state$result, "iBGB_workflow_result")
+    expect_equal(state$model_table$model, "DEC")
+    expect_equal(state$result$model_comparison$model, "DEC")
+    expect_true(any(state$manifest$relative_path == "tables/model_comparison.csv"))
+    expect_match(state$message, "Loaded existing results:", fixed = TRUE)
   })
 })
 
