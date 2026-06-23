@@ -221,6 +221,38 @@ test_that("shiny_run_summary_table handles empty and fitted result states", {
   expect_equal(summary_csv$value[match("Best statistical model", summary_csv$item)], "DEC+J (delta AICc 0)")
 })
 
+test_that("shiny_run_summary_cards renders readable status cards", {
+  testthat::skip_if_not_installed("shiny")
+
+  state <- new.env(parent = emptyenv())
+  state$result <- list(
+    project_paths = list(root = "results/example_clade", tables = tempfile()),
+    model_comparison = data.frame(
+      model = c("DEC", "DEC+J"),
+      has_j = c(FALSE, TRUE),
+      delta_aicc = c(1, 0),
+      stringsAsFactors = FALSE
+    ),
+    model_sensitivity_table = data.frame(
+      section = "Caution",
+      display_label = "Best model includes +J",
+      answer = "yes; report sensitivity",
+      stringsAsFactors = FALSE
+    )
+  )
+  state$model_table <- data.frame(status = c("completed", "completed"), warning_count = c(0L, 2L))
+  state$report <- NULL
+  state$bundle <- NULL
+
+  html <- as.character(shiny_run_summary_cards(state))
+
+  expect_match(html, "ibgb-run-summary-grid", fixed = TRUE)
+  expect_match(html, "Best statistical model", fixed = TRUE)
+  expect_match(html, "DEC\\+J \\(delta AICc 0\\)")
+  expect_match(html, "yes; report sensitivity", fixed = TRUE)
+  expect_match(html, "ibgb-run-summary-card warning", fixed = TRUE)
+})
+
 test_that("Shiny result helpers expose comparison, sensitivity, and warnings", {
   state <- new.env(parent = emptyenv())
   state$result <- list(

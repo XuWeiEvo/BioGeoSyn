@@ -31,6 +31,12 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           ".ibgb-action-grid{display:grid;grid-template-columns:1fr;gap:7px} ",
           ".ibgb-action-grid .btn{width:100%;text-align:left} ",
           ".ibgb-downloads{margin:0} .ibgb-downloads .btn{width:100%;text-align:left;margin-bottom:7px} ",
+          ".ibgb-run-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:0 0 12px 0} ",
+          ".ibgb-run-summary-card{border:1px solid #d8dee4;border-left:4px solid #6b7280;border-radius:4px;padding:10px;background:#fff} ",
+          ".ibgb-run-summary-card.info{border-left-color:#22577a} .ibgb-run-summary-card.warning{border-left-color:#b26a00} ",
+          ".ibgb-run-summary-card.good{border-left-color:#2e7d32} .ibgb-run-summary-card.muted{border-left-color:#8c959f} ",
+          ".ibgb-run-summary-label{font-size:12px;font-weight:600;color:#57606a;margin-bottom:4px} ",
+          ".ibgb-run-summary-value{font-size:15px;font-weight:600;color:#24292f;overflow-wrap:anywhere} ",
           ".ibgb-preview img{max-width:100%;height:auto;border:1px solid #ddd} ",
           ".ibgb-figure-dashboard{display:grid;grid-template-columns:1fr;gap:18px} ",
           ".ibgb-figure-dashboard h4{margin:6px 0 8px 0} ",
@@ -85,7 +91,11 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           shiny::uiOutput("status"),
           shiny::tableOutput("summary_table"),
           shiny::tabsetPanel(
-            shiny::tabPanel("Run Summary", shiny::tableOutput("run_summary_table")),
+            shiny::tabPanel(
+              "Run Summary",
+              shiny::uiOutput("run_summary_cards"),
+              shiny::tableOutput("run_summary_table")
+            ),
             shiny::tabPanel("Validation", shiny::tableOutput("validation_table")),
             shiny::tabPanel("Run Status", shiny::tableOutput("model_table")),
             shiny::tabPanel("Model Comparison", shiny::tableOutput("model_comparison_table")),
@@ -292,6 +302,10 @@ iBGB_shiny_server <- function(input, output, session) {
       output$run_summary_table <- shiny::renderTable({
         shiny_run_summary_table(state)
       }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$run_summary_cards <- shiny::renderUI({
+        shiny_run_summary_cards(state)
+      })
 
       output$validation_table <- shiny::renderTable({
         state$validation
@@ -684,6 +698,55 @@ shiny_run_summary_table <- function(state) {
     ),
     stringsAsFactors = FALSE
   )
+}
+
+shiny_run_summary_cards <- function(state) {
+  summary <- shiny_run_summary_table(state)
+  featured <- summary[summary$item %in% shiny_run_summary_card_items(), , drop = FALSE]
+  featured$item <- factor(featured$item, levels = shiny_run_summary_card_items())
+  featured <- featured[order(featured$item), , drop = FALSE]
+
+  shiny::tags$div(
+    class = "ibgb-run-summary-grid",
+    lapply(seq_len(nrow(featured)), function(i) {
+      item <- as.character(featured$item[[i]])
+      value <- as.character(featured$value[[i]])
+      shiny::tags$div(
+        class = paste("ibgb-run-summary-card", shiny_run_summary_card_class(item, value)),
+        shiny::tags$div(class = "ibgb-run-summary-label", item),
+        shiny::tags$div(class = "ibgb-run-summary-value", value)
+      )
+    })
+  )
+}
+
+shiny_run_summary_card_items <- function() {
+  c(
+    "Fitted models",
+    "Best statistical model",
+    "+J interpretation caution",
+    "Captured warnings",
+    "Report",
+    "Output directory"
+  )
+}
+
+shiny_run_summary_card_class <- function(item, value) {
+  value <- tolower(value %||% "")
+  if (!nzchar(value) || value == "not available") {
+    return("muted")
+  }
+  if (identical(item, "+J interpretation caution")) {
+    return(if (value == "not triggered") "good" else "warning")
+  }
+  if (identical(item, "Captured warnings")) {
+    warning_count <- suppressWarnings(as.numeric(value))
+    return(if (!is.na(warning_count) && warning_count > 0) "warning" else "good")
+  }
+  if (identical(item, "Report")) {
+    return("good")
+  }
+  "info"
 }
 
 fitted_models_label <- function(model_table, comparison) {

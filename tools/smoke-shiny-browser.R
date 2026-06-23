@@ -61,6 +61,9 @@ loaded_text <- app$get_text("body")
 if (!grepl("Loaded existing results", loaded_text, fixed = TRUE)) {
   stop("Load existing results action did not report success.", call. = FALSE)
 }
+if (!grepl("Best statistical model", loaded_text, fixed = TRUE)) {
+  stop("Run summary did not render the best-model card after loading results.", call. = FALSE)
+}
 
 app$click("validate")
 app$wait_for_idle()

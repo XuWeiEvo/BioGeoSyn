@@ -44,6 +44,8 @@ Development version after the 0.1.0 alpha release.
   report, and output-path triage.
 - Added Shiny export support for `tables/shiny_run_summary.csv` and a run
   summary download button.
+- Added Shiny run-summary status cards while keeping the CSV/table summary as
+  the shared data source.
 - Added a `shinytest2` browser smoke script for the Shiny workflow runner.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.
