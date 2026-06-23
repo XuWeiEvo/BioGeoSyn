@@ -40,6 +40,8 @@ Development version after the 0.1.0 alpha release.
   node-state, and node-sensitivity PNG outputs.
 - Added Shiny support for loading existing workflow output directories without
   rerunning the analysis.
+- Added a Shiny run-summary result tab for best-model, `+J` caution, warning,
+  report, and output-path triage.
 - Added a `shinytest2` browser smoke script for the Shiny workflow runner.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.

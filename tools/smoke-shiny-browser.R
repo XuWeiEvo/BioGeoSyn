@@ -45,6 +45,7 @@ on.exit(app$stop(), add = TRUE)
 body_text <- app$get_text("body")
 required_initial_text <- c(
   "Project", "Run options", "Workflow", "Report and export",
+  "Run Summary",
   "Model Comparison", "+J Sensitivity", "Warnings",
   "Node States", "Node Sensitivity", "Figure Dashboard",
   "Load existing results"

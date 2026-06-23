@@ -84,6 +84,7 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           shiny::uiOutput("status"),
           shiny::tableOutput("summary_table"),
           shiny::tabsetPanel(
+            shiny::tabPanel("Run Summary", shiny::tableOutput("run_summary_table")),
             shiny::tabPanel("Validation", shiny::tableOutput("validation_table")),
             shiny::tabPanel("Run Status", shiny::tableOutput("model_table")),
             shiny::tabPanel("Model Comparison", shiny::tableOutput("model_comparison_table")),
@@ -288,6 +289,10 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$summary_table <- shiny::renderTable({
         shiny_summary_table(state)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$run_summary_table <- shiny::renderTable({
+        shiny_run_summary_table(state)
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$validation_table <- shiny::renderTable({
@@ -608,6 +613,127 @@ shiny_summary_table <- function(state) {
     ),
     stringsAsFactors = FALSE
   )
+}
+
+shiny_run_summary_table <- function(state) {
+  comparison <- shiny_model_comparison_table(state)
+  sensitivity <- shiny_model_sensitivity_table(state)
+  warnings <- shiny_warnings_table(state)
+
+  best_overall <- best_model_label(comparison)
+  best_non_j <- best_model_label(filter_model_comparison_by_j(comparison, has_j = FALSE))
+  best_plus_j <- best_model_label(filter_model_comparison_by_j(comparison, has_j = TRUE))
+  plus_j_caution <- plus_j_caution_label(comparison, sensitivity)
+  warning_count <- warning_count_label(state$model_table, warnings)
+  output_dir <- if (!is.null(state$result)) state$result$project_paths$root %||% "not available" else "not available"
+
+  data.frame(
+    item = c(
+      "Fitted models",
+      "Best statistical model",
+      "Best non-+J model",
+      "Best +J model",
+      "+J interpretation caution",
+      "Captured warnings",
+      "Report",
+      "Output directory"
+    ),
+    value = c(
+      fitted_models_label(state$model_table, comparison),
+      best_overall,
+      best_non_j,
+      best_plus_j,
+      plus_j_caution,
+      warning_count,
+      report_preview_path(state) %||% "not available",
+      output_dir
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+fitted_models_label <- function(model_table, comparison) {
+  if (!is.null(model_table) && nrow(model_table) > 0L && "status" %in% names(model_table)) {
+    return(paste0(sum(model_table$status == "completed", na.rm = TRUE), " of ", nrow(model_table)))
+  }
+  if (!is.null(comparison) && nrow(comparison) > 0L) {
+    return(as.character(nrow(comparison)))
+  }
+  "not available"
+}
+
+best_model_label <- function(comparison) {
+  if (is.null(comparison) || nrow(comparison) == 0L || !"model" %in% names(comparison)) {
+    return("not available")
+  }
+  if ("delta_aicc" %in% names(comparison)) {
+    values <- comparison$delta_aicc
+    if (all(is.na(values))) {
+      return("not available")
+    }
+    rows <- comparison[values == min(values, na.rm = TRUE), , drop = FALSE]
+  } else if ("AICc" %in% names(comparison)) {
+    values <- comparison$AICc
+    if (all(is.na(values))) {
+      return("not available")
+    }
+    rows <- comparison[values == min(values, na.rm = TRUE), , drop = FALSE]
+  } else {
+    rows <- comparison[1L, , drop = FALSE]
+  }
+  if (nrow(rows) == 0L) {
+    return("not available")
+  }
+  suffix <- ""
+  if ("delta_aicc" %in% names(rows) && !is.na(rows$delta_aicc[[1L]])) {
+    suffix <- paste0(" (delta AICc ", format(round(rows$delta_aicc[[1L]], 3L), trim = TRUE), ")")
+  } else if ("AICc" %in% names(rows) && !is.na(rows$AICc[[1L]])) {
+    suffix <- paste0(" (AICc ", format(round(rows$AICc[[1L]], 3L), trim = TRUE), ")")
+  }
+  paste(paste(rows$model, collapse = ", "), suffix, sep = "")
+}
+
+filter_model_comparison_by_j <- function(comparison, has_j) {
+  if (is.null(comparison) || nrow(comparison) == 0L || !"has_j" %in% names(comparison)) {
+    return(data.frame())
+  }
+  comparison[!is.na(comparison$has_j) & comparison$has_j == has_j, , drop = FALSE]
+}
+
+plus_j_caution_label <- function(comparison, sensitivity) {
+  if (!is.null(sensitivity) && nrow(sensitivity) > 0L) {
+    section <- if ("section" %in% names(sensitivity)) sensitivity$section else rep("", nrow(sensitivity))
+    display_label <- if ("display_label" %in% names(sensitivity)) sensitivity$display_label else rep("", nrow(sensitivity))
+    caution_rows <- sensitivity[
+      grepl("caution|interpret", section, ignore.case = TRUE) |
+        grepl("caution|interpret", display_label, ignore.case = TRUE),
+      ,
+      drop = FALSE
+    ]
+    if (nrow(caution_rows) > 0L && "answer" %in% names(caution_rows)) {
+      answer <- caution_rows$answer[[1L]]
+      if (!is.na(answer) && nzchar(answer)) {
+        return(as.character(answer))
+      }
+    }
+  }
+  if (!is.null(comparison) && nrow(comparison) > 0L && all(c("has_j", "delta_aicc") %in% names(comparison))) {
+    near_best_j <- comparison$has_j & comparison$delta_aicc <= 2
+    if (any(near_best_j, na.rm = TRUE)) {
+      return("+J model is best or near-best; interpret with sensitivity checks")
+    }
+  }
+  "not triggered"
+}
+
+warning_count_label <- function(model_table, warnings) {
+  if (!is.null(model_table) && nrow(model_table) > 0L && "warning_count" %in% names(model_table)) {
+    return(as.character(sum(model_table$warning_count, na.rm = TRUE)))
+  }
+  if (!is.null(warnings) && nrow(warnings) > 0L && "warning_count" %in% names(warnings)) {
+    return(as.character(sum(warnings$warning_count, na.rm = TRUE)))
+  }
+  "not available"
 }
 
 shiny_model_comparison_table <- function(state) {

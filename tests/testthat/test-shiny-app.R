@@ -158,6 +158,60 @@ test_that("shiny_summary_table reports workflow status", {
   expect_equal(summary$value[match("Bundle", summary$item)], "available")
 })
 
+test_that("shiny_run_summary_table handles empty and fitted result states", {
+  empty_state <- new.env(parent = emptyenv())
+  empty_state$result <- NULL
+  empty_state$model_table <- NULL
+  empty_state$report <- NULL
+  empty_state$bundle <- NULL
+
+  empty_summary <- shiny_run_summary_table(empty_state)
+  expect_equal(empty_summary$value[match("Best statistical model", empty_summary$item)], "not available")
+  expect_equal(empty_summary$value[match("Output directory", empty_summary$item)], "not available")
+
+  out <- tempfile("ibgb-shiny-run-summary-")
+  paths <- create_project(out)
+  report <- file.path(paths$reports, "summary_report.html")
+  writeLines("<html></html>", report)
+
+  state <- new.env(parent = emptyenv())
+  state$result <- list(
+    project_paths = paths,
+    model_comparison = data.frame(
+      model = c("DEC", "DEC+J", "DIVALIKE"),
+      has_j = c(FALSE, TRUE, FALSE),
+      AICc = c(12, 10, 14),
+      delta_aicc = c(2, 0, 4),
+      stringsAsFactors = FALSE
+    ),
+    model_sensitivity_table = data.frame(
+      section = "Caution",
+      display_label = "Best model includes +J",
+      answer = "yes; report sensitivity",
+      stringsAsFactors = FALSE
+    )
+  )
+  state$model_table <- data.frame(
+    model = c("DEC", "DEC+J", "DIVALIKE"),
+    status = c("completed", "completed", "completed"),
+    warning_count = c(0L, 2L, 1L),
+    stringsAsFactors = FALSE
+  )
+  state$report <- report
+  state$bundle <- NULL
+
+  summary <- shiny_run_summary_table(state)
+
+  expect_equal(summary$value[match("Fitted models", summary$item)], "3 of 3")
+  expect_equal(summary$value[match("Best statistical model", summary$item)], "DEC+J (delta AICc 0)")
+  expect_equal(summary$value[match("Best non-+J model", summary$item)], "DEC (delta AICc 2)")
+  expect_equal(summary$value[match("Best +J model", summary$item)], "DEC+J (delta AICc 0)")
+  expect_equal(summary$value[match("+J interpretation caution", summary$item)], "yes; report sensitivity")
+  expect_equal(summary$value[match("Captured warnings", summary$item)], "3")
+  expect_equal(summary$value[match("Report", summary$item)], as_path(report))
+  expect_equal(summary$value[match("Output directory", summary$item)], paths$root)
+})
+
 test_that("Shiny result helpers expose comparison, sensitivity, and warnings", {
   state <- new.env(parent = emptyenv())
   state$result <- list(
