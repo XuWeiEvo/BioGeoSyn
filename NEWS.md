@@ -53,6 +53,8 @@ Development version after the 0.1.0 alpha release.
   reports, bundles, and result tables.
 - Standardized Shiny key-file action feedback with `Report ready:`,
   `Bundle ready:`, and `Key files refreshed:` messages.
+- Added compact Shiny summaries for model fit, +J sensitivity, and captured
+  warnings before the detailed result tables.
 - Added a `shinytest2` browser smoke script for the Shiny workflow runner.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.

@@ -22,6 +22,7 @@ writeLines(
     "utils::write.csv(data.frame(check = 'tree_file', ok = TRUE), file.path(existing$tables, 'input_validation.csv'), row.names = FALSE)",
     "utils::write.csv(data.frame(model = 'DEC', status = 'completed', warning_count = 0L), file.path(existing$tables, 'model_run_status.csv'), row.names = FALSE)",
     "utils::write.csv(data.frame(model = 'DEC', AICc = 10, delta_aicc = 0), file.path(existing$tables, 'model_comparison.csv'), row.names = FALSE)",
+    "utils::write.csv(data.frame(section = 'Sensitivity', display_label = 'Best model includes +J', answer = 'not triggered'), file.path(existing$tables, 'model_sensitivity.csv'), row.names = FALSE)",
     "writeLines('<html></html>', file.path(existing$reports, 'summary_report.html'))",
     "grDevices::png(file.path(existing$figures, 'model_comparison.png'), width = 400, height = 300)",
     "plot.new(); text(0.5, 0.5, 'model comparison')",
@@ -47,6 +48,7 @@ required_initial_text <- c(
   "Project", "Run options", "Workflow", "Report and export",
   "Run Summary",
   "Model Comparison", "+J Sensitivity", "Warnings",
+  "Fit summary", "+J sensitivity summary", "Warning summary",
   "Node States", "Node Sensitivity", "Figure Dashboard",
   "Load existing results", "Download run summary", "Key files",
   "Refresh key files", "Create bundle if missing"

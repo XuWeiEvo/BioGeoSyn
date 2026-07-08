@@ -366,6 +366,54 @@ test_that("Shiny result helpers expose comparison, sensitivity, and warnings", {
   expect_equal(node_sensitivity$plus_j_state, "AB")
 })
 
+test_that("Shiny result summaries make model fit, +J sensitivity, and warnings readable", {
+  state <- new.env(parent = emptyenv())
+  state$result <- list(
+    model_comparison = data.frame(
+      model = c("DEC", "DEC+J", "DIVALIKE"),
+      model_family = c("DEC", "DEC", "DIVALIKE"),
+      has_j = c(FALSE, TRUE, FALSE),
+      AICc = c(11, 10, 16),
+      delta_aicc = c(1, 0, 6),
+      caution_flag = c("none", "plus_j_supported_check_sensitivity", "none"),
+      interpretation_note = c("baseline", "check sensitivity", "weaker fit"),
+      stringsAsFactors = FALSE
+    ),
+    model_sensitivity_table = data.frame(
+      section = c("Sensitivity", "Sensitivity"),
+      display_label = c("Best model includes +J", "Automatic biological conclusion"),
+      answer = c("yes; report sensitivity", "disabled"),
+      evidence = c("DEC+J has delta AICc 0", "auto declaration disabled"),
+      interpretation_note = c("Report sensitivity.", "Do not declare a simple answer."),
+      stringsAsFactors = FALSE
+    )
+  )
+  state$model_table <- data.frame(
+    model = c("DEC", "DEC+J", "DIVALIKE"),
+    status = c("completed", "completed", "completed"),
+    warning_count = c(0L, 3L, 1L),
+    warning_messages = c(NA, "optimizer warning", "boundary warning"),
+    log_file = c("dec.log", "decj.log", "divalike.log"),
+    stringsAsFactors = FALSE
+  )
+
+  fit <- shiny_model_fit_summary_table(state)
+  plus_j <- shiny_plus_j_summary_table(state)
+  warning_summary <- shiny_warning_summary_table(state)
+
+  expect_equal(fit$value[match("Best statistical model", fit$item)], "DEC+J (delta AICc 0)")
+  expect_match(fit$value[match("Models within delta AICc <= 2", fit$item)], "DEC\\+J \\(delta AICc 0\\)")
+  expect_match(fit$value[match("Models within delta AICc <= 2", fit$item)], "DEC \\(delta AICc 1\\)")
+  expect_equal(plus_j$answer[match("Is +J best or near-best?", plus_j$question)], "yes: DEC+J (delta AICc 0)")
+  expect_equal(
+    plus_j$answer[match("Recommended next step", plus_j$question)],
+    "Report +J sensitivity and compare with the best non-+J model."
+  )
+  expect_equal(warning_summary$value[match("Captured warnings", warning_summary$item)], "4")
+  expect_equal(warning_summary$value[match("Affected models", warning_summary$item)], "DEC+J, DIVALIKE")
+  expect_equal(warning_summary$value[match("Highest warning count", warning_summary$item)], "3")
+})
+
 test_that("Shiny result helpers can read workflow CSV tables", {
   out <- tempfile("ibgb-shiny-result-tables-")
   paths <- create_project(out)
