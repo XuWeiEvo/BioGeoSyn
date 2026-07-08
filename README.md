@@ -98,7 +98,7 @@ output scaffold:
 result <- run_workflow(project$config, dry_run = TRUE, require_biogeobears = FALSE)
 ```
 
-## Minimal Workflow
+## Command-Line Workflow
 
 Create a runnable example project:
 
@@ -109,22 +109,31 @@ example <- create_example_project("example_run")
 config <- example$config
 ```
 
-Validate and plan without running BioGeoBEARS:
+Validate and plan without running BioGeoBEARS. This is the safest first check
+on a new machine or after editing `analysis.yml`:
 
 ```r
-result <- run_workflow(config, dry_run = TRUE)
+dry <- run_workflow(config, dry_run = TRUE, require_biogeobears = FALSE)
 ```
 
-Run the example:
+Run the example with real BioGeoBEARS execution:
 
 ```r
 result <- run_workflow(config, dry_run = FALSE)
 ```
 
-Render a report:
+Render a report and create a portable result archive:
 
 ```r
 report <- render_report(result, format = "html")
+bundle <- bundle_results(result)
+```
+
+Reload an existing result directory without rerunning BioGeoBEARS:
+
+```r
+result_dir <- result$project_paths$root
+manifest <- create_workflow_manifest(result_dir)
 ```
 
 ## Shiny Workflow Runner
@@ -145,6 +154,33 @@ rerunning BioGeoBEARS.
 install.packages("shiny")
 launch_app()
 ```
+
+Recommended GUI flow:
+
+1. Click `Create example project`, or provide an `analysis.yml` path.
+2. Click `Validate`.
+3. Keep `Dry run` checked for a first pass, then click `Run workflow`.
+4. Uncheck `Dry run` when BioGeoBEARS is installed and a real analysis is
+   intended.
+5. Click `Render report`.
+6. Click `Refresh key files`.
+7. Click `Create bundle if missing`.
+8. Review `Run Summary`, `Model Comparison`, `+J Sensitivity`, `Warnings`,
+   `Figure Dashboard`, and `Tables`.
+
+The Shiny result views are designed for triage:
+
+- `Run Summary`: fitted model count, best statistical model, `+J` caution,
+  warning count, report path, and output path.
+- `Model Comparison`: compact fit summary plus the full model-comparison table.
+- `+J Sensitivity`: direct answers about whether `+J` is best or near-best,
+  plus the detailed sensitivity table.
+- `Warnings`: captured optimizer/BioGeoBEARS warnings and recommended review
+  steps.
+- `Figure Dashboard`: expected workflow figures, preview status, missing
+  reasons, and next steps.
+- `Tables`: key CSV availability, row and column counts, missing reasons, next
+  steps, and CSV previews.
 
 For a browser-level GUI smoke test, install `shinytest2` and run:
 
@@ -274,6 +310,28 @@ results/example_clade/
 
 Raw BioGeoBEARS outputs remain separate from derived tables, figures, and
 reports.
+
+## Reading Results
+
+Start with these files:
+
+```text
+reports/summary_report.html
+tables/shiny_run_summary.csv
+tables/model_comparison.csv
+tables/model_sensitivity.csv
+tables/model_run_status.csv
+figures/figure_manifest.csv
+```
+
+Use `model_comparison.csv` to inspect statistical fit. Use
+`model_sensitivity.csv` to decide how to report `+J` sensitivity. Use
+`model_run_status.csv` before interpretation to check failed models, warnings,
+and log paths.
+
+Do not treat the lowest AICc model as an automatic biological conclusion. The
+report and Shiny app separate "best-fitting statistical model" from
+interpretation, especially when a `+J` model is best or near-best.
 
 Create a portable zip archive of a completed run with:
 
