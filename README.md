@@ -183,6 +183,8 @@ The Shiny result views are designed for triage:
   steps, and CSV previews.
 - `About/Citation`: package version, GPL license, BioGeoBEARS availability,
   citation guidance, and workflow log paths.
+- `Messages`: timestamped progress messages for validation, workflow
+  execution, output refresh, report rendering, and result bundling.
 
 For a browser-level GUI smoke test, install `shinytest2` and run:
 

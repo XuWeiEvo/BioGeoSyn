@@ -75,6 +75,26 @@ test_that("run_app_action captures errors in state messages", {
   expect_true(any(grepl("Error: broken", state$messages, fixed = TRUE)))
 })
 
+test_that("Shiny message helpers record staged workflow progress", {
+  state <- new.env(parent = emptyenv())
+  state$message <- "Ready."
+  state$messages <- "Ready."
+  state$status_type <- "info"
+
+  append_app_stage(state, "Workflow", "model status ready", "completed: 2")
+
+  expect_equal(state$message, "Workflow: model status ready - completed: 2")
+  expect_true(any(grepl("Workflow: model status ready - completed: 2", state$messages, fixed = TRUE)))
+  expect_equal(
+    workflow_validation_label(data.frame(ok = c(TRUE, TRUE, FALSE, NA))),
+    "2 passed, 1 failed"
+  )
+  expect_equal(
+    workflow_model_status_label(data.frame(status = c("completed", "planned", "completed"))),
+    "completed: 2, planned: 1"
+  )
+})
+
 test_that("download file helpers resolve and copy report files", {
   out <- tempfile("ibgb-shiny-download-")
   paths <- create_project(out)
@@ -706,12 +726,18 @@ test_that("Shiny server validates and dry-runs a workflow", {
     expect_true(all(state$validation$ok))
     expect_true(nrow(state$model_table) > 0L)
     expect_match(state$message, "Validation passed", fixed = TRUE)
+    expect_true(any(grepl("Validation: started", state$messages, fixed = TRUE)))
+    expect_true(any(grepl("Validation: model plan ready", state$messages, fixed = TRUE)))
 
     session$setInputs(run = 1)
     expect_s3_class(state$result, "iBGB_workflow_result")
     expect_true(isTRUE(state$result$dry_run))
     expect_true(file.exists(file.path(state$result$project_paths$tables, "workflow_manifest.csv")))
     expect_match(state$message, "Dry run completed", fixed = TRUE)
+    expect_true(any(grepl("Workflow: dry run started", state$messages, fixed = TRUE)))
+    expect_true(any(grepl("Workflow: validation complete", state$messages, fixed = TRUE)))
+    expect_true(any(grepl("Workflow: model status ready", state$messages, fixed = TRUE)))
+    expect_true(any(grepl("Workflow: outputs refreshed", state$messages, fixed = TRUE)))
   })
 })
 
@@ -726,7 +752,8 @@ test_that("Shiny server creates an example project from the GUI", {
 
     state <- session$userData$state
     expect_true(file.exists(file.path(example_dir, "analysis.yml")))
-    expect_match(state$message, "Example project:", fixed = TRUE)
+    expect_match(state$message, "Example project: ready", fixed = TRUE)
+    expect_true(any(grepl("Example project: started", state$messages, fixed = TRUE)))
 
     session$setInputs(
       config_path = file.path(example_dir, "analysis.yml"),
@@ -755,10 +782,12 @@ test_that("Shiny server loads existing result directories", {
     expect_s3_class(state$result, "iBGB_workflow_result")
     expect_equal(state$model_table$model, "DEC")
     expect_equal(state$result$model_comparison$model, "DEC")
+    expect_true(any(grepl("Load existing results: started", state$messages, fixed = TRUE)))
+    expect_true(any(grepl("Load existing results: ready", state$messages, fixed = TRUE)))
     expect_true(any(state$manifest$relative_path == "tables/model_comparison.csv"))
     expect_true(any(state$manifest$relative_path == "tables/shiny_run_summary.csv"))
     expect_true(file.exists(file.path(paths$tables, "shiny_run_summary.csv")))
-    expect_match(state$message, "Loaded existing results:", fixed = TRUE)
+    expect_match(state$message, "Load existing results: ready", fixed = TRUE)
   })
 })
 
@@ -788,21 +817,26 @@ test_that("Shiny server renders reports and bundles dry-run results", {
     expect_match(state$message, "Report ready:", fixed = TRUE)
     expect_equal(report_preview_path(state), as_path(state$report))
     expect_equal(shiny_key_files_table(state)$status[match("Report", shiny_key_files_table(state)$file)], "Available")
+    expect_true(any(grepl("Report: render started", state$messages, fixed = TRUE)))
 
     session$setInputs(refresh_key_files = 1)
     expect_true(file.exists(file.path(state$result$project_paths$tables, "shiny_run_summary.csv")))
     expect_true(any(state$manifest$relative_path == "tables/shiny_run_summary.csv"))
     expect_null(state$bundle)
     expect_match(state$message, "Key files refreshed:", fixed = TRUE)
+    expect_true(any(grepl("Key files: refresh started", state$messages, fixed = TRUE)))
 
     session$setInputs(bundle = 1)
     expect_true(file.exists(state$bundle))
     first_bundle <- state$bundle
     expect_match(state$message, "Bundle ready:", fixed = TRUE)
     expect_equal(shiny_key_files_table(state)$status[match("Result bundle", shiny_key_files_table(state)$file)], "Available")
+    expect_true(any(grepl("Bundle: refreshing key files", state$messages, fixed = TRUE)))
+    expect_true(any(grepl("Bundle: creating archive", state$messages, fixed = TRUE)))
 
     session$setInputs(bundle = 2)
     expect_equal(state$bundle, first_bundle)
     expect_true(file.exists(state$bundle))
+    expect_true(any(grepl("Bundle: using existing archive", state$messages, fixed = TRUE)))
   })
 })

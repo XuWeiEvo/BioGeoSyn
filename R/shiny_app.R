@@ -219,22 +219,25 @@ iBGB_shiny_server <- function(input, output, session) {
           if (!nzchar(target)) {
             target <- tempfile("ibgb-example-project-")
           }
+          append_app_stage(state, "Example project", "started", target)
           example <- create_example_project(target)
           shiny::updateTextInput(session, "config_path", value = example$config)
           shiny::updateTextInput(session, "output_dir", value = example$output_dir)
-          append_app_message(state, paste("Example project:", example$root))
+          append_app_stage(state, "Example project", "ready", example$root)
         })
       })
 
       shiny::observeEvent(input$validate, {
         run_app_action(state, {
           shiny::withProgress(message = "Validating", value = 0, {
+          append_app_stage(state, "Validation", "started", current_config_path())
           cfg <- read_config(current_config_path())
           if (!is.null(current_output_dir())) {
             cfg$project$output_dir <- current_output_dir()
           }
           state$validation <- validate_inputs(cfg)
           state$model_table <- planned_model_table(cfg)
+          append_app_stage(state, "Validation", "model plan ready", paste(nrow(state$model_table), "model(s)"))
           append_app_message(state, if (all(state$validation$ok)) "Validation passed." else "Validation failed.")
           shiny::incProgress(1)
           })
@@ -244,6 +247,7 @@ iBGB_shiny_server <- function(input, output, session) {
       shiny::observeEvent(input$load_results, {
         run_app_action(state, {
           shiny::withProgress(message = "Loading existing results", value = 0, {
+          append_app_stage(state, "Load existing results", "started", current_output_dir())
           result <- load_existing_workflow_result(current_output_dir())
           state$result <- result
           state$validation <- result$validation
@@ -251,7 +255,7 @@ iBGB_shiny_server <- function(input, output, session) {
           state$manifest <- result$workflow_manifest
           state$report <- report_preview_path(state)
           refresh_shiny_result_exports(session, state)
-          append_app_message(state, paste("Loaded existing results:", result$project_paths$root))
+          append_app_stage(state, "Load existing results", "ready", result$project_paths$root)
           shiny::incProgress(1)
           })
         })
@@ -260,6 +264,12 @@ iBGB_shiny_server <- function(input, output, session) {
       shiny::observeEvent(input$run, {
         run_app_action(state, {
           shiny::withProgress(message = "Running workflow", value = 0, {
+          append_app_stage(
+            state,
+            "Workflow",
+            if (isTRUE(input$dry_run)) "dry run started" else "real run started",
+            current_output_dir() %||% "configured output directory"
+          )
           result <- run_workflow(
             config = current_config_path(),
             output_dir = current_output_dir(),
@@ -271,7 +281,10 @@ iBGB_shiny_server <- function(input, output, session) {
           state$validation <- result$validation
           state$model_table <- result$model_run_status
           state$manifest <- result$workflow_manifest
+          append_app_stage(state, "Workflow", "validation complete", workflow_validation_label(result$validation))
+          append_app_stage(state, "Workflow", "model status ready", workflow_model_status_label(result$model_run_status))
           refresh_shiny_result_exports(session, state)
+          append_app_stage(state, "Workflow", "outputs refreshed", result$project_paths$root)
           append_app_message(state, if (isTRUE(result$dry_run)) "Dry run completed." else "Workflow completed.")
           shiny::incProgress(1)
           })
@@ -282,6 +295,7 @@ iBGB_shiny_server <- function(input, output, session) {
         run_app_action(state, {
           require_workflow_result(state$result)
           shiny::withProgress(message = "Rendering report", value = 0, {
+          append_app_stage(state, "Report", "render started", input$report_format)
           state$report <- render_report(state$result, format = input$report_format)
           refresh_shiny_result_exports(session, state)
           append_app_message(state, paste("Report ready:", state$report))
@@ -294,12 +308,16 @@ iBGB_shiny_server <- function(input, output, session) {
         run_app_action(state, {
           require_workflow_result(state$result)
           shiny::withProgress(message = "Bundling results", value = 0, {
+          append_app_stage(state, "Bundle", "refreshing key files", state$result$project_paths$root)
           refresh_shiny_result_exports(session, state)
           if (is.null(state$bundle) || !file.exists(state$bundle)) {
+            append_app_stage(state, "Bundle", "creating archive", state$result$project_paths$root)
             state$bundle <- bundle_results(state$result, overwrite = TRUE)
             state$manifest <- create_workflow_manifest(state$result, write = TRUE)
             update_table_preview_choices(session, state)
             update_figure_preview_choices(session, state)
+          } else {
+            append_app_stage(state, "Bundle", "using existing archive", state$bundle)
           }
           append_app_message(state, paste("Bundle ready:", state$bundle))
           shiny::incProgress(1)
@@ -311,6 +329,7 @@ iBGB_shiny_server <- function(input, output, session) {
         run_app_action(state, {
           require_workflow_result(state$result)
           shiny::withProgress(message = "Refreshing key files", value = 0, {
+          append_app_stage(state, "Key files", "refresh started", state$result$project_paths$root)
           refresh_shiny_result_exports(session, state)
           append_app_message(state, "Key files refreshed: workflow manifest, run summary, table previews, and figure previews.")
           shiny::incProgress(1)
@@ -545,6 +564,33 @@ append_app_message <- function(state, message, status_type = "info") {
   existing <- state$messages %||% character()
   state$messages <- c(existing, paste(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), message))
   invisible(message)
+}
+
+append_app_stage <- function(state, action, stage, detail = NULL) {
+  message <- paste0(action, ": ", stage)
+  detail <- detail %||% NULL
+  if (!is.null(detail) && length(detail) > 0L && !is.na(detail[[1L]]) && nzchar(as.character(detail[[1L]]))) {
+    message <- paste0(message, " - ", as.character(detail[[1L]]))
+  }
+  append_app_message(state, message)
+}
+
+workflow_validation_label <- function(validation) {
+  if (is.null(validation) || nrow(validation) == 0L || !"ok" %in% names(validation)) {
+    return("not available")
+  }
+  ok <- validation$ok
+  passed <- sum(!is.na(ok) & ok)
+  failed <- sum(!is.na(ok) & !ok)
+  paste0(passed, " passed, ", failed, " failed")
+}
+
+workflow_model_status_label <- function(model_table) {
+  if (is.null(model_table) || nrow(model_table) == 0L || !"status" %in% names(model_table)) {
+    return("not available")
+  }
+  statuses <- sort(table(model_table$status), decreasing = TRUE)
+  paste(paste0(names(statuses), ": ", as.integer(statuses)), collapse = ", ")
 }
 
 resolve_report_file <- function(state) {

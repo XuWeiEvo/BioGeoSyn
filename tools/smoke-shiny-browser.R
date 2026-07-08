@@ -61,7 +61,7 @@ if (length(missing_initial) > 0L) {
 app$click("load_results")
 app$wait_for_idle(timeout = 60000)
 loaded_text <- app$get_text("body")
-if (!grepl("Loaded existing results", loaded_text, fixed = TRUE)) {
+if (!grepl("Load existing results: ready", loaded_text, fixed = TRUE)) {
   stop("Load existing results action did not report success.", call. = FALSE)
 }
 if (!grepl("Best statistical model", loaded_text, fixed = TRUE)) {
@@ -98,26 +98,45 @@ if (!grepl("GPL (>= 2)", about_text, fixed = TRUE) ||
 
 app$click("validate")
 app$wait_for_idle()
-if (!grepl("Validation passed", app$get_text("body"), fixed = TRUE)) {
+validation_text <- app$get_text("body")
+if (!grepl("Validation passed", validation_text, fixed = TRUE)) {
   stop("Validation action did not report success.", call. = FALSE)
 }
 
 app$click("run")
 app$wait_for_idle(timeout = 60000)
-if (!grepl("Dry run completed", app$get_text("body"), fixed = TRUE)) {
+run_text <- app$get_text("body")
+if (!grepl("Dry run completed", run_text, fixed = TRUE)) {
   stop("Dry-run workflow action did not report success.", call. = FALSE)
 }
 
 app$click("render_report")
 app$wait_for_idle(timeout = 60000)
-if (!grepl("Report ready:", app$get_text("body"), fixed = TRUE)) {
+report_text <- app$get_text("body")
+if (!grepl("Report ready:", report_text, fixed = TRUE)) {
   stop("Report action did not report a rendered report path.", call. = FALSE)
 }
 
 app$click("bundle")
 app$wait_for_idle(timeout = 60000)
-if (!grepl("Bundle ready:", app$get_text("body"), fixed = TRUE)) {
+bundle_text <- app$get_text("body")
+if (!grepl("Bundle ready:", bundle_text, fixed = TRUE)) {
   stop("Bundle action did not report a bundle path.", call. = FALSE)
+}
+
+app$click(selector = "a[data-value='Messages']")
+app$wait_for_idle(timeout = 60000)
+messages_text <- app$get_text("body")
+required_messages <- c(
+  "Validation: model plan ready",
+  "Workflow: model status ready",
+  "Workflow: outputs refreshed",
+  "Report: render started",
+  "Bundle: creating archive"
+)
+missing_messages <- required_messages[!vapply(required_messages, grepl, logical(1), x = messages_text, fixed = TRUE)]
+if (length(missing_messages) > 0L) {
+  stop("Messages tab is missing staged progress messages: ", paste(missing_messages, collapse = ", "), call. = FALSE)
 }
 
 cat("Shiny browser smoke test passed\n")
