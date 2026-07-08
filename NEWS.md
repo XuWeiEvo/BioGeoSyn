@@ -1,3 +1,14 @@
+# iBiogeobears 0.2.0.9000
+
+Development toward a stable, ordinary-user release.
+
+- Added a unified installation-readiness check for R, package dependencies,
+  Shiny, BioGeoBEARS, and report rendering.
+- Made the no-argument Shiny launch open with a complete, valid example project
+  instead of a template with unresolved relative input paths.
+- Added a Shiny Setup page with refreshable environment checks and actionable
+  installation guidance.
+
 # iBiogeobears 0.2.0
 
 Second alpha release of the single-clade BioGeoBEARS workflow MVP.

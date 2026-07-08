@@ -1,6 +1,7 @@
 #' Launch the iBiogeobears Shiny application
 #'
-#' @param config Optional path to an `analysis.yml` file.
+#' @param config Optional path to an `analysis.yml` file. When omitted, a
+#'   complete temporary example project is prepared and loaded automatically.
 #' @param output_dir Optional workflow output directory override.
 #' @param launch.browser Passed to [shiny::runApp()].
 #' @param ... Additional arguments passed to [shiny::runApp()].
@@ -15,8 +16,9 @@ launch_app <- function(config = NULL, output_dir = NULL, launch.browser = TRUE, 
 create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
   check_shiny_available()
 
-  default_config <- config %||% system.file("templates", "analysis.yml", package = "iBiogeobears")
-  default_output <- output_dir %||% ""
+  startup <- prepare_shiny_startup(config, output_dir)
+  default_config <- startup$config
+  default_output <- startup$output_dir
 
   shiny::shinyApp(
     ui = shiny::fluidPage(
@@ -52,10 +54,16 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             shiny::textInput("config_path", "analysis.yml", value = default_config),
             shiny::fileInput("config_upload", "Upload analysis.yml", accept = c(".yml", ".yaml")),
             shiny::textInput("output_dir", "Output directory", value = default_output),
-            shiny::textInput("example_project_dir", "Example project directory", value = ""),
+            shiny::textInput("example_project_dir", "Example project directory", value = startup$example_project_dir),
             shiny_action_grid(
               shiny::actionButton("create_example", "Create example project"),
               shiny::actionButton("load_results", "Load existing results")
+            )
+          ),
+          shiny_control_section(
+            "Setup",
+            shiny_action_grid(
+              shiny::actionButton("refresh_setup", "Refresh setup checks")
             )
           ),
           shiny_control_section(
@@ -107,6 +115,11 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           shiny::uiOutput("status"),
           shiny::tableOutput("summary_table"),
           shiny::tabsetPanel(
+            shiny::tabPanel(
+              "Setup",
+              shiny::tags$div(class = "ibgb-key-files-title", "Installation readiness"),
+              shiny::tableOutput("installation_table")
+            ),
             shiny::tabPanel(
               "Run Summary",
               shiny::uiOutput("run_summary_cards"),
@@ -258,8 +271,9 @@ iBGB_shiny_server <- function(input, output, session) {
         report = NULL,
         bundle = NULL,
         diagnostic_bundle = NULL,
-        message = "Ready.",
-        messages = "Ready.",
+        installation = check_installation(),
+        message = "Configuration ready. Validate inputs before running.",
+        messages = "Configuration ready. Validate inputs before running.",
         status_type = "info"
       )
   session$userData$state <- state
@@ -305,6 +319,13 @@ iBGB_shiny_server <- function(input, output, session) {
             shiny::updateTextInput(session, id, value = "")
           }
           append_app_stage(state, "Example project", "ready", example$root)
+        })
+      })
+
+      shiny::observeEvent(input$refresh_setup, {
+        run_app_action(state, {
+          state$installation <- check_installation()
+          append_app_message(state, "Setup checks refreshed.")
         })
       })
 
@@ -453,6 +474,10 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$summary_table <- shiny::renderTable({
         shiny_summary_table(state)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$installation_table <- shiny::renderTable({
+        shiny_installation_table(state$installation)
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$run_summary_table <- shiny::renderTable({
@@ -653,6 +678,36 @@ iBGB_shiny_server <- function(input, output, session) {
           copy_download_file(src, file)
         }
       )
+}
+
+shiny_installation_table <- function(checks = check_installation()) {
+  if (is.null(checks) || nrow(checks) == 0L) {
+    return(data.frame())
+  }
+  out <- checks
+  names(out) <- c("Component", "Required for", "Required", "Status", "Version", "Next step")
+  out
+}
+
+prepare_shiny_startup <- function(config = NULL, output_dir = NULL) {
+  if (!is.null(config)) {
+    config <- as_path(config)
+    if (!file.exists(config)) {
+      stop("Shiny config file does not exist: ", config, call. = FALSE)
+    }
+    return(list(
+      config = config,
+      output_dir = output_dir %||% "",
+      example_project_dir = ""
+    ))
+  }
+
+  example <- create_example_project(tempfile("iBiogeobears-welcome-"))
+  list(
+    config = example$config,
+    output_dir = output_dir %||% example$output_dir,
+    example_project_dir = example$root
+  )
 }
 
 run_app_action <- function(state, expr) {

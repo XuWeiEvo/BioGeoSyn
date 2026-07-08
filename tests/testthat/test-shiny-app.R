@@ -17,6 +17,49 @@ test_that("create_iBGB_shiny_app builds a Shiny app when shiny is installed", {
   expect_s3_class(app, "shiny.appobj")
 })
 
+test_that("Shiny startup creates a valid ready-to-run example", {
+  startup <- prepare_shiny_startup()
+  cfg <- read_config(startup$config)
+  checks <- validate_inputs(cfg)
+
+  expect_true(file.exists(startup$config))
+  expect_true(dir.exists(startup$example_project_dir))
+  expect_equal(startup$output_dir, cfg$project$output_dir)
+  expect_true(all(checks$ok))
+})
+
+test_that("Shiny startup preserves an explicit config and output", {
+  project <- create_example_project(tempfile("ibgb-explicit-startup-"))
+  output <- tempfile("ibgb-explicit-output-")
+
+  startup <- prepare_shiny_startup(project$config, output)
+
+  expect_equal(startup$config, as_path(project$config))
+  expect_equal(startup$output_dir, output)
+  expect_equal(startup$example_project_dir, "")
+  expect_error(prepare_shiny_startup("missing-analysis.yml"), "does not exist")
+})
+
+test_that("Shiny installation table uses readable labels", {
+  checks <- data.frame(
+    component = "BioGeoBEARS",
+    required_for = "Real model execution",
+    required = "yes",
+    status = "Ready",
+    version = "1.1.3",
+    next_step = "Ready.",
+    stringsAsFactors = FALSE
+  )
+
+  table <- shiny_installation_table(checks)
+
+  expect_equal(
+    names(table),
+    c("Component", "Required for", "Required", "Status", "Version", "Next step")
+  )
+  expect_equal(table$Component, "BioGeoBEARS")
+})
+
 test_that("Shiny sidebar helper builds grouped controls", {
   testthat::skip_if_not_installed("shiny")
 

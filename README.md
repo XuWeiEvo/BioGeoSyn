@@ -5,8 +5,9 @@
 `iBiogeobears` is a reproducible workflow, synthesis, visualization, and
 reporting layer for single-clade BioGeoBEARS analyses.
 
-Current status: `0.2.0` alpha. The package supports a single-clade MVP workflow
-and should be treated as an actively developing research workflow layer.
+Current status: `0.2.0.9000`, under development toward the first stable
+ordinary-user release. The package supports a single-clade workflow but is not
+yet intended for external user testing.
 
 It currently supports:
 
@@ -76,6 +77,13 @@ You can inspect the local BioGeoBEARS status with:
 
 ```r
 check_biogeobears(required = FALSE)
+```
+
+For one combined setup check covering the graphical interface, real model
+execution, and report rendering, run:
+
+```r
+check_installation()
 ```
 
 ## Quick Start
@@ -164,6 +172,10 @@ rerunning BioGeoBEARS.
 install.packages("shiny")
 launch_app()
 ```
+
+Calling `launch_app()` without arguments prepares and loads a complete example
+project automatically. The `Setup` tab reports missing requirements and the
+exact next action before a real analysis is started.
 
 Recommended GUI flow:
 

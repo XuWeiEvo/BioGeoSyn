@@ -7,7 +7,8 @@
 launch_app(config = NULL, output_dir = NULL, launch.browser = TRUE, ...)
 }
 \arguments{
-\item{config}{Optional path to an \code{analysis.yml} file.}
+\item{config}{Optional path to an \code{analysis.yml} file. When omitted, a
+complete temporary example project is prepared and loaded automatically.}
 
 \item{output_dir}{Optional workflow output directory override.}
 

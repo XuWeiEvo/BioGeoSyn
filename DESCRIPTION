@@ -1,7 +1,7 @@
 Package: iBiogeobears
 Type: Package
 Title: Reproducible BioGeoBEARS Workflows, Synthesis, Visualization, and Reporting
-Version: 0.2.0
+Version: 0.2.0.9000
 Authors@R:
     person("Wei", "Xu", role = c("aut", "cre"), email = "your.email@example.com")
 Author: Wei Xu [aut, cre]
