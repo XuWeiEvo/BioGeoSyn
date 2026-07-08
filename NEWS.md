@@ -78,6 +78,7 @@ Development version after the 0.1.0 alpha release.
 - Added a user-workflow smoke script covering GUI-style config overrides,
   advanced constraint paths, report-source rendering, result bundles, and
   diagnostic bundles.
+- Added the user-workflow smoke script to GitHub Actions CI.
 - Updated README workflow documentation for command-line runs, Shiny GUI use,
   result triage, key outputs, report rendering, and result bundling.
 - Added a `shinytest2` browser smoke script for the Shiny workflow runner.

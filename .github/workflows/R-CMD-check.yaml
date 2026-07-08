@@ -38,6 +38,7 @@ jobs:
             "ggraph",
             "ape",
             "testthat",
+            "pkgload",
             "quarto",
             "knitr",
             "rmarkdown",
@@ -51,3 +52,6 @@ jobs:
 
       - name: Smoke-test installed package
         run: Rscript tools/smoke-installed-package.R .
+
+      - name: Smoke-test user workflow
+        run: Rscript tools/smoke-user-workflow.R .

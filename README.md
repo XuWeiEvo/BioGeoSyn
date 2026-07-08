@@ -44,13 +44,15 @@ BioGeoBEARS must be installed separately; it is not bundled with
 
 ## Continuous Integration
 
-GitHub Actions runs `R CMD check --no-manual` and an installed-package smoke
-test on every push and pull request to `main`.
+GitHub Actions runs `R CMD check --no-manual`, an installed-package smoke test,
+and a user-workflow smoke test on every push and pull request to `main`.
 
 The CI workflow intentionally does not install or execute BioGeoBEARS. It
 verifies package installation, exported APIs, bundled templates, bundled example
-data, and the dry-run workflow. Real BioGeoBEARS model execution should be
-validated on a local machine where BioGeoBEARS is installed.
+data, GUI-style config overrides, advanced constraint paths, report-source
+rendering, result bundling, diagnostic bundling, and the dry-run workflow. Real
+BioGeoBEARS model execution should be validated on a local machine where
+BioGeoBEARS is installed.
 
 ## BioGeoBEARS Dependency
 
