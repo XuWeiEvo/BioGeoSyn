@@ -57,6 +57,8 @@ Development version after the 0.1.0 alpha release.
   warnings before the detailed result tables.
 - Expanded the Shiny figure dashboard with preview status, missing reasons,
   and recommended next steps for missing or failed figures.
+- Added a Shiny table-status view for key CSV outputs with row and column
+  counts, missing reasons, and recommended next steps.
 - Added a `shinytest2` browser smoke script for the Shiny workflow runner.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.

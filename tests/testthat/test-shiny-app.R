@@ -504,6 +504,39 @@ test_that("table preview helpers discover and read CSV outputs", {
   expect_equal(preview$AICc, 10)
 })
 
+test_that("table status helpers report key CSV availability and next steps", {
+  out <- tempfile("ibgb-shiny-table-status-")
+  paths <- create_project(out)
+  utils::write.csv(data.frame(model = "DEC", AICc = 10), file.path(paths$tables, "model_comparison.csv"), row.names = FALSE)
+  utils::write.csv(data.frame(model = "DEC", status = "completed"), file.path(paths$tables, "model_run_status.csv"), row.names = FALSE)
+  manifest <- data.frame(
+    category = "tables",
+    relative_path = c("tables/model_comparison.csv", "tables/node_state_summary.csv"),
+    file_name = c("model_comparison.csv", "node_state_summary.csv"),
+    extension = "csv",
+    stringsAsFactors = FALSE
+  )
+
+  state <- new.env(parent = emptyenv())
+  state$result <- list(project_paths = paths, workflow_manifest = manifest)
+  state$manifest <- manifest
+
+  status <- shiny_table_status_table(state)
+  model_row <- status[status$table == "Model comparison", , drop = FALSE]
+  node_row <- status[status$table == "Node states", , drop = FALSE]
+  root_row <- status[status$table == "Root states", , drop = FALSE]
+
+  expect_equal(model_row$status, "Available")
+  expect_equal(model_row$rows, 1L)
+  expect_equal(model_row$columns, 2L)
+  expect_equal(model_row$missing_reason, "")
+  expect_equal(node_row$status, "Missing")
+  expect_match(node_row$missing_reason, "Workflow manifest lists this table", fixed = TRUE)
+  expect_match(node_row$next_step, "Refresh key files", fixed = TRUE)
+  expect_equal(root_row$status, "Missing")
+  expect_match(root_row$missing_reason, "Expected CSV was not found", fixed = TRUE)
+})
+
 test_that("table preview helpers return empty data when no tables exist", {
   paths <- create_project(tempfile("ibgb-shiny-no-tables-"))
   state <- new.env(parent = emptyenv())

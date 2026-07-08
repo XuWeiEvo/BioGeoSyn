@@ -79,6 +79,15 @@ if (!grepl("Shown below", dashboard_text, fixed = TRUE) ||
   stop("Figure dashboard did not render figure preview status and missing reasons.", call. = FALSE)
 }
 
+app$click(selector = "a[data-value='Tables']")
+app$wait_for_idle(timeout = 60000)
+tables_text <- app$get_text("body")
+if (!grepl("Table status", tables_text, fixed = TRUE) ||
+    !grepl("Model comparison", tables_text, fixed = TRUE) ||
+    !grepl("Expected CSV was not found", tables_text, fixed = TRUE)) {
+  stop("Tables tab did not render key table status and missing reasons.", call. = FALSE)
+}
+
 app$click("validate")
 app$wait_for_idle()
 if (!grepl("Validation passed", app$get_text("body"), fixed = TRUE)) {

@@ -142,6 +142,8 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             ),
             shiny::tabPanel(
               "Tables",
+              shiny::tags$div(class = "ibgb-key-files-title", "Table status"),
+              shiny::tableOutput("table_status_table"),
               shiny::selectInput("table_preview", "Table", choices = c("No CSV tables available" = "")),
               shiny::tableOutput("table_preview_output"),
               shiny::verbatimTextOutput("table_path_text")
@@ -440,6 +442,10 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$table_preview_output <- shiny::renderTable({
         table_head(read_table_preview(input, state), 50L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$table_status_table <- shiny::renderTable({
+        shiny_table_status_table(state)
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$table_path_text <- shiny::renderText({
@@ -1192,6 +1198,140 @@ read_workflow_table <- function(result, filename) {
     return(NULL)
   }
   utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
+}
+
+shiny_table_status_table <- function(state) {
+  specs <- shiny_table_status_specs()
+  rows <- lapply(seq_len(nrow(specs)), function(i) {
+    relative_path <- specs$relative_path[[i]]
+    path <- resolve_table_status_path(state, relative_path)
+    status <- table_file_status(path)
+    missing_reason <- if (identical(status$status, "Available")) "" else
+      shiny_table_missing_reason(state, relative_path, status$error_message)
+    next_step <- if (identical(status$status, "Available")) "" else
+      shiny_table_next_step(relative_path, missing_reason, specs$missing_action[[i]])
+
+    data.frame(
+      table = specs$display_label[[i]],
+      status = status$status,
+      rows = status$rows,
+      columns = status$columns,
+      missing_reason = missing_reason,
+      next_step = next_step,
+      path = path %||% NA_character_,
+      stringsAsFactors = FALSE
+    )
+  })
+  do.call(rbind, rows)
+}
+
+shiny_table_status_specs <- function() {
+  data.frame(
+    display_label = c(
+      "Run summary",
+      "Model run status",
+      "Model comparison",
+      "+J sensitivity",
+      "Model parameters",
+      "Root states",
+      "Node states",
+      "Node sensitivity",
+      "Input validation",
+      "Workflow manifest"
+    ),
+    relative_path = c(
+      "tables/shiny_run_summary.csv",
+      "tables/model_run_status.csv",
+      "tables/model_comparison.csv",
+      "tables/model_sensitivity.csv",
+      "tables/model_parameters.csv",
+      "tables/root_state_probabilities.csv",
+      "tables/node_state_summary.csv",
+      "tables/node_state_sensitivity.csv",
+      "tables/input_validation.csv",
+      "tables/workflow_manifest.csv"
+    ),
+    missing_action = c(
+      "Run or load workflow results, then refresh key files.",
+      "Run workflow.",
+      "Run workflow with model fitting or load existing results.",
+      "Run workflow with model comparison or load existing results.",
+      "Run workflow with model fitting or load existing results.",
+      "Run workflow with BioGeoBEARS outputs available.",
+      "Run workflow with BioGeoBEARS outputs available.",
+      "Run workflow with both +J and non-+J node summaries available.",
+      "Validate inputs or run workflow.",
+      "Refresh key files."
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+resolve_table_status_path <- function(state, relative_path) {
+  result <- state$result
+  if (is.null(result) || is.null(result$project_paths$root)) {
+    return(NULL)
+  }
+  root <- result$project_paths$root
+  path <- file.path(root, relative_path)
+  if (file.exists(path)) {
+    return(as_path(path))
+  }
+  NULL
+}
+
+table_file_status <- function(path) {
+  empty <- list(status = "Missing", rows = NA_integer_, columns = NA_integer_, error_message = NA_character_)
+  if (is.null(path) || is.na(path) || !file.exists(path)) {
+    return(empty)
+  }
+  tryCatch(
+    {
+      table <- utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
+      list(status = "Available", rows = nrow(table), columns = ncol(table), error_message = NA_character_)
+    },
+    error = function(e) {
+      list(status = "Failed", rows = NA_integer_, columns = NA_integer_, error_message = conditionMessage(e))
+    }
+  )
+}
+
+shiny_table_missing_reason <- function(state, relative_path, error_message = NA_character_) {
+  if (!is.na(error_message) && nzchar(error_message)) {
+    return(paste("CSV could not be read:", error_message))
+  }
+  result <- state$result
+  if (is.null(result) || is.null(result$project_paths$root)) {
+    return("No workflow result loaded.")
+  }
+  if (shiny_workflow_manifest_has_path(state, relative_path)) {
+    return("Workflow manifest lists this table, but the CSV file is missing.")
+  }
+  "Expected CSV was not found in the tables directory."
+}
+
+shiny_workflow_manifest_has_path <- function(state, relative_path) {
+  manifest <- state$manifest %||% NULL
+  if (is.null(manifest) || nrow(manifest) == 0L) {
+    manifest <- state$result$workflow_manifest %||% NULL
+  }
+  !is.null(manifest) && nrow(manifest) > 0L &&
+    "relative_path" %in% names(manifest) &&
+    relative_path %in% manifest$relative_path
+}
+
+shiny_table_next_step <- function(relative_path, missing_reason, fallback) {
+  reason <- tolower(missing_reason %||% "")
+  if (grepl("no workflow result", reason)) {
+    return("Run workflow or load existing results.")
+  }
+  if (grepl("could not be read", reason)) {
+    return("Open the CSV path, fix or regenerate the table, then refresh key files.")
+  }
+  if (grepl("manifest lists", reason)) {
+    return("Refresh key files; if still missing, rerun workflow generation for this table.")
+  }
+  fallback
 }
 
 shiny_figure_dashboard_table <- function(state) {
