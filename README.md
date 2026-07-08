@@ -158,14 +158,16 @@ launch_app()
 Recommended GUI flow:
 
 1. Click `Create example project`, or provide an `analysis.yml` path.
-2. Click `Validate`.
-3. Keep `Dry run` checked for a first pass, then click `Run workflow`.
-4. Uncheck `Dry run` when BioGeoBEARS is installed and a real analysis is
+2. Optionally check `Use GUI config overrides` and edit project name, input
+   files, `max_range_size`, or selected models.
+3. Click `Validate`.
+4. Keep `Dry run` checked for a first pass, then click `Run workflow`.
+5. Uncheck `Dry run` when BioGeoBEARS is installed and a real analysis is
    intended.
-5. Click `Render report`.
-6. Click `Refresh key files`.
-7. Click `Create bundle if missing`.
-8. Review `Run Summary`, `Model Comparison`, `+J Sensitivity`, `Warnings`,
+6. Click `Render report`.
+7. Click `Refresh key files`.
+8. Click `Create bundle if missing`.
+9. Review `Run Summary`, `Model Comparison`, `+J Sensitivity`, `Warnings`,
    `Figure Dashboard`, `Tables`, and `About/Citation`.
 
 The Shiny result views are designed for triage:

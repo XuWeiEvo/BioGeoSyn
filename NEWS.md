@@ -68,6 +68,8 @@ Development version after the 0.1.0 alpha release.
 - Added `bundle_diagnostics()` and Shiny diagnostic-bundle export for lightweight
   troubleshooting archives containing config, status tables, manifests, session
   metadata, and log files.
+- Added a first-pass Shiny config editor for common project, input,
+  `max_range_size`, and model-selection overrides.
 - Updated README workflow documentation for command-line runs, Shiny GUI use,
   result triage, key outputs, report rendering, and result bundling.
 - Added a `shinytest2` browser smoke script for the Shiny workflow runner.

@@ -59,6 +59,16 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             )
           ),
           shiny_control_section(
+            "Config editor",
+            shiny::checkboxInput("use_config_editor", "Use GUI config overrides", value = FALSE),
+            shiny::textInput("project_name", "Project name", value = ""),
+            shiny::textInput("tree_file", "Tree file", value = ""),
+            shiny::textInput("geography_file", "Geography file", value = ""),
+            shiny::textInput("regions_file", "Regions file", value = ""),
+            shiny::textInput("max_range_size", "Max range size", value = ""),
+            shiny::checkboxGroupInput("models_run", "Models", choices = valid_models(), selected = valid_models())
+          ),
+          shiny_control_section(
             "Run options",
             shiny::checkboxInput("dry_run", "Dry run", value = TRUE),
             shiny::checkboxInput("require_biogeobears", "Require BioGeoBEARS", value = FALSE),
@@ -222,6 +232,18 @@ iBGB_shiny_server <- function(input, output, session) {
         if (nzchar(value)) value else NULL
       })
 
+      current_config <- shiny::reactive({
+        apply_shiny_config_overrides(
+          read_config(current_config_path()),
+          input = input,
+          output_dir = current_output_dir()
+        )
+      })
+
+      current_workflow_config_path <- shiny::reactive({
+        write_shiny_workflow_config(current_config(), source_config = current_config_path())
+      })
+
       shiny::observeEvent(input$create_example, {
         run_app_action(state, {
           target <- trimws(input$example_project_dir %||% "")
@@ -232,6 +254,12 @@ iBGB_shiny_server <- function(input, output, session) {
           example <- create_example_project(target)
           shiny::updateTextInput(session, "config_path", value = example$config)
           shiny::updateTextInput(session, "output_dir", value = example$output_dir)
+          shiny::updateTextInput(session, "project_name", value = "example_clade")
+          shiny::updateTextInput(session, "tree_file", value = "data/tree.nwk")
+          shiny::updateTextInput(session, "geography_file", value = "data/geography.csv")
+          shiny::updateTextInput(session, "regions_file", value = "data/regions.csv")
+          shiny::updateTextInput(session, "max_range_size", value = "3")
+          shiny::updateCheckboxGroupInput(session, "models_run", selected = valid_models())
           append_app_stage(state, "Example project", "ready", example$root)
         })
       })
@@ -240,10 +268,7 @@ iBGB_shiny_server <- function(input, output, session) {
         run_app_action(state, {
           shiny::withProgress(message = "Validating", value = 0, {
           append_app_stage(state, "Validation", "started", current_config_path())
-          cfg <- read_config(current_config_path())
-          if (!is.null(current_output_dir())) {
-            cfg$project$output_dir <- current_output_dir()
-          }
+          cfg <- current_config()
           state$validation <- validate_inputs(cfg)
           state$model_table <- planned_model_table(cfg)
           append_app_stage(state, "Validation", "model plan ready", paste(nrow(state$model_table), "model(s)"))
@@ -280,8 +305,8 @@ iBGB_shiny_server <- function(input, output, session) {
             current_output_dir() %||% "configured output directory"
           )
           result <- run_workflow(
-            config = current_config_path(),
-            output_dir = current_output_dir(),
+            config = current_workflow_config_path(),
+            output_dir = NULL,
             dry_run = isTRUE(input$dry_run),
             require_biogeobears = isTRUE(input$require_biogeobears),
             force = isTRUE(input$force)
@@ -1915,6 +1940,85 @@ resolve_shiny_config_path <- function(input) {
     stop("Provide an analysis.yml path or upload a YAML config file.", call. = FALSE)
   }
   path
+}
+
+apply_shiny_config_overrides <- function(config, input, output_dir = NULL) {
+  cfg <- config
+  if (!is.null(output_dir)) {
+    cfg$project$output_dir <- output_dir
+  }
+
+  if (!isTRUE(input$use_config_editor %||% FALSE)) {
+    return(cfg)
+  }
+
+  project_name <- shiny_trimmed_input(input, "project_name")
+  tree_file <- shiny_trimmed_input(input, "tree_file")
+  geography_file <- shiny_trimmed_input(input, "geography_file")
+  regions_file <- shiny_trimmed_input(input, "regions_file")
+  max_range_size <- shiny_trimmed_input(input, "max_range_size")
+  models <- input$models_run %||% character()
+
+  if (!is.null(project_name)) {
+    cfg$project$name <- project_name
+  }
+  if (!is.null(tree_file)) {
+    cfg$inputs$tree_file <- tree_file
+  }
+  if (!is.null(geography_file)) {
+    cfg$inputs$geography_file <- geography_file
+  }
+  if (!is.null(regions_file)) {
+    cfg$inputs$regions_file <- regions_file
+  }
+  if (!is.null(max_range_size)) {
+    parsed <- suppressWarnings(as.integer(max_range_size))
+    cfg$inputs$max_range_size <- if (!is.na(parsed)) parsed else max_range_size
+  }
+  cfg$models$run <- as.character(models)
+
+  cfg
+}
+
+shiny_trimmed_input <- function(input, id) {
+  value <- trimws(input[[id]] %||% "")
+  if (!nzchar(value)) {
+    return(NULL)
+  }
+  value
+}
+
+write_shiny_workflow_config <- function(config, source_config) {
+  if (!requireNamespace("yaml", quietly = TRUE)) {
+    stop("The yaml package is required to write edited Shiny workflow configs.", call. = FALSE)
+  }
+  cfg <- absolutize_shiny_config_paths(config, base_dir = dirname(source_config))
+  cfg$.config_file <- NULL
+  path <- tempfile("ibgb-shiny-analysis-", fileext = ".yml")
+  yaml::write_yaml(cfg, path)
+  as_path(path)
+}
+
+absolutize_shiny_config_paths <- function(config, base_dir) {
+  cfg <- config
+  input_fields <- c("tree_file", "geography_file", "regions_file")
+  for (field in input_fields) {
+    if (!is.null(cfg$inputs[[field]]) && nzchar(cfg$inputs[[field]])) {
+      cfg$inputs[[field]] <- resolve_config_path(cfg$inputs[[field]], base_dir)
+    }
+  }
+
+  constraint_fields <- c(
+    "times_file", "dists_file", "distance_file", "dispersal_multipliers_file",
+    "areas_allowed_file", "areas_adjacency_file", "area_of_areas_file"
+  )
+  for (field in intersect(names(cfg$advanced$constraints %||% list()), constraint_fields)) {
+    value <- cfg$advanced$constraints[[field]]
+    if (!is.null(value) && nzchar(value)) {
+      cfg$advanced$constraints[[field]] <- resolve_config_path(value, base_dir)
+    }
+  }
+  cfg
 }
 
 planned_model_table <- function(config) {

@@ -59,6 +59,33 @@ test_that("resolve_shiny_config_path requires a config source", {
   )
 })
 
+test_that("Shiny config editor applies GUI overrides and writes runnable YAML", {
+  project <- create_example_project(tempfile("ibgb-shiny-config-editor-"))
+  cfg <- read_config(project$config)
+  input <- list(
+    use_config_editor = TRUE,
+    project_name = "edited_clade",
+    tree_file = "data/tree.nwk",
+    geography_file = "data/geography.csv",
+    regions_file = "data/regions.csv",
+    max_range_size = "2",
+    models_run = c("DEC", "DEC+J")
+  )
+
+  edited <- apply_shiny_config_overrides(cfg, input, output_dir = file.path(project$root, "edited-results"))
+  config_path <- write_shiny_workflow_config(edited, source_config = project$config)
+  roundtrip <- read_config(config_path)
+
+  expect_equal(edited$project$name, "edited_clade")
+  expect_equal(edited$inputs$max_range_size, 2L)
+  expect_equal(edited$models$run, c("DEC", "DEC+J"))
+  expect_true(grepl("edited-results$", edited$project$output_dir))
+  expect_true(file.exists(roundtrip$inputs$tree_file))
+  expect_true(file.exists(roundtrip$inputs$geography_file))
+  expect_true(file.exists(roundtrip$inputs$regions_file))
+  expect_equal(roundtrip$models$run, c("DEC", "DEC+J"))
+})
+
 test_that("run_app_action captures errors in state messages", {
   state <- new.env(parent = emptyenv())
   state$message <- "Ready."
@@ -781,6 +808,42 @@ test_that("Shiny server validates and dry-runs a workflow", {
     expect_true(any(grepl("Workflow: model status ready", state$messages, fixed = TRUE)))
     expect_true(any(grepl("Workflow: failed models - none", state$messages, fixed = TRUE)))
     expect_true(any(grepl("Workflow: outputs refreshed", state$messages, fixed = TRUE)))
+  })
+})
+
+test_that("Shiny server uses GUI config editor overrides", {
+  testthat::skip_if_not_installed("shiny")
+
+  project <- create_example_project(tempfile("ibgb-shiny-server-editor-"))
+  edited_output <- file.path(project$root, "results", "edited_clade")
+
+  shiny::testServer(iBGB_shiny_server, {
+    session$setInputs(
+      config_path = project$config,
+      output_dir = edited_output,
+      use_config_editor = TRUE,
+      project_name = "edited_clade",
+      tree_file = "data/tree.nwk",
+      geography_file = "data/geography.csv",
+      regions_file = "data/regions.csv",
+      max_range_size = "2",
+      models_run = "DEC",
+      dry_run = TRUE,
+      require_biogeobears = FALSE,
+      force = FALSE,
+      report_format = "source"
+    )
+
+    session$setInputs(validate = 1)
+    state <- session$userData$state
+    expect_true(all(state$validation$ok))
+    expect_equal(state$model_table$model, "DEC")
+
+    session$setInputs(run = 1)
+    expect_equal(state$result$config$project$name, "edited_clade")
+    expect_equal(state$result$config$inputs$max_range_size, 2L)
+    expect_equal(state$result$config$models$run, "DEC")
+    expect_equal(state$result$project_paths$root, edited_output)
   })
 })
 
