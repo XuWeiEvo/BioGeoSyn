@@ -48,3 +48,40 @@ test_that("bundle_results can omit raw BioGeoBEARS files", {
   expect_true("tables/example.csv" %in% contents$Name)
   expect_false("raw_biogeobears/raw.txt" %in% contents$Name)
 })
+
+test_that("bundle_diagnostics creates a lightweight diagnostic archive", {
+  testthat::skip_if(Sys.which("zip") == "", "zip utility is not available")
+
+  out <- tempfile("ibgb-diagnostics-")
+  paths <- create_project(out)
+  model_log <- file.path(paths$raw_biogeobears, "DEC", "DEC.log")
+  dir.create(dirname(model_log), recursive = TRUE, showWarnings = FALSE)
+  writeLines("project: diagnostic", file.path(paths$root, "config_used.yml"))
+  writeLines("session", file.path(paths$logs, "session_info.txt"))
+  writeLines("citation", file.path(paths$logs, "biogeobears_citation.txt"))
+  writeLines("optimizer log", model_log)
+  writeLines("raw result", file.path(paths$raw_biogeobears, "DEC", "DEC.rds"))
+  utils::write.csv(
+    data.frame(
+      model = "DEC",
+      status = "failed",
+      error_message = "optimizer failed",
+      log_file = model_log
+    ),
+    file.path(paths$tables, "model_run_status.csv"),
+    row.names = FALSE
+  )
+  bundle_file <- tempfile(fileext = ".zip")
+
+  bundle <- bundle_diagnostics(out, bundle_file = bundle_file)
+  contents <- utils::unzip(bundle, list = TRUE)
+
+  expect_true(file.exists(bundle))
+  expect_true("config_used.yml" %in% contents$Name)
+  expect_true("tables/model_run_status.csv" %in% contents$Name)
+  expect_true("tables/workflow_manifest.csv" %in% contents$Name)
+  expect_true("logs/session_info.txt" %in% contents$Name)
+  expect_true("logs/biogeobears_citation.txt" %in% contents$Name)
+  expect_true("raw_biogeobears/DEC/DEC.log" %in% contents$Name)
+  expect_false("raw_biogeobears/DEC/DEC.rds" %in% contents$Name)
+})

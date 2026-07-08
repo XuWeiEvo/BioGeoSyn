@@ -65,6 +65,9 @@ Development version after the 0.1.0 alpha release.
   output refresh, report rendering, and result bundling.
 - Added Shiny failed-model diagnostics in run summaries, warning summaries,
   run-status details, and staged workflow messages.
+- Added `bundle_diagnostics()` and Shiny diagnostic-bundle export for lightweight
+  troubleshooting archives containing config, status tables, manifests, session
+  metadata, and log files.
 - Updated README workflow documentation for command-line runs, Shiny GUI use,
   result triage, key outputs, report rendering, and result bundling.
 - Added a `shinytest2` browser smoke script for the Shiny workflow runner.

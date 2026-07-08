@@ -349,6 +349,16 @@ To share derived outputs without raw BioGeoBEARS objects:
 bundle <- bundle_results(result, include_raw = FALSE)
 ```
 
+To share only troubleshooting files after failures or warnings:
+
+```r
+diagnostics <- bundle_diagnostics(result)
+```
+
+The diagnostics archive contains configuration, model status tables, workflow
+manifest, session metadata, BioGeoBEARS citation metadata, and log files. It
+does not include full raw BioGeoBEARS result objects.
+
 ## Standard Tables
 
 The main derived tables are:

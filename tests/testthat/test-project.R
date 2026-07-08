@@ -40,6 +40,7 @@ test_that("installed package exposes templates, example data, and public API", {
 
   exported <- getNamespaceExports("iBiogeobears")
   expect_true(all(c(
+    "bundle_diagnostics",
     "bundle_results",
     "create_workflow_manifest",
     "create_example_project",

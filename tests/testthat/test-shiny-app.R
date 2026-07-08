@@ -320,18 +320,22 @@ test_that("shiny_key_files_table lists common workflow outputs", {
   empty_state$result <- NULL
   empty_state$manifest <- NULL
   empty_state$bundle <- NULL
+  empty_state$diagnostic_bundle <- NULL
 
   empty_files <- shiny_key_files_table(empty_state)
   expect_true(all(empty_files$status == "Missing"))
   expect_equal(empty_files$next_step[match("Report", empty_files$file)], "Click Render report.")
   expect_equal(empty_files$next_step[match("Result bundle", empty_files$file)], "Click Create bundle if missing.")
+  expect_equal(empty_files$next_step[match("Diagnostic bundle", empty_files$file)], "Click Create diagnostic bundle.")
 
   out <- tempfile("ibgb-shiny-key-files-")
   paths <- create_project(out)
   report <- file.path(paths$reports, "summary_report.html")
   bundle <- tempfile(fileext = ".zip")
+  diagnostic_bundle <- tempfile(fileext = ".zip")
   writeLines("<html></html>", report)
   writeLines("zip", bundle)
+  writeLines("diagnostics", diagnostic_bundle)
   utils::write.csv(data.frame(item = "Best statistical model", value = "DEC"), file.path(paths$tables, "shiny_run_summary.csv"), row.names = FALSE)
   utils::write.csv(data.frame(model = "DEC", delta_aicc = 0), file.path(paths$tables, "model_comparison.csv"), row.names = FALSE)
   utils::write.csv(data.frame(section = "Caution", answer = "not triggered"), file.path(paths$tables, "model_sensitivity.csv"), row.names = FALSE)
@@ -342,6 +346,7 @@ test_that("shiny_key_files_table lists common workflow outputs", {
   state$manifest <- manifest
   state$report <- report
   state$bundle <- bundle
+  state$diagnostic_bundle <- diagnostic_bundle
 
   key_files <- shiny_key_files_table(state)
 
@@ -351,9 +356,11 @@ test_that("shiny_key_files_table lists common workflow outputs", {
   expect_equal(key_files$status[match("Workflow manifest CSV", key_files$file)], "Available")
   expect_equal(key_files$status[match("Report", key_files$file)], "Available")
   expect_equal(key_files$status[match("Result bundle", key_files$file)], "Available")
+  expect_equal(key_files$status[match("Diagnostic bundle", key_files$file)], "Available")
   expect_equal(key_files$next_step[match("Report", key_files$file)], "")
   expect_equal(key_files$path[match("Report", key_files$file)], as_path(report))
   expect_equal(key_files$path[match("Result bundle", key_files$file)], as_path(bundle))
+  expect_equal(key_files$path[match("Diagnostic bundle", key_files$file)], as_path(diagnostic_bundle))
 })
 
 test_that("Shiny result helpers expose comparison, sensitivity, and warnings", {
@@ -874,5 +881,15 @@ test_that("Shiny server renders reports and bundles dry-run results", {
     expect_equal(state$bundle, first_bundle)
     expect_true(file.exists(state$bundle))
     expect_true(any(grepl("Bundle: using existing archive", state$messages, fixed = TRUE)))
+
+    session$setInputs(diagnostic_bundle = 1)
+    expect_true(file.exists(state$diagnostic_bundle))
+    expect_match(state$message, "Diagnostic bundle ready:", fixed = TRUE)
+    expect_equal(shiny_key_files_table(state)$status[match("Diagnostic bundle", shiny_key_files_table(state)$file)], "Available")
+    expect_true(any(grepl("Diagnostics: creating archive", state$messages, fixed = TRUE)))
+
+    copied <- tempfile(fileext = ".zip")
+    copy_download_file(resolve_diagnostic_bundle_file(state), copied)
+    expect_true(file.exists(copied))
   })
 })

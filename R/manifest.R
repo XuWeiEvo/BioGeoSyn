@@ -83,6 +83,111 @@ bundle_results <- function(result_or_path, bundle_file = NULL, include_raw = TRU
   as_path(bundle_file)
 }
 
+#' Bundle workflow diagnostics into a lightweight zip archive
+#'
+#' @param result_or_path A workflow result returned by [run_workflow()] or a
+#'   path to a workflow output directory.
+#' @param bundle_file Optional output `.zip` path. Defaults to a diagnostics zip
+#'   file next to the workflow output directory.
+#' @param overwrite Logical. If `FALSE`, stop when `bundle_file` exists.
+#' @param refresh_manifest Logical. If `TRUE`, rewrite
+#'   `tables/workflow_manifest.csv` before bundling.
+#' @return Path to the created diagnostics zip archive.
+#' @export
+bundle_diagnostics <- function(result_or_path, bundle_file = NULL, overwrite = FALSE, refresh_manifest = TRUE) {
+  root <- workflow_root_path(result_or_path)
+  if (!dir.exists(root)) {
+    stop("Workflow output directory does not exist: ", root, call. = FALSE)
+  }
+
+  if (is.null(bundle_file)) {
+    bundle_file <- file.path(dirname(root), paste0(basename(root), "_diagnostics.zip"))
+  }
+  bundle_file <- as_path(bundle_file)
+  if (file.exists(bundle_file) && !isTRUE(overwrite)) {
+    stop("Diagnostics bundle file already exists: ", bundle_file, call. = FALSE)
+  }
+
+  create_workflow_manifest(root, write = isTRUE(refresh_manifest))
+  files <- diagnostic_bundle_files(root)
+  if (length(files) == 0L) {
+    stop("No diagnostic workflow files are available to bundle.", call. = FALSE)
+  }
+
+  zip_relative_files(root, bundle_file, files)
+}
+
+diagnostic_bundle_files <- function(root) {
+  root <- normalizePath(root, winslash = "/", mustWork = TRUE)
+  fixed <- c(
+    "config_used.yml",
+    "tables/input_validation.csv",
+    "tables/model_run_plan.csv",
+    "tables/model_run_status.csv",
+    "tables/workflow_manifest.csv",
+    "logs/session_info.txt",
+    "logs/biogeobears_citation.txt"
+  )
+  files <- fixed[file.exists(file.path(root, fixed))]
+
+  status_path <- file.path(root, "tables", "model_run_status.csv")
+  if (file.exists(status_path)) {
+    status <- utils::read.csv(status_path, check.names = FALSE, stringsAsFactors = FALSE)
+    if ("log_file" %in% names(status)) {
+      files <- c(files, diagnostic_relative_paths(root, status$log_file))
+    }
+  }
+
+  discovered_logs <- list.files(root, pattern = "[.]log$", recursive = TRUE, full.names = TRUE)
+  files <- c(files, diagnostic_relative_paths(root, discovered_logs))
+  files <- unique(files[file.exists(file.path(root, files))])
+  sort(files)
+}
+
+diagnostic_relative_paths <- function(root, paths) {
+  paths <- as.character(paths %||% character())
+  paths <- paths[!is.na(paths) & nzchar(paths)]
+  if (length(paths) == 0L) {
+    return(character())
+  }
+
+  root <- normalizePath(root, winslash = "/", mustWork = TRUE)
+  absolute <- ifelse(grepl("^([A-Za-z]:)?[/\\\\]", paths), paths, file.path(root, paths))
+  absolute <- normalizePath(absolute, winslash = "/", mustWork = FALSE)
+  inside <- startsWith(absolute, paste0(root, "/")) | absolute == root
+  absolute <- absolute[inside]
+  if (length(absolute) == 0L) {
+    return(character())
+  }
+  substring(absolute, nchar(root) + 2L)
+}
+
+zip_relative_files <- function(root, bundle_file, files) {
+  old_wd <- getwd()
+  on.exit(setwd(old_wd), add = TRUE)
+  setwd(root)
+
+  zip_error <- NULL
+  status <- NULL
+  invisible(utils::capture.output({
+    status <- tryCatch(
+      utils::zip(zipfile = bundle_file, files = files, flags = "-qr9X"),
+      error = function(e) {
+        zip_error <<- e
+        NA_integer_
+      }
+    )
+  }))
+  if (!is.null(zip_error) || (!is.null(status) && !identical(status, 0L))) {
+    stop(
+      "Unable to create zip archive. Ensure a zip utility is available to R, or provide a writable bundle_file path.",
+      call. = FALSE
+    )
+  }
+
+  as_path(bundle_file)
+}
+
 collect_workflow_manifest <- function(root) {
   root <- normalizePath(root, winslash = "/", mustWork = TRUE)
   files <- list.files(root, recursive = TRUE, all.files = FALSE, full.names = TRUE, no.. = TRUE)

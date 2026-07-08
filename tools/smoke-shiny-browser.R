@@ -51,7 +51,8 @@ required_initial_text <- c(
   "Fit summary", "+J sensitivity summary", "Warning summary",
   "Node States", "Node Sensitivity", "Figure Dashboard",
   "Load existing results", "Download run summary", "Key files",
-  "Refresh key files", "Create bundle if missing", "About/Citation"
+  "Refresh key files", "Create bundle if missing", "Create diagnostic bundle",
+  "Download diagnostic bundle", "About/Citation"
 )
 missing_initial <- required_initial_text[!vapply(required_initial_text, grepl, logical(1), x = body_text, fixed = TRUE)]
 if (length(missing_initial) > 0L) {
@@ -124,6 +125,13 @@ if (!grepl("Bundle ready:", bundle_text, fixed = TRUE)) {
   stop("Bundle action did not report a bundle path.", call. = FALSE)
 }
 
+app$click("diagnostic_bundle")
+app$wait_for_idle(timeout = 60000)
+diagnostic_text <- app$get_text("body")
+if (!grepl("Diagnostic bundle ready:", diagnostic_text, fixed = TRUE)) {
+  stop("Diagnostic bundle action did not report a diagnostics bundle path.", call. = FALSE)
+}
+
 app$click(selector = "a[data-value='Messages']")
 app$wait_for_idle(timeout = 60000)
 messages_text <- app$get_text("body")
@@ -133,7 +141,8 @@ required_messages <- c(
   "Workflow: failed models - none",
   "Workflow: outputs refreshed",
   "Report: render started",
-  "Bundle: creating archive"
+  "Bundle: creating archive",
+  "Diagnostics: creating archive"
 )
 missing_messages <- required_messages[!vapply(required_messages, grepl, logical(1), x = messages_text, fixed = TRUE)]
 if (length(missing_messages) > 0L) {

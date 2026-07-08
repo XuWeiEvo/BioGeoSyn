@@ -79,13 +79,15 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
               shiny::actionButton("render_report", "Render report"),
               shiny::actionButton("open_report", "Open report"),
               shiny::actionButton("refresh_key_files", "Refresh key files"),
-              shiny::actionButton("bundle", "Create bundle if missing")
+              shiny::actionButton("bundle", "Create bundle if missing"),
+              shiny::actionButton("diagnostic_bundle", "Create diagnostic bundle")
             ),
             shiny::tags$div(
               class = "ibgb-downloads",
               shiny::downloadButton("download_run_summary", "Download run summary"),
               shiny::downloadButton("download_report", "Download report"),
-              shiny::downloadButton("download_bundle", "Download bundle")
+              shiny::downloadButton("download_bundle", "Download bundle"),
+              shiny::downloadButton("download_diagnostic_bundle", "Download diagnostic bundle")
             )
           )
         ),
@@ -204,6 +206,7 @@ iBGB_shiny_server <- function(input, output, session) {
         manifest = NULL,
         report = NULL,
         bundle = NULL,
+        diagnostic_bundle = NULL,
         message = "Ready.",
         messages = "Ready.",
         status_type = "info"
@@ -327,6 +330,20 @@ iBGB_shiny_server <- function(input, output, session) {
             append_app_stage(state, "Bundle", "using existing archive", state$bundle)
           }
           append_app_message(state, paste("Bundle ready:", state$bundle))
+          shiny::incProgress(1)
+          })
+        })
+      })
+
+      shiny::observeEvent(input$diagnostic_bundle, {
+        run_app_action(state, {
+          require_workflow_result(state$result)
+          shiny::withProgress(message = "Bundling diagnostics", value = 0, {
+          append_app_stage(state, "Diagnostics", "refreshing key files", state$result$project_paths$root)
+          refresh_shiny_result_exports(session, state)
+          append_app_stage(state, "Diagnostics", "creating archive", state$result$project_paths$root)
+          state$diagnostic_bundle <- bundle_diagnostics(state$result, overwrite = TRUE)
+          append_app_message(state, paste("Diagnostic bundle ready:", state$diagnostic_bundle))
           shiny::incProgress(1)
           })
         })
@@ -553,6 +570,16 @@ iBGB_shiny_server <- function(input, output, session) {
           copy_download_file(src, file)
         }
       )
+
+      output$download_diagnostic_bundle <- shiny::downloadHandler(
+        filename = function() {
+          basename(resolve_diagnostic_bundle_file(state))
+        },
+        content = function(file) {
+          src <- resolve_diagnostic_bundle_file(state)
+          copy_download_file(src, file)
+        }
+      )
 }
 
 run_app_action <- function(state, expr) {
@@ -636,6 +663,14 @@ resolve_bundle_file <- function(state) {
     state$bundle <- bundle_results(state$result, overwrite = TRUE)
   }
   require_existing_file(state$bundle, "Bundle results before downloading them.")
+}
+
+resolve_diagnostic_bundle_file <- function(state) {
+  if (is.null(state$diagnostic_bundle)) {
+    require_workflow_result(state$result)
+    state$diagnostic_bundle <- bundle_diagnostics(state$result, overwrite = TRUE)
+  }
+  require_existing_file(state$diagnostic_bundle, "Bundle diagnostics before downloading them.")
 }
 
 require_existing_file <- function(path, message) {
@@ -992,7 +1027,8 @@ shiny_key_file_specs <- function() {
       "+J sensitivity CSV",
       "Workflow manifest CSV",
       "Report",
-      "Result bundle"
+      "Result bundle",
+      "Diagnostic bundle"
     ),
     relative_path = c(
       "tables/shiny_run_summary.csv",
@@ -1000,7 +1036,8 @@ shiny_key_file_specs <- function() {
       "tables/model_sensitivity.csv",
       "tables/workflow_manifest.csv",
       "reports/summary_report.html",
-      NA_character_
+      "bundle:result",
+      "bundle:diagnostic"
     ),
     missing_action = c(
       "Run or load workflow results, then refresh key files.",
@@ -1008,7 +1045,8 @@ shiny_key_file_specs <- function() {
       "Run or load workflow results.",
       "Run or load workflow results, then refresh key files.",
       "Click Render report.",
-      "Click Create bundle if missing."
+      "Click Create bundle if missing.",
+      "Click Create diagnostic bundle."
     ),
     stringsAsFactors = FALSE
   )
@@ -1021,8 +1059,16 @@ resolve_key_file_path <- function(state, relative_path) {
   }
   root <- result$project_paths$root
 
-  if (is.na(relative_path)) {
+  if (identical(relative_path, "bundle:result")) {
     bundle <- state$bundle %||% NULL
+    if (!is.null(bundle) && file.exists(bundle)) {
+      return(as_path(bundle))
+    }
+    return(NULL)
+  }
+
+  if (identical(relative_path, "bundle:diagnostic")) {
+    bundle <- state$diagnostic_bundle %||% NULL
     if (!is.null(bundle) && file.exists(bundle)) {
       return(as_path(bundle))
     }
