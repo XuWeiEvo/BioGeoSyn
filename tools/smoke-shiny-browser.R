@@ -71,6 +71,14 @@ if (!grepl("Model comparison CSV", loaded_text, fixed = TRUE)) {
   stop("Run summary did not render the key-files table after loading results.", call. = FALSE)
 }
 
+app$click(selector = "a[data-value='Figure Dashboard']")
+app$wait_for_idle(timeout = 60000)
+dashboard_text <- app$get_text("body")
+if (!grepl("Shown below", dashboard_text, fixed = TRUE) ||
+    !grepl("Expected PNG was not found", dashboard_text, fixed = TRUE)) {
+  stop("Figure dashboard did not render figure preview status and missing reasons.", call. = FALSE)
+}
+
 app$click("validate")
 app$wait_for_idle()
 if (!grepl("Validation passed", app$get_text("body"), fixed = TRUE)) {

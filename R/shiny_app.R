@@ -1199,9 +1199,32 @@ shiny_figure_dashboard_table <- function(state) {
   paths <- vapply(figures$figure, function(figure) {
     shiny_named_figure_path(state, figure) %||% NA_character_
   }, character(1))
+  reasons <- vapply(figures$figure, function(figure) {
+    if (!is.na(paths[[figure]])) {
+      return("")
+    }
+    shiny_figure_missing_reason(state, figure)
+  }, character(1))
   data.frame(
     figure = figures$display_label,
-    status = ifelse(is.na(paths), "not available", "available"),
+    status = vapply(figures$figure, function(figure) {
+      if (!is.na(paths[[figure]])) {
+        return("Available")
+      }
+      rows <- shiny_figure_manifest_rows(state, figure)
+      if (nrow(rows) > 0L && "status" %in% names(rows) &&
+          any(tolower(rows$status %||% "") == "failed", na.rm = TRUE)) {
+        return("Failed")
+      }
+      "Missing"
+    }, character(1)),
+    preview = ifelse(is.na(paths), "Not shown", "Shown below"),
+    missing_reason = reasons,
+    next_step = ifelse(
+      is.na(paths),
+      vapply(reasons, shiny_figure_next_step, character(1)),
+      ""
+    ),
     path = paths,
     stringsAsFactors = FALSE
   )
@@ -1227,6 +1250,83 @@ shiny_dashboard_figures <- function() {
     ),
     stringsAsFactors = FALSE
   )
+}
+
+shiny_figure_manifest_rows <- function(state, figure) {
+  result <- state$result
+  if (is.null(result) || is.null(result$figure_manifest)) {
+    return(data.frame())
+  }
+  manifest <- result$figure_manifest
+  if (is.null(manifest) || nrow(manifest) == 0L || !"figure" %in% names(manifest)) {
+    return(data.frame())
+  }
+  rows <- manifest[manifest$figure == figure, , drop = FALSE]
+  if (nrow(rows) > 0L && "format" %in% names(rows)) {
+    rows <- rows[tolower(rows$format) == "png", , drop = FALSE]
+  }
+  rows
+}
+
+shiny_figure_missing_reason <- function(state, figure) {
+  result <- state$result
+  if (is.null(result)) {
+    return("No workflow result loaded.")
+  }
+
+  rows <- shiny_figure_manifest_rows(state, figure)
+  if (nrow(rows) > 0L) {
+    status <- if ("status" %in% names(rows)) rows$status[[1L]] else "unknown"
+    error_message <- first_non_empty(rows$error_message %||% character())
+    if (!is.na(status) && identical(tolower(status), "failed")) {
+      if (!is.null(error_message)) {
+        return(paste("Figure generation failed:", error_message))
+      }
+      return("Figure generation failed.")
+    }
+    if ("path" %in% names(rows)) {
+      path <- rows$path[[1L]] %||% ""
+      if (is.na(path)) {
+        path <- ""
+      }
+      if (nzchar(path) && !file.exists(path)) {
+        return("Figure manifest points to a missing PNG file.")
+      }
+    }
+    return(paste("Figure generation status:", status %||% "unknown"))
+  }
+
+  figures_dir <- result$project_paths$figures %||% NULL
+  if (!is.null(figures_dir)) {
+    expected <- file.path(figures_dir, paste0(figure, ".png"))
+    if (!file.exists(expected)) {
+      return("Expected PNG was not found in the figures directory.")
+    }
+  }
+  "No figure manifest entry is available for this named figure."
+}
+
+shiny_figure_next_step <- function(reason) {
+  reason <- tolower(reason %||% "")
+  if (grepl("no workflow result", reason)) {
+    return("Run workflow or load existing results.")
+  }
+  if (grepl("failed", reason)) {
+    return("Inspect figure_manifest.csv and rerun figure generation after fixing the source table.")
+  }
+  if (grepl("missing png|expected png|manifest points", reason)) {
+    return("Refresh key files, then rerun workflow or regenerate figures.")
+  }
+  "Run workflow with figure generation enabled."
+}
+
+first_non_empty <- function(x) {
+  x <- as.character(x %||% character())
+  x <- x[!is.na(x) & nzchar(trimws(x))]
+  if (length(x) == 0L) {
+    return(NULL)
+  }
+  x[[1L]]
 }
 
 shiny_named_figure_image <- function(state, figure) {

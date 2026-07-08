@@ -55,6 +55,8 @@ Development version after the 0.1.0 alpha release.
   `Bundle ready:`, and `Key files refreshed:` messages.
 - Added compact Shiny summaries for model fit, +J sensitivity, and captured
   warnings before the detailed result tables.
+- Expanded the Shiny figure dashboard with preview status, missing reasons,
+  and recommended next steps for missing or failed figures.
 - Added a `shinytest2` browser smoke script for the Shiny workflow runner.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.

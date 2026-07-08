@@ -563,10 +563,43 @@ test_that("figure dashboard helpers expose named workflow figures", {
   image <- shiny_named_figure_image(state, "model_comparison")
 
   expect_equal(shiny_named_figure_path(state, "model_comparison"), as_path(png_path))
-  expect_equal(dashboard$status[match("Model Comparison", dashboard$figure)], "available")
-  expect_equal(dashboard$status[match("Root State Probabilities", dashboard$figure)], "not available")
+  expect_equal(dashboard$status[match("Model Comparison", dashboard$figure)], "Available")
+  expect_equal(dashboard$preview[match("Model Comparison", dashboard$figure)], "Shown below")
+  expect_equal(dashboard$status[match("Root State Probabilities", dashboard$figure)], "Missing")
+  expect_match(
+    dashboard$missing_reason[match("Root State Probabilities", dashboard$figure)],
+    "Expected PNG was not found",
+    fixed = TRUE
+  )
   expect_equal(image$src, as_path(png_path))
   expect_equal(image$contentType, "image/png")
+})
+
+test_that("figure dashboard reports failed figure generation with next steps", {
+  out <- tempfile("ibgb-shiny-figure-dashboard-failed-")
+  paths <- create_project(out)
+
+  state <- new.env(parent = emptyenv())
+  state$result <- list(
+    project_paths = paths,
+    figure_manifest = data.frame(
+      figure = "node_state_sensitivity",
+      format = "png",
+      path = file.path(paths$figures, "node_state_sensitivity.png"),
+      status = "failed",
+      error_message = "missing node_state_sensitivity.csv",
+      stringsAsFactors = FALSE
+    )
+  )
+  state$manifest <- NULL
+
+  dashboard <- shiny_figure_dashboard_table(state)
+  row <- dashboard[dashboard$figure == "Node-State Sensitivity", , drop = FALSE]
+
+  expect_equal(row$status, "Failed")
+  expect_equal(row$preview, "Not shown")
+  expect_match(row$missing_reason, "Figure generation failed: missing node_state_sensitivity.csv", fixed = TRUE)
+  expect_match(row$next_step, "Inspect figure_manifest.csv", fixed = TRUE)
 })
 
 test_that("figure preview helpers return NULL when no figures exist", {
