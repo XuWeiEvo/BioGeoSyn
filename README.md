@@ -166,7 +166,7 @@ Recommended GUI flow:
 6. Click `Refresh key files`.
 7. Click `Create bundle if missing`.
 8. Review `Run Summary`, `Model Comparison`, `+J Sensitivity`, `Warnings`,
-   `Figure Dashboard`, and `Tables`.
+   `Figure Dashboard`, `Tables`, and `About/Citation`.
 
 The Shiny result views are designed for triage:
 
@@ -181,6 +181,8 @@ The Shiny result views are designed for triage:
   reasons, and next steps.
 - `Tables`: key CSV availability, row and column counts, missing reasons, next
   steps, and CSV previews.
+- `About/Citation`: package version, GPL license, BioGeoBEARS availability,
+  citation guidance, and workflow log paths.
 
 For a browser-level GUI smoke test, install `shinytest2` and run:
 

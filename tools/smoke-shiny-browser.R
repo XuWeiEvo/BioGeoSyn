@@ -51,7 +51,7 @@ required_initial_text <- c(
   "Fit summary", "+J sensitivity summary", "Warning summary",
   "Node States", "Node Sensitivity", "Figure Dashboard",
   "Load existing results", "Download run summary", "Key files",
-  "Refresh key files", "Create bundle if missing"
+  "Refresh key files", "Create bundle if missing", "About/Citation"
 )
 missing_initial <- required_initial_text[!vapply(required_initial_text, grepl, logical(1), x = body_text, fixed = TRUE)]
 if (length(missing_initial) > 0L) {
@@ -86,6 +86,14 @@ if (!grepl("Table status", tables_text, fixed = TRUE) ||
     !grepl("Model comparison", tables_text, fixed = TRUE) ||
     !grepl("Expected CSV was not found", tables_text, fixed = TRUE)) {
   stop("Tables tab did not render key table status and missing reasons.", call. = FALSE)
+}
+
+app$click(selector = "a[data-value='About/Citation']")
+app$wait_for_idle(timeout = 60000)
+about_text <- app$get_text("body")
+if (!grepl("GPL (>= 2)", about_text, fixed = TRUE) ||
+    !grepl("citation(\"BioGeoBEARS\")", about_text, fixed = TRUE)) {
+  stop("About/Citation tab did not render license and BioGeoBEARS citation guidance.", call. = FALSE)
 }
 
 app$click("validate")

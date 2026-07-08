@@ -158,6 +158,46 @@ test_that("shiny_summary_table reports workflow status", {
   expect_equal(summary$value[match("Bundle", summary$item)], "available")
 })
 
+test_that("shiny about and citation helpers expose software status", {
+  out <- tempfile("ibgb-shiny-about-")
+  paths <- create_project(out)
+  session_info <- file.path(paths$logs, "session_info.txt")
+  citation_log <- file.path(paths$logs, "biogeobears_citation.txt")
+  writeLines("session", session_info)
+  writeLines("citation", citation_log)
+
+  state <- new.env(parent = emptyenv())
+  state$result <- list(project_paths = paths)
+  fake_bgb <- list(
+    available = TRUE,
+    version = "1.1.2",
+    path = "C:/R/BioGeoBEARS",
+    citation = "BioGeoBEARS citation text",
+    install_help = "install help"
+  )
+
+  about <- shiny_about_table(state, bgb_check = fake_bgb)
+  citation <- shiny_biogeobears_citation_text(fake_bgb)
+  missing <- shiny_biogeobears_citation_text(list(
+    available = FALSE,
+    version = NA_character_,
+    path = NA_character_,
+    citation = NA_character_,
+    install_help = "install BioGeoBEARS"
+  ))
+
+  expect_equal(about$value[match("Package", about$item)], "iBiogeobears")
+  expect_equal(about$value[match("License", about$item)], "GPL (>= 2)")
+  expect_equal(about$value[match("BioGeoBEARS available", about$item)], "yes")
+  expect_equal(about$value[match("BioGeoBEARS version", about$item)], "1.1.2")
+  expect_equal(about$value[match("BioGeoBEARS citation command", about$item)], "citation(\"BioGeoBEARS\")")
+  expect_equal(about$value[match("Session info log", about$item)], as_path(session_info))
+  expect_equal(about$value[match("BioGeoBEARS citation log", about$item)], as_path(citation_log))
+  expect_match(citation, "BioGeoBEARS citation text", fixed = TRUE)
+  expect_match(missing, "BioGeoBEARS is not bundled", fixed = TRUE)
+  expect_match(missing, "citation(\"BioGeoBEARS\")", fixed = TRUE)
+})
+
 test_that("shiny_run_summary_table handles empty and fitted result states", {
   empty_state <- new.env(parent = emptyenv())
   empty_state$result <- NULL

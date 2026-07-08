@@ -59,6 +59,8 @@ Development version after the 0.1.0 alpha release.
   and recommended next steps for missing or failed figures.
 - Added a Shiny table-status view for key CSV outputs with row and column
   counts, missing reasons, and recommended next steps.
+- Added a Shiny About/Citation view for BioGeoBEARS availability, citation
+  guidance, license, package version, and workflow log paths.
 - Updated README workflow documentation for command-line runs, Shiny GUI use,
   result triage, key outputs, report rendering, and result bundling.
 - Added a `shinytest2` browser smoke script for the Shiny workflow runner.

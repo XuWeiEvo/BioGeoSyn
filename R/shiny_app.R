@@ -154,6 +154,13 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
               shiny::div(class = "ibgb-preview", shiny::imageOutput("figure_image")),
               shiny::verbatimTextOutput("figure_path_text")
             ),
+            shiny::tabPanel(
+              "About/Citation",
+              shiny::tags$div(class = "ibgb-key-files-title", "Software status"),
+              shiny::tableOutput("about_table"),
+              shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS citation"),
+              shiny::verbatimTextOutput("citation_text")
+            ),
             shiny::tabPanel("Paths", shiny::verbatimTextOutput("paths_text")),
             shiny::tabPanel("Messages", shiny::verbatimTextOutput("messages_text"))
           )
@@ -479,6 +486,14 @@ iBGB_shiny_server <- function(input, output, session) {
         }
       })
 
+      output$about_table <- shiny::renderTable({
+        shiny_about_table(state)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$citation_text <- shiny::renderText({
+        shiny_biogeobears_citation_text()
+      })
+
       output$download_report <- shiny::downloadHandler(
         filename = function() {
           basename(resolve_report_file(state))
@@ -717,6 +732,80 @@ shiny_summary_table <- function(state) {
       if (!is.null(state$bundle) && file.exists(state$bundle)) "available" else "not available"
     ),
     stringsAsFactors = FALSE
+  )
+}
+
+shiny_about_table <- function(state, bgb_check = check_biogeobears(required = FALSE)) {
+  data.frame(
+    item = c(
+      "Package",
+      "Package version",
+      "License",
+      "BioGeoBEARS available",
+      "BioGeoBEARS version",
+      "BioGeoBEARS path",
+      "BioGeoBEARS citation command",
+      "Session info log",
+      "BioGeoBEARS citation log"
+    ),
+    value = c(
+      "iBiogeobears",
+      shiny_package_version_label(),
+      "GPL (>= 2)",
+      if (isTRUE(bgb_check$available)) "yes" else "no",
+      shiny_text_or_not_available(bgb_check$version),
+      shiny_text_or_not_available(bgb_check$path),
+      "citation(\"BioGeoBEARS\")",
+      shiny_log_path(state, "session_info.txt") %||% "not available",
+      shiny_log_path(state, "biogeobears_citation.txt") %||% "not available"
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+shiny_text_or_not_available <- function(x) {
+  if (is.null(x) || length(x) == 0L || is.na(x[[1L]]) || !nzchar(as.character(x[[1L]]))) {
+    return("not available")
+  }
+  as.character(x[[1L]])
+}
+
+shiny_package_version_label <- function() {
+  tryCatch(
+    as.character(utils::packageVersion("iBiogeobears")),
+    error = function(e) {
+      desc <- tryCatch(utils::packageDescription("iBiogeobears", fields = "Version"), error = function(e) NA_character_)
+      if (!is.na(desc) && nzchar(desc)) {
+        desc
+      } else {
+        "not available"
+      }
+    }
+  )
+}
+
+shiny_log_path <- function(state, filename) {
+  if (is.null(state$result) || is.null(state$result$project_paths$logs)) {
+    return(NULL)
+  }
+  path <- file.path(state$result$project_paths$logs, filename)
+  if (file.exists(path)) {
+    return(as_path(path))
+  }
+  NULL
+}
+
+shiny_biogeobears_citation_text <- function(bgb_check = check_biogeobears(required = FALSE)) {
+  citation <- shiny_text_or_not_available(bgb_check$citation)
+  if (isTRUE(bgb_check$available) && citation != "not available") {
+    return(citation)
+  }
+  paste(
+    "BioGeoBEARS is not bundled with iBiogeobears.",
+    "Install BioGeoBEARS separately for real model execution.",
+    "When BioGeoBEARS is installed, run citation(\"BioGeoBEARS\") and cite it directly.",
+    bgb_check$install_help %||% "",
+    sep = "\n"
   )
 }
 
