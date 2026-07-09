@@ -1,9 +1,24 @@
 test_that("quick acceptance check covers the installed user workflow", {
   out <- tempfile("ibgb-acceptance-")
   result <- run_acceptance_check(out, mode = "quick")
+  failed <- result$checks[result$checks$status == "Failed", , drop = FALSE]
+  failure_info <- if (nrow(failed) == 0L) {
+    "No failed acceptance row was recorded."
+  } else {
+    paste(
+      paste0(
+        failed$check,
+        ": ",
+        failed$detail,
+        " Next step: ",
+        failed$next_step
+      ),
+      collapse = "\n"
+    )
+  }
 
   expect_s3_class(result, "iBGB_acceptance_result")
-  expect_true(result$passed)
+  expect_true(result$passed, info = failure_info)
   expect_true(file.exists(result$results_file))
   expect_true(file.exists(result$session_file))
   expect_true(file.exists(result$source_report))
