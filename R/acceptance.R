@@ -330,10 +330,16 @@ acceptance_require_components <- function(installation, components) {
   selected <- installation[installation$component %in% components, , drop = FALSE]
   missing <- setdiff(components, selected$component)
   acceptance_assert(length(missing) == 0L, paste("Missing installation check(s):", paste(missing, collapse = ", ")))
-  action_needed <- selected$component[selected$status != "Ready"]
+  action_needed <- selected[selected$status != "Ready", , drop = FALSE]
+  action_detail <- paste0(
+    action_needed$component,
+    " (",
+    action_needed$next_step,
+    ")"
+  )
   acceptance_assert(
-    length(action_needed) == 0L,
-    paste("Components requiring action:", paste(action_needed, collapse = ", "))
+    nrow(action_needed) == 0L,
+    paste("Components requiring action:", paste(action_detail, collapse = "; "))
   )
   invisible(TRUE)
 }
