@@ -6,10 +6,6 @@ missing <- required[!vapply(required, requireNamespace, logical(1), quietly = TR
 if (length(missing) > 0L) {
   stop("Missing required smoke-test package(s): ", paste(missing, collapse = ", "), call. = FALSE)
 }
-if (Sys.which("zip") == "") {
-  stop("The zip utility is required for result-bundle smoke testing.", call. = FALSE)
-}
-
 lib <- tempfile("ibgb-user-workflow-lib-")
 dir.create(lib, recursive = TRUE, showWarnings = FALSE)
 install.packages(repo, lib = lib, repos = NULL, type = "source")

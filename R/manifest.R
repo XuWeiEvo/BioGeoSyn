@@ -57,30 +57,8 @@ bundle_results <- function(result_or_path, bundle_file = NULL, include_raw = TRU
     stop("No workflow output files are available to bundle.", call. = FALSE)
   }
 
-  old_wd <- getwd()
-  on.exit(setwd(old_wd), add = TRUE)
-  setwd(root)
-
   files <- manifest$relative_path
-  zip_error <- NULL
-  status <- NULL
-  invisible(utils::capture.output({
-    status <- tryCatch(
-      utils::zip(zipfile = bundle_file, files = files, flags = "-qr9X"),
-      error = function(e) {
-        zip_error <<- e
-        NA_integer_
-      }
-    )
-  }))
-  if (!is.null(zip_error) || (!is.null(status) && !identical(status, 0L))) {
-    stop(
-      "Unable to create zip archive. Ensure a zip utility is available to R, or provide a writable bundle_file path.",
-      call. = FALSE
-    )
-  }
-
-  as_path(bundle_file)
+  zip_relative_files(root, bundle_file, files)
 }
 
 #' Bundle workflow diagnostics into a lightweight zip archive
@@ -170,17 +148,30 @@ zip_relative_files <- function(root, bundle_file, files) {
   zip_error <- NULL
   status <- NULL
   invisible(utils::capture.output({
-    status <- tryCatch(
-      utils::zip(zipfile = bundle_file, files = files, flags = "-qr9X"),
-      error = function(e) {
-        zip_error <<- e
-        NA_integer_
-      }
-    )
+    if (requireNamespace("zip", quietly = TRUE)) {
+      status <- tryCatch(
+        {
+          zip::zip(zipfile = bundle_file, files = files, include_directories = FALSE)
+          0L
+        },
+        error = function(e) {
+          zip_error <<- e
+          NA_integer_
+        }
+      )
+    } else {
+      status <- tryCatch(
+        utils::zip(zipfile = bundle_file, files = files, flags = "-qr9X"),
+        error = function(e) {
+          zip_error <<- e
+          NA_integer_
+        }
+      )
+    }
   }))
   if (!is.null(zip_error) || (!is.null(status) && !identical(status, 0L))) {
     stop(
-      "Unable to create zip archive. Ensure a zip utility is available to R, or provide a writable bundle_file path.",
+      "Unable to create zip archive. Install the R package 'zip' or ensure a system zip utility is available to R.",
       call. = FALSE
     )
   }

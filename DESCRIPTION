@@ -28,7 +28,8 @@ Imports:
     ggplot2,
     igraph,
     ggraph,
-    ape
+    ape,
+    zip
 Suggests:
     devtools,
     testthat (>= 3.0.0),

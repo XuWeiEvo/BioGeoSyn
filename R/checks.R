@@ -56,7 +56,7 @@ check_biogeobears <- function(required = TRUE) {
 #'   recommended next step.
 #' @export
 check_installation <- function(include_pdf = TRUE) {
-  core_packages <- c("yaml", "ggplot2", "igraph", "ggraph", "ape")
+  core_packages <- c("yaml", "ggplot2", "igraph", "ggraph", "ape", "zip")
   core_status <- do.call(rbind, lapply(core_packages, package_namespace_status))
   core_available <- core_status$available
   core_versions <- stats::setNames(

@@ -248,7 +248,7 @@ run_acceptance_check <- function(
       }
       bundle
     },
-    "Ensure that a zip utility is available and the destination is writable."
+    "Ensure that the R package 'zip' is installed and the destination is writable."
   )
 
   state$diagnostic_bundle <- add_step(
@@ -260,7 +260,7 @@ run_acceptance_check <- function(
       acceptance_assert(file.exists(bundle) && file.info(bundle)$size > 0, "The diagnostic bundle is empty.")
       bundle
     },
-    "Ensure that logs and status tables exist and the destination is writable."
+    "Ensure that logs, status tables, the R package 'zip', and a writable destination are available."
   )
 
   checks <- do.call(rbind, rows)

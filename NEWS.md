@@ -8,6 +8,9 @@ Development toward a stable, ordinary-user release.
 - Added a saved acceptance matrix with platform, R version, package version,
   elapsed time, failure details, and actionable next steps.
 - Added the quick acceptance matrix to GitHub Actions.
+- Expanded GitHub Actions quick checks across Linux, Windows, and macOS.
+- Switched result and diagnostic bundling to the R `zip` package when available
+  for more reliable cross-platform archive creation.
 - Added Linux GLPK/libxml2 CI dependencies and actionable diagnostics for R
   packages that are installed but cannot load because a system library is
   missing.

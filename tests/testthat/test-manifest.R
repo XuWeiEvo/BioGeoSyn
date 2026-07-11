@@ -17,8 +17,6 @@ test_that("create_workflow_manifest lists workflow output files", {
 })
 
 test_that("bundle_results creates a zip archive", {
-  testthat::skip_if(Sys.which("zip") == "", "zip utility is not available")
-
   out <- tempfile("ibgb-bundle-")
   paths <- create_project(out)
   writeLines("a,b\n1,2", file.path(paths$tables, "example.csv"))
@@ -34,8 +32,6 @@ test_that("bundle_results creates a zip archive", {
 })
 
 test_that("bundle_results can omit raw BioGeoBEARS files", {
-  testthat::skip_if(Sys.which("zip") == "", "zip utility is not available")
-
   out <- tempfile("ibgb-bundle-no-raw-")
   paths <- create_project(out)
   writeLines("a,b\n1,2", file.path(paths$tables, "example.csv"))
@@ -50,8 +46,6 @@ test_that("bundle_results can omit raw BioGeoBEARS files", {
 })
 
 test_that("bundle_diagnostics creates a lightweight diagnostic archive", {
-  testthat::skip_if(Sys.which("zip") == "", "zip utility is not available")
-
   out <- tempfile("ibgb-diagnostics-")
   paths <- create_project(out)
   model_log <- file.path(paths$raw_biogeobears, "DEC", "DEC.log")
