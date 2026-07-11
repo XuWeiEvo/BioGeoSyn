@@ -10,7 +10,7 @@ plot_node_state_summary(
   model = NULL,
   location = "branch_top_at_node",
   label_tips = TRUE,
-  label_internal_nodes = FALSE
+  label_internal_nodes = TRUE
 )
 }
 \arguments{
@@ -29,7 +29,7 @@ plot_node_state_summary(
 \item{label_tips}{Logical. If \code{TRUE}, label tip nodes.}
 
 \item{label_internal_nodes}{Logical. If \code{TRUE}, label internal nodes by
-node index.}
+best state and probability.}
 }
 \value{
 A ggplot object.

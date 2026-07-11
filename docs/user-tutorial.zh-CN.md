@@ -332,6 +332,7 @@ reports/summary_report.html
 tables/shiny_run_summary.csv
 tables/model_comparison.csv
 tables/event_summary.csv
+tables/best_fit_events.csv
 tables/model_sensitivity.csv
 tables/model_run_status.csv
 figures/

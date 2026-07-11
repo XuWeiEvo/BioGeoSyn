@@ -10,8 +10,8 @@
 #' @return A data frame describing planned or executed model runs. Executed
 #'   runs also write raw `.rds` outputs, logs, `model_fit_raw.csv`,
 #'   `model_comparison.csv`, `model_sensitivity.csv`,
-#'   `model_sensitivity.rds`, `node_state_sensitivity.csv`, and warning
-#'   summaries in `model_run_status.csv`.
+#'   `model_sensitivity.rds`, `node_state_sensitivity.csv`,
+#'   `best_fit_events.csv`, and warning summaries in `model_run_status.csv`.
 #' @export
 run_models <- function(config, project_paths, execute = FALSE) {
   models <- config$models$run %||% valid_models()
@@ -124,15 +124,22 @@ run_models <- function(config, project_paths, execute = FALSE) {
     node_state_summary = standardized_tables$node_state_summary,
     comparison = comparison
   )
+  best_fit_events <- summarize_best_fit_events(
+    range_change_events = standardized_tables$range_change_events,
+    comparison = comparison
+  )
   standardized_tables$node_state_sensitivity <- node_state_sensitivity
+  standardized_tables$best_fit_events <- best_fit_events
   saveRDS(sensitivity, file.path(project_paths$tables, "model_sensitivity.rds"))
   write_csv_base(sensitivity_table, file.path(project_paths$tables, "model_sensitivity.csv"))
   write_csv_base(node_state_sensitivity, file.path(project_paths$tables, "node_state_sensitivity.csv"))
+  write_csv_base(best_fit_events, file.path(project_paths$tables, "best_fit_events.csv"))
   write_csv_base(comparison, file.path(project_paths$tables, "model_comparison.csv"))
 
   attr(comparison, "sensitivity") <- sensitivity
   attr(comparison, "sensitivity_table") <- sensitivity_table
   attr(comparison, "node_state_sensitivity") <- node_state_sensitivity
+  attr(comparison, "best_fit_events") <- best_fit_events
   attr(comparison, "run_status") <- raw_table
   attr(comparison, "standardized_tables") <- standardized_tables
   comparison
@@ -142,6 +149,7 @@ prepare_biogeobears_inputs <- function(config, project_paths) {
   base_dir <- dirname(config$.config_file %||% ".")
   tree_file <- resolve_config_path(config$inputs$tree_file, base_dir)
   geography_file <- resolve_config_path(config$inputs$geography_file, base_dir)
+  regions_file <- resolve_config_path(config$inputs$regions_file, base_dir)
 
   if (is.null(tree_file) || !file.exists(tree_file)) {
     stop("Tree file does not exist: ", tree_file %||% "missing", call. = FALSE)
@@ -168,8 +176,26 @@ prepare_biogeobears_inputs <- function(config, project_paths) {
     original_geography_file = as_path(original_geography_out),
     n_taxa = nrow(geography$matrix),
     areas = colnames(geography$matrix),
-    max_range_size = as.integer(config$inputs$max_range_size)
+    max_range_size = as.integer(config$inputs$max_range_size),
+    region_metadata = read_region_metadata(regions_file)
   )
+}
+
+read_region_metadata <- function(path) {
+  if (is.null(path) || !file.exists(path)) {
+    return(data.frame())
+  }
+  regions <- tryCatch(
+    utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE),
+    error = function(e) data.frame()
+  )
+  if (nrow(regions) == 0L || !"region" %in% names(regions)) {
+    return(data.frame())
+  }
+  if (!"label" %in% names(regions)) {
+    regions$label <- regions$region
+  }
+  regions[, intersect(c("region", "label", "color"), names(regions)), drop = FALSE]
 }
 
 read_range_matrix <- function(path) {

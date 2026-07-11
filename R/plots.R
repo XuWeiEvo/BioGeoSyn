@@ -162,10 +162,10 @@ plot_root_state_probabilities <- function(root_state_probabilities, top_n = 8L) 
 #'   `"branch_top_at_node"` when available.
 #' @param label_tips Logical. If `TRUE`, label tip nodes.
 #' @param label_internal_nodes Logical. If `TRUE`, label internal nodes by
-#'   node index.
+#'   best state and probability.
 #' @return A ggplot object.
 #' @export
-plot_node_state_summary <- function(tree_nodes, node_state_summary, model = NULL, location = "branch_top_at_node", label_tips = TRUE, label_internal_nodes = FALSE) {
+plot_node_state_summary <- function(tree_nodes, node_state_summary, model = NULL, location = "branch_top_at_node", label_tips = TRUE, label_internal_nodes = TRUE) {
   node_required <- c("node_index", "node_type", "node_label", "parent_node_index", "edge_length")
   summary_required <- c("model", "location", "node_index", "best_state", "best_probability")
   missing_nodes <- setdiff(node_required, names(tree_nodes))
@@ -197,14 +197,24 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, model = NULL
   plot_data <- merge(layout, summary_rows, by = "node_index", all.x = TRUE, sort = FALSE)
   plot_data$plot_probability <- ifelse(is.na(plot_data$best_probability), 0, plot_data$best_probability)
   plot_data$best_state_label <- ifelse(is.na(plot_data$best_state), "not estimated", plot_data$best_state)
+  plot_data$probability_label <- ifelse(
+    is.na(plot_data$best_probability),
+    "NA",
+    format(round(plot_data$best_probability, 2L), nsmall = 2L, trim = TRUE)
+  )
 
   edges <- plot_data[!is.na(plot_data$parent_node_index), , drop = FALSE]
   edges <- edges[!is.na(edges$parent_x) & !is.na(edges$parent_y), , drop = FALSE]
   edge_segments <- tree_edge_segments(edges)
   tip_labels <- if (isTRUE(label_tips)) plot_data[plot_data$node_type == "tip", , drop = FALSE] else plot_data[0L, , drop = FALSE]
+  tip_labels$tip_display <- if (nrow(tip_labels) > 0L) {
+    paste0(tip_labels$node_label, " [", tip_labels$best_state_label, "]")
+  } else {
+    character(0)
+  }
   internal_labels <- if (isTRUE(label_internal_nodes)) plot_data[plot_data$node_type == "internal", , drop = FALSE] else plot_data[0L, , drop = FALSE]
   internal_labels$internal_node_label <- if (nrow(internal_labels) > 0L) {
-    paste0("n", internal_labels$node_index)
+    paste0(internal_labels$best_state_label, "\n", internal_labels$probability_label)
   } else {
     character(0)
   }
@@ -213,43 +223,49 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, model = NULL
     ggplot2::geom_segment(
       data = edge_segments,
       ggplot2::aes(x = x, y = y, xend = xend, yend = yend),
-      linewidth = 0.35,
-      colour = "grey45"
+      linewidth = 0.45,
+      colour = "#64748b"
     ) +
     ggplot2::geom_point(
       data = plot_data,
       ggplot2::aes(x = x, y = y, fill = best_state_label, size = plot_probability),
       shape = 21,
-      colour = "grey20",
-      stroke = 0.25,
-      alpha = 0.9
+      colour = "#1f2937",
+      stroke = 0.35,
+      alpha = 0.95
     ) +
     ggplot2::geom_text(
       data = tip_labels,
-      ggplot2::aes(x = x, y = y, label = node_label),
-      hjust = -0.08,
-      size = 3
+      ggplot2::aes(x = x, y = y, label = tip_display),
+      hjust = -0.05,
+      size = 3.1
     ) +
-    ggplot2::geom_text(
+    ggplot2::geom_label(
       data = internal_labels,
       ggplot2::aes(x = x, y = y, label = internal_node_label),
-      nudge_y = 0.12,
-      size = 2.5,
-      colour = "grey30"
+      nudge_y = 0.22,
+      size = 2.8,
+      colour = "#111827",
+      fill = "white",
+      label.size = 0.15,
+      alpha = 0.9
     ) +
-    ggplot2::scale_size_continuous(limits = c(0, 1), range = c(1.8, 5.8), name = "Best-state probability") +
+    ggplot2::scale_size_continuous(limits = c(0, 1), range = c(2.4, 7.2), name = "Best-state probability") +
+    ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = c(0.03, 0.2))) +
+    ggplot2::coord_cartesian(clip = "off") +
     ggplot2::labs(
-      title = paste(model, location, sep = " - "),
+      title = paste("Best ancestral ranges:", model),
+      subtitle = location,
       x = "Distance from root",
       y = NULL,
       fill = "Best state"
     ) +
-    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme_classic(base_size = 11) +
     ggplot2::theme(
-      panel.grid.major.y = ggplot2::element_blank(),
-      panel.grid.minor = ggplot2::element_blank(),
       axis.text.y = ggplot2::element_blank(),
-      legend.position = "bottom"
+      axis.ticks.y = ggplot2::element_blank(),
+      legend.position = "bottom",
+      plot.margin = ggplot2::margin(8, 44, 8, 8)
     )
 }
 
@@ -379,6 +395,7 @@ generate_figures <- function(model_comparison, standardized_tables, project_path
 
 save_plot_outputs <- function(plot, name, figures_dir, formats) {
   formats <- unique(as.character(formats %||% "png"))
+  dimensions <- plot_output_dimensions(name)
   do.call(rbind, lapply(formats, function(format) {
     path <- file.path(figures_dir, paste0(name, ".", format))
     status <- "created"
@@ -387,8 +404,8 @@ save_plot_outputs <- function(plot, name, figures_dir, formats) {
       ggplot2::ggsave(
         filename = path,
         plot = plot,
-        width = 7,
-        height = 4.5,
+        width = dimensions$width,
+        height = dimensions$height,
         units = "in",
         dpi = 300
       ),
@@ -406,6 +423,16 @@ save_plot_outputs <- function(plot, name, figures_dir, formats) {
       stringsAsFactors = FALSE
     )
   }))
+}
+
+plot_output_dimensions <- function(name) {
+  if (grepl("^node_state_summary", name)) {
+    return(list(width = 9.5, height = 6.2))
+  }
+  if (identical(name, "event_summary")) {
+    return(list(width = 7.5, height = 4.8))
+  }
+  list(width = 7, height = 4.5)
 }
 
 layout_tree_nodes <- function(tree_nodes) {

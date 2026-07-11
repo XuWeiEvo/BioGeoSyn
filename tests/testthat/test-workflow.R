@@ -107,12 +107,14 @@ test_that("run_workflow exposes model comparison when BioGeoBEARS is available",
     "root_state_probabilities",
     "node_state_summary",
     "range_change_events",
+    "best_fit_events",
     "event_summary"
   ) %in% names(result$standardized_tables)))
   expect_true(file.exists(file.path(out, "tables", "model_run_status.csv")))
   expect_true(file.exists(file.path(out, "tables", "model_comparison.csv")))
   expect_true(file.exists(file.path(out, "tables", "model_sensitivity.csv")))
   expect_true(file.exists(file.path(out, "tables", "node_state_sensitivity.csv")))
+  expect_true(file.exists(file.path(out, "tables", "best_fit_events.csv")))
   expect_true(file.exists(file.path(out, "tables", "range_change_events.csv")))
   expect_true(file.exists(file.path(out, "tables", "event_summary.csv")))
   expect_true(file.exists(file.path(out, "tables", "model_parameters.csv")))

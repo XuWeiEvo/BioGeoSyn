@@ -9,7 +9,7 @@ if (getRversion() >= "2.15.1") {
     "internal_node_label", "model",
     "name", "node_display", "node_label", "parent_x", "parent_y",
     "plot_probability", "plus_j", "probability", "probability_difference_abs",
-    "state", "state_change", "x", "xend", "y", "yend"
+    "state", "state_change", "tip_display", "x", "xend", "y", "yend"
   ))
 }
 

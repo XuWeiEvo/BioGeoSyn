@@ -11,6 +11,7 @@ standardize_biogeobears_outputs <- function(model_results, prepared_inputs, proj
     root_state_probabilities = data.frame(),
     node_state_summary = data.frame(),
     range_change_events = data.frame(),
+    best_fit_events = data.frame(),
     event_summary = data.frame()
   )
   if (length(completed) == 0L) {
@@ -53,7 +54,8 @@ standardize_biogeobears_outputs <- function(model_results, prepared_inputs, proj
   range_change_events <- summarize_range_change_events(
     node_state_summary = node_state_summary,
     tree_nodes = node_lookup,
-    geographic_states = geographic_states
+    geographic_states = geographic_states,
+    region_metadata = prepared_inputs$region_metadata %||% data.frame()
   )
   event_summary <- summarize_range_change_event_counts(range_change_events)
 
@@ -74,6 +76,7 @@ standardize_biogeobears_outputs <- function(model_results, prepared_inputs, proj
     root_state_probabilities = root_state_probabilities,
     node_state_summary = node_state_summary,
     range_change_events = range_change_events,
+    best_fit_events = data.frame(),
     event_summary = event_summary
   )
 }
@@ -229,6 +232,9 @@ make_node_lookup <- function(tree_file) {
       edge_length[child] <- tree$edge.length
     }
   }
+  distance_from_root <- compute_node_distances(parent_node_index, edge_length, root_index)
+  tree_height <- infer_tree_height(distance_from_root, node_type)
+  time_before_present <- ifelse(is.finite(distance_from_root), tree_height - distance_from_root, NA_real_)
 
   data.frame(
     node_index = node_index,
@@ -236,9 +242,48 @@ make_node_lookup <- function(tree_file) {
     node_label = node_label,
     parent_node_index = parent_node_index,
     edge_length = edge_length,
+    distance_from_root = distance_from_root,
+    time_before_present = time_before_present,
+    tree_height = tree_height,
     is_root = node_index == root_index,
     stringsAsFactors = FALSE
   )
+}
+
+compute_node_distances <- function(parent_node_index, edge_length, root_index) {
+  n <- length(parent_node_index)
+  distances <- rep(NA_real_, n)
+  distances[[root_index]] <- 0
+  branch_lengths <- edge_length
+  branch_lengths[is.na(branch_lengths) & !is.na(parent_node_index)] <- 1
+
+  unresolved <- is.na(distances)
+  guard <- 0L
+  while (any(unresolved) && guard < n + 1L) {
+    guard <- guard + 1L
+    changed <- FALSE
+    for (i in which(unresolved)) {
+      parent <- parent_node_index[[i]]
+      if (!is.na(parent) && !is.na(distances[[parent]])) {
+        distances[[i]] <- distances[[parent]] + branch_lengths[[i]]
+        changed <- TRUE
+      }
+    }
+    if (!changed) {
+      break
+    }
+    unresolved <- is.na(distances)
+  }
+  distances
+}
+
+infer_tree_height <- function(distance_from_root, node_type) {
+  tip_distances <- distance_from_root[node_type == "tip"]
+  height <- suppressWarnings(max(tip_distances, na.rm = TRUE))
+  if (!is.finite(height)) {
+    height <- suppressWarnings(max(distance_from_root, na.rm = TRUE))
+  }
+  if (is.finite(height)) height else 0
 }
 
 summarize_top_node_states <- function(ancestral_state_probabilities) {
@@ -357,7 +402,7 @@ empty_node_state_sensitivity_table <- function() {
   )
 }
 
-summarize_range_change_events <- function(node_state_summary, tree_nodes, geographic_states = NULL) {
+summarize_range_change_events <- function(node_state_summary, tree_nodes, geographic_states = NULL, region_metadata = NULL) {
   empty <- empty_range_change_events_table()
   if (is.null(node_state_summary) || nrow(node_state_summary) == 0L ||
       is.null(tree_nodes) || nrow(tree_nodes) == 0L) {
@@ -371,7 +416,13 @@ summarize_range_change_events <- function(node_state_summary, tree_nodes, geogra
     return(empty)
   }
 
-  node_cols <- c("node_index", "node_type", "node_label", "parent_node_index", "edge_length")
+  node_cols <- intersect(
+    c(
+      "node_index", "node_type", "node_label", "parent_node_index", "edge_length",
+      "distance_from_root", "time_before_present", "tree_height"
+    ),
+    names(tree_nodes)
+  )
   rows <- merge(
     node_state_summary[, required_summary, drop = FALSE],
     tree_nodes[, node_cols, drop = FALSE],
@@ -379,6 +430,11 @@ summarize_range_change_events <- function(node_state_summary, tree_nodes, geogra
     all.x = TRUE,
     sort = FALSE
   )
+  for (col in c("distance_from_root", "time_before_present", "tree_height")) {
+    if (!col %in% names(rows)) {
+      rows[[col]] <- NA_real_
+    }
+  }
   rows <- rows[!is.na(rows$parent_node_index), , drop = FALSE]
   if (nrow(rows) == 0L) {
     return(empty)
@@ -396,18 +452,40 @@ summarize_range_change_events <- function(node_state_summary, tree_nodes, geogra
     all.x = TRUE,
     sort = FALSE
   )
+  parent_time_cols <- intersect(c("node_index", "distance_from_root", "time_before_present"), names(tree_nodes))
+  if (all(c("node_index", "distance_from_root", "time_before_present") %in% parent_time_cols)) {
+    parent_times <- tree_nodes[, parent_time_cols, drop = FALSE]
+    names(parent_times) <- c("parent_node_index", "parent_distance_from_root", "parent_time_before_present")
+    rows <- merge(rows, parent_times, by = "parent_node_index", all.x = TRUE, sort = FALSE)
+  } else {
+    rows$parent_distance_from_root <- NA_real_
+    rows$parent_time_before_present <- NA_real_
+  }
   rows <- rows[!is.na(rows$parent_state) & !is.na(rows$best_state), , drop = FALSE]
   if (nrow(rows) == 0L) {
     return(empty)
   }
 
   lookup <- state_area_lookup(geographic_states)
+  label_lookup <- region_label_lookup(region_metadata)
   event_rows <- lapply(seq_len(nrow(rows)), function(i) {
     parent_areas <- state_areas(rows$parent_state[[i]], lookup)
     child_areas <- state_areas(rows$best_state[[i]], lookup)
     gained <- setdiff(child_areas, parent_areas)
     lost <- setdiff(parent_areas, child_areas)
     event <- classify_range_change_event(parent_areas, child_areas, gained, lost)
+    direction <- describe_range_change_direction(
+      parent_areas = parent_areas,
+      child_areas = child_areas,
+      gained = gained,
+      lost = lost,
+      event_type = event$type,
+      label_lookup = label_lookup
+    )
+    time_summary <- branch_event_time_summary(
+      parent_time_before_present = rows$parent_time_before_present[[i]],
+      child_time_before_present = rows$time_before_present[[i]]
+    )
 
     data.frame(
       model = rows$model[[i]],
@@ -417,6 +495,15 @@ summarize_range_change_events <- function(node_state_summary, tree_nodes, geogra
       node_type = rows$node_type[[i]],
       node_label = rows$node_label[[i]],
       edge_length = rows$edge_length[[i]],
+      parent_distance_from_root = rows$parent_distance_from_root[[i]],
+      child_distance_from_root = rows$distance_from_root[[i]],
+      parent_time_before_present = rows$parent_time_before_present[[i]],
+      child_time_before_present = rows$time_before_present[[i]],
+      event_time_min = time_summary$event_time_min,
+      event_time_max = time_summary$event_time_max,
+      event_time_midpoint = time_summary$event_time_midpoint,
+      time_unit = "tree branch length units before present",
+      event_time_note = "Approximate branch midpoint time; deterministic best-state change, not stochastic mapping.",
       parent_state = rows$parent_state[[i]],
       child_state = rows$best_state[[i]],
       parent_probability = rows$parent_probability[[i]],
@@ -426,6 +513,12 @@ summarize_range_change_events <- function(node_state_summary, tree_nodes, geogra
       state_changed = !identical(rows$parent_state[[i]], rows$best_state[[i]]),
       gained_areas = paste(gained, collapse = ";"),
       lost_areas = paste(lost, collapse = ";"),
+      source_region = direction$source_region,
+      target_region = direction$target_region,
+      direction = direction$direction,
+      source_region_label = direction$source_region_label,
+      target_region_label = direction$target_region_label,
+      direction_label = direction$direction_label,
       gained_count = length(gained),
       lost_count = length(lost),
       interpretation_note = "Deterministic summary from highest-probability ancestral states; not stochastic mapping event counts.",
@@ -436,6 +529,135 @@ summarize_range_change_events <- function(node_state_summary, tree_nodes, geogra
   out <- do.call(rbind, event_rows)
   row.names(out) <- NULL
   out[order(out$model, out$location, out$node_index), , drop = FALSE]
+}
+
+branch_event_time_summary <- function(parent_time_before_present, child_time_before_present) {
+  values <- c(parent_time_before_present, child_time_before_present)
+  values <- values[is.finite(values)]
+  if (length(values) == 0L) {
+    return(list(event_time_min = NA_real_, event_time_max = NA_real_, event_time_midpoint = NA_real_))
+  }
+  list(
+    event_time_min = min(values),
+    event_time_max = max(values),
+    event_time_midpoint = mean(values)
+  )
+}
+
+region_label_lookup <- function(region_metadata) {
+  if (is.null(region_metadata) || nrow(region_metadata) == 0L || !"region" %in% names(region_metadata)) {
+    return(character())
+  }
+  labels <- if ("label" %in% names(region_metadata)) region_metadata$label else region_metadata$region
+  labels[is.na(labels) | !nzchar(labels)] <- region_metadata$region[is.na(labels) | !nzchar(labels)]
+  stats::setNames(as.character(labels), as.character(region_metadata$region))
+}
+
+describe_range_change_direction <- function(parent_areas, child_areas, gained, lost, event_type, label_lookup = character()) {
+  source <- parent_areas
+  target <- child_areas
+  if (identical(event_type, "range_expansion")) {
+    source <- parent_areas
+    target <- gained
+  } else if (identical(event_type, "local_extinction")) {
+    source <- lost
+    target <- child_areas
+  } else if (identical(event_type, "range_shift")) {
+    source <- if (length(lost) > 0L) lost else parent_areas
+    target <- if (length(gained) > 0L) gained else child_areas
+  }
+
+  source_region <- paste_area_values(source)
+  target_region <- paste_area_values(target)
+  source_region_label <- paste_area_values(label_area_values(source, label_lookup))
+  target_region_label <- paste_area_values(label_area_values(target, label_lookup))
+  list(
+    source_region = source_region,
+    target_region = target_region,
+    direction = paste(source_region, target_region, sep = " -> "),
+    source_region_label = source_region_label,
+    target_region_label = target_region_label,
+    direction_label = paste(source_region_label, target_region_label, sep = " -> ")
+  )
+}
+
+paste_area_values <- function(areas) {
+  areas <- as.character(areas %||% character())
+  areas <- areas[nzchar(areas) & !is.na(areas)]
+  if (length(areas) == 0L) {
+    return("null")
+  }
+  paste(areas, collapse = ";")
+}
+
+label_area_values <- function(areas, label_lookup) {
+  areas <- as.character(areas %||% character())
+  if (length(areas) == 0L || length(label_lookup) == 0L) {
+    return(areas)
+  }
+  labels <- label_lookup[areas]
+  labels[is.na(labels) | !nzchar(labels)] <- areas[is.na(labels) | !nzchar(labels)]
+  unname(labels)
+}
+
+summarize_best_fit_events <- function(range_change_events, comparison, location = "branch_top_at_node") {
+  empty <- empty_best_fit_events_table()
+  if (is.null(range_change_events) || nrow(range_change_events) == 0L ||
+      is.null(comparison) || nrow(comparison) == 0L || !"model" %in% names(comparison)) {
+    return(empty)
+  }
+  best_model <- best_fit_model_from_comparison(comparison)
+  if (is.null(best_model)) {
+    return(empty)
+  }
+
+  events <- range_change_events[range_change_events$model == best_model, , drop = FALSE]
+  if (nrow(events) == 0L) {
+    return(empty)
+  }
+  if ("location" %in% names(events) && location %in% events$location) {
+    events <- events[events$location == location, , drop = FALSE]
+  }
+  if ("state_changed" %in% names(events)) {
+    changed <- events[!is.na(events$state_changed) & events$state_changed, , drop = FALSE]
+    if (nrow(changed) > 0L) {
+      events <- changed
+    }
+  }
+  if (nrow(events) == 0L) {
+    return(empty)
+  }
+
+  if ("event_time_midpoint" %in% names(events)) {
+    events <- events[order(-events$event_time_midpoint, events$node_index), , drop = FALSE]
+  } else {
+    events <- events[order(events$node_index), , drop = FALSE]
+  }
+  events$event_index <- seq_len(nrow(events))
+  cols <- c(
+    "event_index", "model", "location",
+    "event_time_midpoint", "event_time_min", "event_time_max", "time_unit",
+    "event_time_note", "direction", "direction_label", "source_region",
+    "target_region", "source_region_label", "target_region_label",
+    "event_type", "event_label", "parent_state", "child_state",
+    "gained_areas", "lost_areas", "parent_node_index", "node_index",
+    "node_label", "edge_length", "parent_probability", "child_probability",
+    "interpretation_note"
+  )
+  events[, intersect(cols, names(events)), drop = FALSE]
+}
+
+best_fit_model_from_comparison <- function(comparison) {
+  if (is.null(comparison) || nrow(comparison) == 0L || !"model" %in% names(comparison)) {
+    return(NULL)
+  }
+  if ("delta_aicc" %in% names(comparison) && any(!is.na(comparison$delta_aicc))) {
+    return(comparison$model[[which.min(comparison$delta_aicc)]])
+  }
+  if ("AICc" %in% names(comparison) && any(!is.na(comparison$AICc))) {
+    return(comparison$model[[which.min(comparison$AICc)]])
+  }
+  comparison$model[[1L]]
 }
 
 summarize_range_change_event_counts <- function(range_change_events) {
@@ -519,6 +741,15 @@ empty_range_change_events_table <- function() {
     node_type = character(),
     node_label = character(),
     edge_length = numeric(),
+    parent_distance_from_root = numeric(),
+    child_distance_from_root = numeric(),
+    parent_time_before_present = numeric(),
+    child_time_before_present = numeric(),
+    event_time_min = numeric(),
+    event_time_max = numeric(),
+    event_time_midpoint = numeric(),
+    time_unit = character(),
+    event_time_note = character(),
     parent_state = character(),
     child_state = character(),
     parent_probability = numeric(),
@@ -528,8 +759,47 @@ empty_range_change_events_table <- function() {
     state_changed = logical(),
     gained_areas = character(),
     lost_areas = character(),
+    source_region = character(),
+    target_region = character(),
+    direction = character(),
+    source_region_label = character(),
+    target_region_label = character(),
+    direction_label = character(),
     gained_count = integer(),
     lost_count = integer(),
+    interpretation_note = character(),
+    stringsAsFactors = FALSE
+  )
+}
+
+empty_best_fit_events_table <- function() {
+  data.frame(
+    event_index = integer(),
+    model = character(),
+    location = character(),
+    event_time_midpoint = numeric(),
+    event_time_min = numeric(),
+    event_time_max = numeric(),
+    time_unit = character(),
+    event_time_note = character(),
+    direction = character(),
+    direction_label = character(),
+    source_region = character(),
+    target_region = character(),
+    source_region_label = character(),
+    target_region_label = character(),
+    event_type = character(),
+    event_label = character(),
+    parent_state = character(),
+    child_state = character(),
+    gained_areas = character(),
+    lost_areas = character(),
+    parent_node_index = integer(),
+    node_index = integer(),
+    node_label = character(),
+    edge_length = numeric(),
+    parent_probability = numeric(),
+    child_probability = numeric(),
     interpretation_note = character(),
     stringsAsFactors = FALSE
   )

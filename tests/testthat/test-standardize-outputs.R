@@ -55,6 +55,9 @@ test_that("range-change event summaries classify ancestral state changes", {
     node_label = c("sp1", "sp2", "node_3", "node_4"),
     parent_node_index = c(3L, 3L, 4L, NA_integer_),
     edge_length = c(1, 1, 1, NA_real_),
+    distance_from_root = c(2, 2, 1, 0),
+    time_before_present = c(0, 0, 1, 2),
+    tree_height = c(2, 2, 2, 2),
     stringsAsFactors = FALSE
   )
   geographic_states <- data.frame(
@@ -63,12 +66,28 @@ test_that("range-change event summaries classify ancestral state changes", {
     stringsAsFactors = FALSE
   )
 
-  events <- summarize_range_change_events(node_state_summary, tree_nodes, geographic_states)
+  regions <- data.frame(region = c("A", "B"), label = c("Area A", "Area B"))
+  events <- summarize_range_change_events(node_state_summary, tree_nodes, geographic_states, regions)
   summary <- summarize_range_change_event_counts(events)
+  best_events <- summarize_best_fit_events(
+    events,
+    data.frame(model = "DEC", AICc = 1, delta_aicc = 0)
+  )
 
-  expect_true(all(c("event_type", "gained_areas", "lost_areas") %in% names(events)))
+  expect_true(all(c(
+    "event_type",
+    "gained_areas",
+    "lost_areas",
+    "event_time_midpoint",
+    "direction",
+    "direction_label"
+  ) %in% names(events)))
   expect_true("range_expansion" %in% events$event_type)
   expect_true("range_origin" %in% events$event_type)
+  expect_true(any(grepl(" -> ", events$direction, fixed = TRUE)))
+  expect_true(any(grepl("Area", events$direction_label, fixed = TRUE)))
   expect_equal(summary$event_count[match("Range expansion", summary$event_label)], 1L)
+  expect_true(nrow(best_events) > 0L)
+  expect_true(all(c("event_time_midpoint", "direction_label") %in% names(best_events)))
   expect_true(any(grepl("stochastic mapping", summary$interpretation_note, fixed = TRUE)))
 })

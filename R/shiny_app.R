@@ -78,6 +78,18 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             )
           ),
           shiny_control_section(
+            "\u7ed3\u679c\u4fdd\u5b58\u4f4d\u7f6e",
+            shiny::textInput("output_dir", "\u6240\u6709\u7ed3\u679c\u4fdd\u5b58\u5230", value = default_output),
+            shiny::tags$div(
+              class = "ibgb-home-note",
+              "\u8fd0\u884c\u540e\u4f1a\u5728\u8fd9\u4e2a\u76ee\u5f55\u4e0b\u751f\u6210 tables\u3001figures\u3001reports\u3001logs\u3002\u53ef\u4ee5\u5148\u9009\u76ee\u5f55\uff0c\u518d\u8fd0\u884c\u6d41\u7a0b\u3002"
+            ),
+            shiny_action_grid(
+              shiny::actionButton("choose_output_dir", "\u9009\u62e9\u7ed3\u679c\u76ee\u5f55"),
+              shiny::actionButton("open_output", "\u6253\u5f00\u7ed3\u679c\u76ee\u5f55")
+            )
+          ),
+          shiny_control_section(
             "\u4f7f\u7528\u81ea\u5df1\u7684\u6570\u636e",
             shiny::textInput("wizard_project_name", "\u9879\u76ee\u540d", value = "my_clade"),
             shiny::textInput("wizard_project_parent", "\u9879\u76ee\u4fdd\u5b58\u4f4d\u7f6e", value = default_project_parent()),
@@ -111,7 +123,6 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             "\u9ad8\u7ea7\uff1a\u5df2\u6709\u9879\u76ee\u548c YAML",
             shiny::textInput("config_path", "analysis.yml", value = default_config),
             shiny::fileInput("config_upload", "\u4e0a\u4f20 analysis.yml", accept = c(".yml", ".yaml")),
-            shiny::textInput("output_dir", "\u7ed3\u679c\u76ee\u5f55", value = default_output),
             shiny::textInput("example_project_dir", "\u793a\u4f8b\u9879\u76ee\u76ee\u5f55", value = startup$example_project_dir),
             shiny_action_grid(
               shiny::actionButton("load_results", "\u52a0\u8f7d\u5df2\u6709\u7ed3\u679c")
@@ -144,8 +155,7 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             shiny::checkboxInput("require_biogeobears", "\u771f\u5b9e\u8fd0\u884c\u65f6\u8981\u6c42 BioGeoBEARS \u53ef\u7528", value = FALSE),
             shiny::checkboxInput("resume_completed_models", "Reuse completed models", value = TRUE),
             shiny::checkboxInput("retry_failed_only", "Retry failed models only", value = FALSE),
-            shiny::checkboxInput("force", "Force execution after validation failure", value = FALSE),
-            shiny_action_grid(shiny::actionButton("open_output", "\u6253\u5f00\u7ed3\u679c\u76ee\u5f55"))
+            shiny::checkboxInput("force", "Force execution after validation failure", value = FALSE)
           ),
           shiny_collapsible_section(
             "\u5bfc\u51fa\u548c\u6392\u9519",
@@ -203,6 +213,7 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
                 ),
                 shiny::tabPanel("Node States", shiny::tableOutput("node_state_summary_table")),
                 shiny::tabPanel("Node Sensitivity", shiny::tableOutput("node_state_sensitivity_table")),
+                shiny::tabPanel("Best-Fit Events", shiny::tableOutput("best_fit_events_table")),
                 shiny::tabPanel("Event Details", shiny::tableOutput("range_change_events_table")),
                 shiny::tabPanel("Manifest", shiny::tableOutput("manifest_table")),
                 shiny::tabPanel(
@@ -329,6 +340,9 @@ shiny_primary_results_panel <- function() {
       shiny::tags$h4("3. \u4e8b\u4ef6\u7edf\u8ba1"),
       shiny::tags$p("\u5f53\u524d\u4e8b\u4ef6\u7edf\u8ba1\u6765\u81ea\u6bcf\u6761\u5206\u652f\u6700\u9ad8\u6982\u7387\u7956\u5148\u72b6\u6001\u7684\u53d8\u5316\uff0c\u4e0d\u7b49\u540c\u4e8e stochastic mapping \u7684\u4e8b\u4ef6\u8ba1\u6570\u3002"),
       shiny::tableOutput("primary_event_summary_table"),
+      shiny::tags$h4("Best-fit model \u4e8b\u4ef6\u65f6\u95f4\u548c\u65b9\u5411"),
+      shiny::tags$p("\u65f6\u95f4\u4e3a\u5206\u652f\u4e2d\u70b9\u8fd1\u4f3c\u503c\uff0c\u5355\u4f4d\u4e0e\u8f93\u5165\u6811\u5206\u652f\u957f\u5ea6\u4e00\u81f4\uff1b\u65b9\u5411\u6765\u81ea\u6700\u9ad8\u6982\u7387\u7956\u5148\u72b6\u6001\u7684\u53d8\u5316\u3002"),
+      shiny::tableOutput("primary_best_fit_events_table"),
       shiny::imageOutput("primary_figure_event_summary")
     )
   )
@@ -402,6 +416,16 @@ iBGB_shiny_server <- function(input, output, session) {
       current_output_dir <- shiny::reactive({
         value <- trimws(input$output_dir %||% "")
         if (nzchar(value)) value else NULL
+      })
+
+      shiny::observeEvent(input$choose_output_dir, {
+        run_app_action(state, {
+          selected <- choose_output_directory(current_output_dir())
+          if (!is.null(selected) && nzchar(selected)) {
+            shiny::updateTextInput(session, "output_dir", value = selected)
+            append_app_message(state, paste("Output directory selected:", selected))
+          }
+        })
       })
 
       current_config <- shiny::reactive({
@@ -684,8 +708,16 @@ iBGB_shiny_server <- function(input, output, session) {
 
       shiny::observeEvent(input$open_output, {
         run_app_action(state, {
-          require_workflow_result(state$result)
-          output_dir <- normalizePath(state$result$project_paths$root, winslash = "/", mustWork = TRUE)
+          output_dir <- if (!is.null(state$result) && !is.null(state$result$project_paths$root)) {
+            state$result$project_paths$root
+          } else {
+            current_output_dir()
+          }
+          if (is.null(output_dir) || !nzchar(output_dir)) {
+            stop("Choose or enter an output directory first.", call. = FALSE)
+          }
+          dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+          output_dir <- normalizePath(output_dir, winslash = "/", mustWork = TRUE)
           utils::browseURL(output_dir)
           append_app_message(state, paste("Output directory:", output_dir))
         })
@@ -808,8 +840,16 @@ iBGB_shiny_server <- function(input, output, session) {
         table_head(shiny_primary_event_summary_table(state), 20L)
       }, striped = TRUE, bordered = TRUE, na = "")
 
+      output$primary_best_fit_events_table <- shiny::renderTable({
+        table_head(shiny_primary_best_fit_events_table(state), 20L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
       output$range_change_events_table <- shiny::renderTable({
         table_head(shiny_range_change_events_table(state), 50L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$best_fit_events_table <- shiny::renderTable({
+        table_head(shiny_best_fit_events_table(state), 80L)
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$manifest_table <- shiny::renderTable({
@@ -1251,6 +1291,7 @@ load_existing_workflow_result <- function(output_dir, refresh_manifest = TRUE) {
   model_comparison <- read_existing_output_table(project_paths, "model_comparison.csv")
   model_sensitivity_table <- read_existing_output_table(project_paths, "model_sensitivity.csv")
   node_state_sensitivity <- read_existing_output_table(project_paths, "node_state_sensitivity.csv")
+  best_fit_events <- read_existing_output_table(project_paths, "best_fit_events.csv")
   range_change_events <- read_existing_output_table(project_paths, "range_change_events.csv")
   event_summary <- read_existing_output_table(project_paths, "event_summary.csv")
   figure_manifest <- read_existing_figure_manifest(project_paths)
@@ -1263,6 +1304,7 @@ load_existing_workflow_result <- function(output_dir, refresh_manifest = TRUE) {
     root_state_probabilities = read_existing_output_table(project_paths, "root_state_probabilities.csv") %||% data.frame(),
     node_state_summary = read_existing_output_table(project_paths, "node_state_summary.csv") %||% data.frame(),
     node_state_sensitivity = node_state_sensitivity %||% data.frame(),
+    best_fit_events = best_fit_events %||% data.frame(),
     range_change_events = range_change_events %||% data.frame(),
     event_summary = event_summary %||% data.frame()
   )
@@ -1278,6 +1320,7 @@ load_existing_workflow_result <- function(output_dir, refresh_manifest = TRUE) {
     model_sensitivity = NULL,
     model_sensitivity_table = model_sensitivity_table,
     node_state_sensitivity = node_state_sensitivity,
+    best_fit_events = best_fit_events,
     standardized_tables = standardized_tables,
     figure_manifest = figure_manifest,
     workflow_manifest = workflow_manifest,
@@ -1784,6 +1827,21 @@ shiny_text_or_blank <- function(x) {
   trimws(as.character(x[[1L]]))
 }
 
+choose_output_directory <- function(default = NULL) {
+  default <- shiny_text_or_blank(default)
+  if (!nzchar(default)) {
+    default <- getwd()
+  }
+  if (.Platform$OS.type == "windows" && exists("choose.dir", envir = asNamespace("utils"), inherits = FALSE)) {
+    selected <- utils::choose.dir(default = default, caption = "Choose iBiogeobears result directory")
+    return(shiny_text_or_blank(selected))
+  }
+  stop(
+    "Folder chooser is not available in this R session. Paste the full output directory path into the result directory box.",
+    call. = FALSE
+  )
+}
+
 shiny_missing_required_components <- function(installation, exclude = character()) {
   if (is.null(installation) || nrow(installation) == 0L ||
       !all(c("component", "required", "status") %in% names(installation))) {
@@ -2063,6 +2121,7 @@ shiny_key_file_specs <- function() {
       "Run summary CSV",
       "Model comparison CSV",
       "Event summary CSV",
+      "Best-fit events CSV",
       "+J sensitivity CSV",
       "Workflow manifest CSV",
       "Report",
@@ -2073,6 +2132,7 @@ shiny_key_file_specs <- function() {
       "tables/shiny_run_summary.csv",
       "tables/model_comparison.csv",
       "tables/event_summary.csv",
+      "tables/best_fit_events.csv",
       "tables/model_sensitivity.csv",
       "tables/workflow_manifest.csv",
       "reports/summary_report.html",
@@ -2082,6 +2142,7 @@ shiny_key_file_specs <- function() {
     missing_action = c(
       "Run or load workflow results, then refresh key files.",
       "Run or load workflow results.",
+      "Run or load workflow results with ancestral-state outputs.",
       "Run or load workflow results with ancestral-state outputs.",
       "Run or load workflow results.",
       "Run or load workflow results, then refresh key files.",
@@ -2543,6 +2604,43 @@ shiny_primary_event_summary_table <- function(state) {
   table[, intersect(cols, names(table)), drop = FALSE]
 }
 
+shiny_best_fit_events_table <- function(state) {
+  table <- state$result$best_fit_events %||%
+    state$result$standardized_tables$best_fit_events %||%
+    read_workflow_table(state$result, "best_fit_events.csv")
+  if (is.null(table) || nrow(table) == 0L) {
+    return(data.frame())
+  }
+  if ("event_time_midpoint" %in% names(table)) {
+    table <- table[order(-table$event_time_midpoint, table$event_index %||% seq_len(nrow(table))), , drop = FALSE]
+  }
+  cols <- c(
+    "event_index", "model", "event_time_midpoint", "event_time_min", "event_time_max",
+    "direction_label", "direction", "event_label", "parent_state", "child_state",
+    "source_region_label", "target_region_label", "node_label", "parent_node_index",
+    "node_index", "parent_probability", "child_probability", "event_time_note",
+    "interpretation_note"
+  )
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
+shiny_primary_best_fit_events_table <- function(state) {
+  table <- shiny_best_fit_events_table(state)
+  if (nrow(table) == 0L) {
+    return(data.frame(
+      event = "No best-fit event table available yet",
+      time = NA_real_,
+      direction = "Run a real workflow with ancestral-state outputs.",
+      stringsAsFactors = FALSE
+    ))
+  }
+  cols <- c(
+    "event_index", "model", "event_time_midpoint", "direction_label",
+    "direction", "event_label", "parent_state", "child_state", "node_label"
+  )
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
 shiny_range_change_events_table <- function(state) {
   table <- state$result$standardized_tables$range_change_events %||%
     read_workflow_table(state$result, "range_change_events.csv")
@@ -2555,7 +2653,8 @@ shiny_range_change_events_table <- function(state) {
   cols <- c(
     "model", "location", "parent_node_index", "node_index", "node_label",
     "parent_state", "child_state", "event_label", "gained_areas",
-    "lost_areas", "parent_probability", "child_probability",
+    "lost_areas", "direction_label", "event_time_midpoint",
+    "parent_probability", "child_probability",
     "interpretation_note"
   )
   table[, intersect(cols, names(table)), drop = FALSE]
@@ -2617,6 +2716,7 @@ shiny_table_status_specs <- function() {
       "Model run status",
       "Model comparison",
       "Event summary",
+      "Best-fit events",
       "Range-change events",
       "+J sensitivity",
       "Model parameters",
@@ -2631,6 +2731,7 @@ shiny_table_status_specs <- function() {
       "tables/model_run_status.csv",
       "tables/model_comparison.csv",
       "tables/event_summary.csv",
+      "tables/best_fit_events.csv",
       "tables/range_change_events.csv",
       "tables/model_sensitivity.csv",
       "tables/model_parameters.csv",
@@ -2645,6 +2746,7 @@ shiny_table_status_specs <- function() {
       "Run workflow.",
       "Run workflow with model fitting or load existing results.",
       "Run workflow with ancestral-state outputs available.",
+      "Run workflow with model fitting and ancestral-state outputs available.",
       "Run workflow with ancestral-state outputs available.",
       "Run workflow with model comparison or load existing results.",
       "Run workflow with model fitting or load existing results.",

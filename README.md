@@ -254,8 +254,9 @@ the YAML config, runs `run_workflow()`, renders reports, and bundles results
 without moving scientific logic into Shiny server code. The default interface
 now starts with a simplified Chinese `首页` tab and a focused `结果` tab. The main
 results shown first are the best-model ancestral reconstruction, the model
-comparison table, and a range-change event summary. Advanced diagnostics,
-full tables, figure dashboards, paths, and logs remain available under
+comparison table, a range-change event summary, and the best-fit model event
+timing/direction table. Advanced diagnostics, full tables, figure dashboards,
+paths, and logs remain available under
 `高级结果` and `排错`.
 
 ```r
@@ -438,6 +439,7 @@ results/example_clade/
     node_state_summary.csv
     node_state_sensitivity.csv
     range_change_events.csv
+    best_fit_events.csv
     event_summary.csv
     model_sensitivity.rds
   figures/
@@ -480,6 +482,7 @@ reports/summary_report.html
 tables/shiny_run_summary.csv
 tables/model_comparison.csv
 tables/event_summary.csv
+tables/best_fit_events.csv
 tables/model_sensitivity.csv
 tables/model_run_status.csv
 figures/figure_manifest.csv
@@ -487,9 +490,11 @@ figures/figure_manifest.csv
 
 Use `model_comparison.csv` to inspect statistical fit. Use
 `event_summary.csv` for a quick range-change overview inferred from
-highest-probability ancestral states. Use `model_sensitivity.csv` to decide how
-to report `+J` sensitivity. Use `model_run_status.csv` before interpretation to
-check failed models, warnings, and log paths.
+highest-probability ancestral states. Use `best_fit_events.csv` for approximate
+best-fit event timing and source -> target direction. Use
+`model_sensitivity.csv` to decide how to report `+J` sensitivity. Use
+`model_run_status.csv` before interpretation to check failed models, warnings,
+and log paths.
 
 Do not treat the lowest AICc model as an automatic biological conclusion. The
 report and Shiny app separate "best-fitting statistical model" from
@@ -543,6 +548,9 @@ The main derived tables are:
   differences.
 - `range_change_events.csv`: branch-level range-change details inferred from
   highest-probability ancestral states.
+- `best_fit_events.csv`: changed branches under the best-fitting statistical
+  model, including approximate branch-midpoint time and source -> target
+  direction. This is a deterministic summary, not stochastic mapping output.
 - `event_summary.csv`: counts of range expansion, local extinction, range
   shift, range origin, and no-change categories by model and probability
   location. This is not a stochastic mapping event-count table.

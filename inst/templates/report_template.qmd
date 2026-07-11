@@ -35,6 +35,7 @@ model_parameters <- read_table_if_exists("model_parameters.csv")
 node_state_summary <- read_table_if_exists("node_state_summary.csv")
 node_state_sensitivity <- read_table_if_exists("node_state_sensitivity.csv")
 event_summary <- read_table_if_exists("event_summary.csv")
+best_fit_events <- read_table_if_exists("best_fit_events.csv")
 range_change_events <- read_table_if_exists("range_change_events.csv")
 root_state_probabilities <- read_table_if_exists("root_state_probabilities.csv")
 workflow_manifest <- read_table_if_exists("workflow_manifest.csv")
@@ -287,6 +288,30 @@ event_summary_cols <- c(
 if (!is.null(event_summary)) {
   event_rows <- event_summary[order(event_summary$model, event_summary$location, -event_summary$event_count), , drop = FALSE]
   print_table(event_rows[intersect(event_summary_cols, names(event_rows))])
+} else {
+  print_table(NULL)
+}
+```
+
+### Best-Fit Model Event Timing and Direction
+
+The table below lists deterministic range-change events under the best-fitting
+statistical model. Times are approximate branch-midpoint values in the input
+tree's branch-length units before present. They are not stochastic mapping event
+times.
+
+```{r}
+best_fit_event_cols <- c(
+  "event_index", "model", "event_time_midpoint", "event_time_min",
+  "event_time_max", "direction_label", "direction", "event_label",
+  "parent_state", "child_state", "node_label", "interpretation_note"
+)
+if (!is.null(best_fit_events)) {
+  event_rows <- best_fit_events
+  if ("event_time_midpoint" %in% names(event_rows)) {
+    event_rows <- event_rows[order(-event_rows$event_time_midpoint), , drop = FALSE]
+  }
+  print_table(event_rows[intersect(best_fit_event_cols, names(event_rows))])
 } else {
   print_table(NULL)
 }

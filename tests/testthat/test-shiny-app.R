@@ -317,6 +317,7 @@ test_that("Shiny simplified primary results panel helpers are available", {
   expect_match(ui_html, "模型比较表", fixed = TRUE)
   expect_match(ui_html, "事件统计", fixed = TRUE)
   expect_match(ui_html, "primary_event_summary_table", fixed = TRUE)
+  expect_match(ui_html, "primary_best_fit_events_table", fixed = TRUE)
 })
 
 test_that("Shiny constraint input helpers expose advanced fields", {
@@ -480,6 +481,7 @@ test_that("load_existing_workflow_result rebuilds Shiny state from output files"
   utils::write.csv(data.frame(section = "Summary", display_label = "Best model", answer = "DEC"), file.path(paths$tables, "model_sensitivity.csv"), row.names = FALSE)
   utils::write.csv(data.frame(model = "DEC", location = "branch_top_at_node", node_index = 1L, best_state = "A", best_probability = 0.9), file.path(paths$tables, "node_state_summary.csv"), row.names = FALSE)
   utils::write.csv(data.frame(model = "DEC", location = "branch_top_at_node", event_label = "Range expansion", event_count = 2L, changed_edges = 2L), file.path(paths$tables, "event_summary.csv"), row.names = FALSE)
+  utils::write.csv(data.frame(event_index = 1L, model = "DEC", event_time_midpoint = 0.5, direction = "A -> B", direction_label = "Area A -> Area B", event_label = "Range expansion"), file.path(paths$tables, "best_fit_events.csv"), row.names = FALSE)
   utils::write.csv(data.frame(model = "DEC", location = "branch_top_at_node", node_index = 1L, parent_node_index = 2L, parent_state = "A", child_state = "AB", event_label = "Range expansion"), file.path(paths$tables, "range_change_events.csv"), row.names = FALSE)
   utils::write.csv(data.frame(figure = "model_comparison", format = "png", path = model_plot, status = "created"), file.path(paths$figures, "figure_manifest.csv"), row.names = FALSE)
 
@@ -494,6 +496,7 @@ test_that("load_existing_workflow_result rebuilds Shiny state from output files"
   expect_equal(result$model_sensitivity_table$answer, "DEC")
   expect_equal(result$standardized_tables$node_state_summary$best_state, "A")
   expect_equal(result$standardized_tables$event_summary$event_label, "Range expansion")
+  expect_equal(result$standardized_tables$best_fit_events$direction, "A -> B")
   expect_equal(result$standardized_tables$range_change_events$child_state, "AB")
   expect_true(any(result$workflow_manifest$relative_path == "tables/model_comparison.csv"))
   expect_equal(shiny_named_figure_path(state, "model_comparison"), as_path(model_plot))
@@ -946,6 +949,21 @@ test_that("Shiny result helpers can read workflow CSV tables", {
   )
   utils::write.csv(
     data.frame(
+      event_index = 1L,
+      model = "DEC",
+      event_time_midpoint = 0.5,
+      direction = "A -> B",
+      direction_label = "Area A -> Area B",
+      event_label = "Range expansion",
+      parent_state = "A",
+      child_state = "AB",
+      node_label = "sp1"
+    ),
+    file.path(paths$tables, "best_fit_events.csv"),
+    row.names = FALSE
+  )
+  utils::write.csv(
+    data.frame(
       model = "DEC",
       location = "branch_top_at_node",
       parent_node_index = 2L,
@@ -970,6 +988,8 @@ test_that("Shiny result helpers can read workflow CSV tables", {
   expect_equal(shiny_node_state_sensitivity_table(state)$plus_j_state, "B")
   expect_equal(shiny_event_summary_table(state)$event_count, 3L)
   expect_equal(shiny_primary_event_summary_table(state)$event_label, "Range expansion")
+  expect_equal(shiny_best_fit_events_table(state)$direction, "A -> B")
+  expect_equal(shiny_primary_best_fit_events_table(state)$direction_label, "Area A -> Area B")
   expect_equal(shiny_range_change_events_table(state)$child_state, "AB")
 })
 
