@@ -270,6 +270,23 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
               )
             ),
             shiny::tabPanel(
+              "\u8de8\u7c7b\u7fa4",
+              shiny::tags$div(
+                class = "ibgb-home-note",
+                "\u628a\u591a\u4e2a\u7c7b\u7fa4\u7684\u7ed3\u679c\u6574\u5408\u5230\u4e00\u8d77\u6bd4\u8f83\u5404\u751f\u7269\u5730\u7406\u8fc7\u7a0b\u7684\u901f\u7387\u968f\u65f6\u95f4\u53d8\u5316\u3002\u4e0a\u4f20\u6bcf\u4e2a\u7c7b\u7fa4\u7684 process_rates_through_time.csv \u6587\u4ef6\uff08\u5728\u6bcf\u4e2a\u5206\u6790\u9879\u76ee\u7684 tables/ \u76ee\u5f55\u4e0b\uff09\u3002\u5efa\u8bae\u5148\u628a\u6bcf\u4e2a\u6587\u4ef6\u91cd\u547d\u540d\u4e3a\u7c7b\u7fa4\u540d\uff08\u5982 CladeA.csv\uff09\uff0c\u7cfb\u7edf\u4f1a\u7528\u6587\u4ef6\u540d\u4f5c\u4e3a\u7c7b\u7fa4\u6807\u7b7e\u3002\u53ef\u4e00\u6b21\u591a\u9009\u6279\u91cf\u4e0a\u4f20\u3002\u5404\u7c7b\u7fa4\u9700\u4f7f\u7528\u53ef\u6bd4\u8f83\u7684\u65f6\u95f4\u5355\u4f4d\u3002"
+              ),
+              shiny::fileInput(
+                "cross_clade_files",
+                "\u4e0a\u4f20\u5404\u7c7b\u7fa4\u7684 process_rates_through_time.csv\uff08\u53ef\u591a\u9009\uff09",
+                multiple = TRUE,
+                accept = ".csv"
+              ),
+              shiny::uiOutput("cross_clade_status"),
+              shiny::div(class = "ibgb-preview", shiny::imageOutput("cross_clade_plot", height = "520px")),
+              shiny::tags$div(class = "ibgb-key-files-title", "\u5408\u5e76\u6570\u636e\u9884\u89c8"),
+              shiny::tableOutput("cross_clade_table")
+            ),
+            shiny::tabPanel(
               "\u6392\u9519",
               shiny::tags$div(class = "ibgb-key-files-title", "\u8b66\u544a\u6458\u8981"),
               shiny::tableOutput("warning_summary_table"),
@@ -914,6 +931,54 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$primary_process_summary_table <- shiny::renderTable({
         table_head(shiny_biogeographic_process_summary_table(state), 20L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      cross_clade_combined <- shiny::reactive({
+        files <- input$cross_clade_files
+        if (is.null(files) || nrow(files) == 0L) {
+          return(NULL)
+        }
+        clade_names <- tools::file_path_sans_ext(files$name)
+        combine_process_rates_across_clades(files$datapath, clade_names = clade_names)
+      })
+
+      output$cross_clade_status <- shiny::renderUI({
+        combined <- cross_clade_combined()
+        if (is.null(combined)) {
+          return(shiny::tags$div(class = "ibgb-home-note", "\u5c1a\u672a\u4e0a\u4f20\u6587\u4ef6\u3002"))
+        }
+        if (nrow(combined) == 0L) {
+          return(shiny::tags$div(
+            class = "ibgb-status error",
+            "\u4e0a\u4f20\u7684\u6587\u4ef6\u91cc\u6ca1\u6709\u53ef\u7528\u7684\u901f\u7387\u6570\u636e\u3002\u8bf7\u786e\u8ba4\u4e0a\u4f20\u7684\u662f process_rates_through_time.csv\u3002"
+          ))
+        }
+        n <- length(unique(combined$clade))
+        shiny::tags$div(class = "ibgb-status info", paste0("\u5df2\u6574\u5408 ", n, " \u4e2a\u7c7b\u7fa4\u3002"))
+      })
+
+      output$cross_clade_plot <- shiny::renderImage({
+        combined <- cross_clade_combined()
+        shiny::req(combined)
+        shiny::validate(shiny::need(nrow(combined) > 0, "\u65e0\u53ef\u7ed8\u5236\u7684\u6570\u636e\u3002"))
+        path <- tempfile(fileext = ".png")
+        ggplot2::ggsave(
+          path, plot_process_rates_across_clades(combined),
+          width = 8.6, height = 5.2, dpi = 150
+        )
+        list(src = path, contentType = "image/png", width = "100%")
+      }, deleteFile = TRUE)
+
+      output$cross_clade_table <- shiny::renderTable({
+        combined <- cross_clade_combined()
+        if (is.null(combined) || nrow(combined) == 0L) {
+          return(data.frame())
+        }
+        cols <- intersect(
+          c("clade", "process_label", "process_group", "time_bin", "bin_midpoint", "mean_count", "sd_count", "rate"),
+          names(combined)
+        )
+        table_head(combined[, cols, drop = FALSE], 60L)
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$manifest_table <- shiny::renderTable({

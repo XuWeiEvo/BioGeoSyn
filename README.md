@@ -674,6 +674,27 @@ figures:
     - svg
 ```
 
+## Cross-Clade Comparison
+
+Process rates through time can be compared across separately analysed clades.
+Each clade's run writes `tables/process_rates_through_time.csv`; collect that
+file from every clade and combine them:
+
+```r
+combined <- combine_process_rates_across_clades(
+  c("results/anolis/tables/process_rates_through_time.csv",
+    "results/phelsuma/tables/process_rates_through_time.csv"),
+  clade_names = c("Anolis", "Phelsuma")
+)
+plot_process_rates_across_clades(combined)
+```
+
+The figure shows one panel per biogeographic process with a coloured curve per
+clade. In the Shiny app, the `跨类群` tab accepts a batch (multi-file) upload of
+each clade's `process_rates_through_time.csv`; rename each file to the clade
+name (e.g. `Anolis.csv`) so the labels are clear. The clades must use comparable
+time units.
+
 ## Methodological Position
 
 `iBiogeobears` is intentionally not a "pick the lowest AIC and stop" tool.

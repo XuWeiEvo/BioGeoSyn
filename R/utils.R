@@ -6,7 +6,7 @@ if (getRversion() >= "2.15.1") {
   utils::globalVariables(c(
     "best_state", "best_state_label", "comparison", "delta_aicc",
     "event_count", "event_label", "event_time", "event_type", "frequency",
-    "bin_midpoint", "count", "direction", "emigration",
+    "bin_midpoint", "clade", "count", "direction", "emigration",
     "event_time_before_present", "group_label", "immigration",
     "internal_node_label", "mean_count", "model",
     "name", "net_dispersal_flux", "node_display", "node_label", "parent_x", "parent_y",
