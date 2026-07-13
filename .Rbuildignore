@@ -12,3 +12,5 @@
 ^.*\.Rcheck$
 ^.*\.tar\.gz$
 ^.*\.zip$
+^paper$
+^paper/
