@@ -360,7 +360,14 @@ shiny_primary_results_panel <- function() {
     ),
     shiny::tags$div(
       class = "ibgb-primary-result",
-      shiny::tags$h4("3. \u4e8b\u4ef6\u7edf\u8ba1"),
+      shiny::tags$h4("3. \u751f\u7269\u5730\u7406\u8fc7\u7a0b\u7efc\u5408"),
+      shiny::tags$p("\u628a BSM \u968f\u673a\u6620\u5c04\u7ed3\u679c\u7ffb\u8bd1\u6210\u53ef\u89e3\u91ca\u7684\u751f\u7269\u5730\u7406\u8fc7\u7a0b\uff1a\u5206\u652f\u5f62\u6210\u4e8b\u4ef6\uff08\u539f\u5730/\u540c\u57df\u7269\u79cd\u5f62\u6210\u3001subset sympatry\u3001vicariance\u3001founder-event \u8df3\u8dc3\u7269\u79cd\u5f62\u6210\uff09\u548c\u652f\u7cfb\u5185\u5206\u5e03\u533a\u6f14\u5316\uff08range expansion\u3001\u5c40\u90e8\u706d\u7edd\u3001range switching\uff09\u3002\u4ec5\u5728\u8fd0\u884c BSM \u540e\u663e\u793a\u3002"),
+      shiny::imageOutput("primary_figure_process_synthesis"),
+      shiny::tableOutput("primary_process_summary_table")
+    ),
+    shiny::tags$div(
+      class = "ibgb-primary-result",
+      shiny::tags$h4("4. \u4e8b\u4ef6\u7edf\u8ba1\u660e\u7ec6"),
       shiny::tags$p("\u5982\u679c\u8fd0\u884c\u4e86 BSM \u968f\u673a\u6620\u5c04\uff0c\u8fd9\u91cc\u4f18\u5148\u663e\u793a BSM \u7ed3\u679c\uff1b\u5426\u5219\u663e\u793a\u57fa\u4e8e\u6700\u9ad8\u6982\u7387\u7956\u5148\u72b6\u6001\u7684\u786e\u5b9a\u6027\u4e8b\u4ef6\u7edf\u8ba1\u4f5c\u4e3a\u66ff\u4ee3\u3002"),
       shiny::tableOutput("primary_bsm_event_summary_table"),
       shiny::imageOutput("primary_figure_bsm_event_summary"),
@@ -905,6 +912,10 @@ iBGB_shiny_server <- function(input, output, session) {
         table_head(shiny_primary_bsm_event_times_table(state), 20L)
       }, striped = TRUE, bordered = TRUE, na = "")
 
+      output$primary_process_summary_table <- shiny::renderTable({
+        table_head(shiny_biogeographic_process_summary_table(state), 20L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
       output$manifest_table <- shiny::renderTable({
         table_head(state$manifest, 30L)
       }, striped = TRUE, bordered = TRUE, na = "")
@@ -979,6 +990,10 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$primary_figure_bsm_event_summary <- shiny::renderImage({
         shiny_named_figure_image(state, "bsm_event_summary")
+      }, deleteFile = FALSE)
+
+      output$primary_figure_process_synthesis <- shiny::renderImage({
+        shiny_named_figure_image(state, "biogeographic_process_synthesis")
       }, deleteFile = FALSE)
 
       output$figure_bsm_event_times <- shiny::renderImage({
@@ -2802,6 +2817,28 @@ shiny_primary_bsm_event_summary_table <- function(state) {
     ))
   }
   cols <- c("model", "event_label", "mean_count", "sd_count", "replicate_count")
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
+shiny_biogeographic_process_summary_table <- function(state) {
+  table <- state$result$bsm_tables$biogeographic_process_summary %||%
+    state$result$standardized_tables$biogeographic_process_summary %||%
+    read_workflow_table(state$result, "biogeographic_process_summary.csv")
+  if (is.null(table) || nrow(table) == 0L) {
+    return(data.frame(
+      process = "No biogeographic process synthesis available",
+      next_step = "Enable BSM stochastic mapping and run a real workflow to generate the biogeographic process synthesis.",
+      stringsAsFactors = FALSE
+    ))
+  }
+  if ("mean_count" %in% names(table)) {
+    group_order <- factor(table$process_group, levels = c("cladogenetic", "anagenetic"))
+    table <- table[order(table$model, group_order, -table$mean_count), , drop = FALSE]
+  }
+  cols <- c(
+    "model", "process_group", "process_label", "mean_count", "sd_count",
+    "proportion_within_group", "proportion_overall"
+  )
   table[, intersect(cols, names(table)), drop = FALSE]
 }
 

@@ -1028,6 +1028,21 @@ test_that("Shiny result helpers can read workflow CSV tables", {
     file.path(paths$tables, "bsm_event_times.csv"),
     row.names = FALSE
   )
+  utils::write.csv(
+    data.frame(
+      model = "DEC",
+      process_group = c("cladogenetic", "anagenetic"),
+      process_key = c("in_situ_speciation", "range_expansion"),
+      process_label = c("In-situ (sympatric) speciation", "Range expansion"),
+      biogeobears_code = c("y", "d"),
+      mean_count = c(2, 3),
+      sd_count = c(0.5, 0.7),
+      proportion_within_group = c(1, 1),
+      proportion_overall = c(0.4, 0.6)
+    ),
+    file.path(paths$tables, "biogeographic_process_summary.csv"),
+    row.names = FALSE
+  )
 
   state <- new.env(parent = emptyenv())
   state$result <- list(project_paths = paths)
@@ -1049,6 +1064,9 @@ test_that("Shiny result helpers can read workflow CSV tables", {
   expect_equal(shiny_bsm_event_times_table(state)$event_time_before_present, 0.5)
   expect_equal(shiny_primary_bsm_event_summary_table(state)$event_label, "Range-expansion dispersal")
   expect_equal(shiny_primary_bsm_event_times_table(state)$direction_label, "Area A -> Area B")
+  process_summary <- shiny_biogeographic_process_summary_table(state)
+  expect_equal(process_summary$process_group[[1]], "cladogenetic")
+  expect_equal(process_summary$process_label[[1]], "In-situ (sympatric) speciation")
 })
 
 test_that("table preview helpers discover and read CSV outputs", {
