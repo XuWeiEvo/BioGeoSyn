@@ -32,6 +32,17 @@ fill_config_defaults <- function(cfg) {
   cfg$inputs$max_range_size <- cfg$inputs$max_range_size %||% 3L
   cfg$models$run <- cfg$models$run %||% valid_models()
   cfg$analysis$run_stochastic_mapping <- cfg$analysis$run_stochastic_mapping %||% FALSE
+  cfg$analysis$stochastic_mapping_model <- cfg$analysis$stochastic_mapping_model %||% "best"
+  cfg$analysis$stochastic_mapping_replicates <- cfg$analysis$stochastic_mapping_replicates %||% 100L
+  stochastic_mapping_replicates <- suppressWarnings(as.integer(cfg$analysis$stochastic_mapping_replicates))
+  if (is.na(stochastic_mapping_replicates) || stochastic_mapping_replicates < 1L) {
+    stochastic_mapping_replicates <- 100L
+  }
+  cfg$analysis$stochastic_mapping_max_maps_to_try <- cfg$analysis$stochastic_mapping_max_maps_to_try %||%
+    max(stochastic_mapping_replicates, ceiling(stochastic_mapping_replicates * 2))
+  cfg$analysis$stochastic_mapping_maxtries_per_branch <- cfg$analysis$stochastic_mapping_maxtries_per_branch %||% 40000L
+  cfg$analysis$stochastic_mapping_seed <- cfg$analysis$stochastic_mapping_seed %||% 1L
+  cfg$analysis$stochastic_mapping_save_after_every_try <- cfg$analysis$stochastic_mapping_save_after_every_try %||% FALSE
   cfg$analysis$time_bins <- cfg$analysis$time_bins %||% NULL
   cfg$analysis$resume_completed_models <- cfg$analysis$resume_completed_models %||% TRUE
   cfg$analysis$retry_failed_only <- cfg$analysis$retry_failed_only %||% FALSE

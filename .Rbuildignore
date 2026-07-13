@@ -1,5 +1,6 @@
 ^\.git$
 ^\.git/
+^\.git.*
 ^\.github$
 ^\.github/
 ^README\.Rmd$

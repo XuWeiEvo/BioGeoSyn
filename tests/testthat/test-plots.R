@@ -56,6 +56,35 @@ test_that("plot_event_summary returns a ggplot", {
   expect_s3_class(plot, "ggplot")
 })
 
+test_that("BSM plot helpers return ggplots", {
+  bsm_event_summary <- data.frame(
+    model = "DEC",
+    event_type = c("d", "e"),
+    event_label = c("Range-expansion dispersal", "Local extinction"),
+    mean_count = c(2, 1),
+    sd_count = c(0.5, 0.2),
+    stringsAsFactors = FALSE
+  )
+  bsm_events <- data.frame(
+    model = "DEC",
+    event_time_before_present = c(1.2, 0.4),
+    event_label = c("Range-expansion dispersal", "Local extinction"),
+    stringsAsFactors = FALSE
+  )
+  bsm_routes <- data.frame(
+    model = "DEC",
+    route_type = "all_dispersal",
+    source_region = c("Area A", "Area B"),
+    target_region = c("Area B", "Area C"),
+    mean_count = c(2, 1),
+    stringsAsFactors = FALSE
+  )
+
+  expect_s3_class(plot_bsm_event_summary(bsm_event_summary), "ggplot")
+  expect_s3_class(plot_bsm_event_times(bsm_events), "ggplot")
+  expect_s3_class(plot_bsm_dispersal_routes(bsm_routes), "ggplot")
+})
+
 test_that("generate_figures writes node-state sensitivity figures", {
   out <- tempfile("ibgb-figures-")
   paths <- create_project(out)
@@ -96,6 +125,28 @@ test_that("generate_figures writes node-state sensitivity figures", {
       changed_edges = 2L,
       interpretation_note = "derived",
       stringsAsFactors = FALSE
+    ),
+    bsm_event_summary = data.frame(
+      model = "DEC",
+      event_type = "d",
+      event_label = "Range-expansion dispersal",
+      mean_count = 2,
+      sd_count = 0.5,
+      stringsAsFactors = FALSE
+    ),
+    bsm_events = data.frame(
+      model = "DEC",
+      event_time_before_present = 0.7,
+      event_label = "Range-expansion dispersal",
+      stringsAsFactors = FALSE
+    ),
+    bsm_dispersal_routes = data.frame(
+      model = "DEC",
+      route_type = "all_dispersal",
+      source_region = "Area A",
+      target_region = "Area B",
+      mean_count = 2,
+      stringsAsFactors = FALSE
     )
   )
 
@@ -103,8 +154,12 @@ test_that("generate_figures writes node-state sensitivity figures", {
 
   expect_true(any(manifest$figure == "node_state_sensitivity" & manifest$status == "created"))
   expect_true(any(manifest$figure == "event_summary" & manifest$status == "created"))
+  expect_true(any(manifest$figure == "bsm_event_summary" & manifest$status == "created"))
+  expect_true(any(manifest$figure == "bsm_event_times" & manifest$status == "created"))
+  expect_true(any(manifest$figure == "bsm_dispersal_routes" & manifest$status == "created"))
   expect_true(file.exists(file.path(paths$figures, "node_state_sensitivity.png")))
   expect_true(file.exists(file.path(paths$figures, "event_summary.png")))
+  expect_true(file.exists(file.path(paths$figures, "bsm_event_summary.png")))
 })
 
 test_that("layout_tree_nodes adds plotting coordinates", {

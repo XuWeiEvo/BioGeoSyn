@@ -11,7 +11,8 @@
 #'   runs also write raw `.rds` outputs, logs, `model_fit_raw.csv`,
 #'   `model_comparison.csv`, `model_sensitivity.csv`,
 #'   `model_sensitivity.rds`, `node_state_sensitivity.csv`,
-#'   `best_fit_events.csv`, and warning summaries in `model_run_status.csv`.
+#'   `best_fit_events.csv`, optional BSM stochastic mapping tables, and warning
+#'   summaries in `model_run_status.csv`.
 #' @export
 run_models <- function(config, project_paths, execute = FALSE) {
   models <- config$models$run %||% valid_models()
@@ -136,10 +137,20 @@ run_models <- function(config, project_paths, execute = FALSE) {
   write_csv_base(best_fit_events, file.path(project_paths$tables, "best_fit_events.csv"))
   write_csv_base(comparison, file.path(project_paths$tables, "model_comparison.csv"))
 
+  bsm_tables <- run_bsm_stochastic_mapping(
+    config = config,
+    project_paths = project_paths,
+    model_results = model_results,
+    comparison = comparison,
+    prepared_inputs = prepared_inputs
+  )
+  standardized_tables <- c(standardized_tables, bsm_tables)
+
   attr(comparison, "sensitivity") <- sensitivity
   attr(comparison, "sensitivity_table") <- sensitivity_table
   attr(comparison, "node_state_sensitivity") <- node_state_sensitivity
   attr(comparison, "best_fit_events") <- best_fit_events
+  attr(comparison, "bsm_tables") <- bsm_tables
   attr(comparison, "run_status") <- raw_table
   attr(comparison, "standardized_tables") <- standardized_tables
   comparison
@@ -566,7 +577,17 @@ model_run_signature <- function(config, prepared_inputs, model) {
       geography = file_md5(prepared_inputs$geography_file),
       max_range_size = prepared_inputs$max_range_size
     ),
-    analysis = analysis[c("time_bins")],
+    analysis = analysis[c(
+      "time_bins",
+      "run_stochastic_mapping",
+      "stochastic_mapping_model",
+      "stochastic_mapping_models",
+      "stochastic_mapping_replicates",
+      "stochastic_mapping_max_maps_to_try",
+      "stochastic_mapping_maxtries_per_branch",
+      "stochastic_mapping_max_tries_per_branch",
+      "stochastic_mapping_seed"
+    )],
     advanced = config$advanced %||% list(),
     constraint_files = constraint_file_hashes(config),
     biogeobears_version = installed_package_version("BioGeoBEARS")

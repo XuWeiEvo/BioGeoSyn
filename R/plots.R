@@ -89,6 +89,98 @@ plot_event_summary <- function(event_summary) {
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
 }
 
+plot_bsm_event_summary <- function(bsm_event_summary) {
+  required <- c("model", "event_label", "mean_count")
+  missing <- setdiff(required, names(bsm_event_summary))
+  if (length(missing) > 0L) {
+    stop("bsm_event_summary is missing required columns: ", paste(missing, collapse = ", "), call. = FALSE)
+  }
+  if (nrow(bsm_event_summary) == 0L) {
+    stop("bsm_event_summary must contain at least one row.", call. = FALSE)
+  }
+
+  plot_data <- bsm_event_summary[!is.na(bsm_event_summary$mean_count), , drop = FALSE]
+  plot_data <- plot_data[plot_data$event_type %in% c(
+    "founder", "a", "d", "e", "subset", "vicariance", "sympatry"
+  ), , drop = FALSE]
+  if (nrow(plot_data) == 0L) {
+    stop("No BSM event summary rows are available to plot.", call. = FALSE)
+  }
+  plot_data$event_label <- stats::reorder(plot_data$event_label, plot_data$mean_count)
+  plot_data$sd_count <- suppressWarnings(as.numeric(plot_data$sd_count %||% NA_real_))
+
+  ggplot2::ggplot(plot_data, ggplot2::aes(x = event_label, y = mean_count, fill = event_label)) +
+    ggplot2::geom_col(width = 0.72, colour = "grey25", linewidth = 0.25, show.legend = FALSE) +
+    ggplot2::geom_errorbar(
+      ggplot2::aes(ymin = pmax(0, mean_count - sd_count), ymax = mean_count + sd_count),
+      width = 0.18,
+      na.rm = TRUE
+    ) +
+    ggplot2::coord_flip() +
+    ggplot2::facet_wrap(stats::as.formula("~ model")) +
+    ggplot2::labs(
+      x = NULL,
+      y = "Mean count per stochastic map",
+      title = "BSM event-count summary",
+      subtitle = "Formal BioGeoBEARS stochastic mapping counts"
+    ) +
+    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
+}
+
+plot_bsm_event_times <- function(bsm_events) {
+  required <- c("event_time_before_present", "event_label")
+  missing <- setdiff(required, names(bsm_events))
+  if (length(missing) > 0L) {
+    stop("bsm_events is missing required columns: ", paste(missing, collapse = ", "), call. = FALSE)
+  }
+  plot_data <- bsm_events[!is.na(bsm_events$event_time_before_present), , drop = FALSE]
+  if (nrow(plot_data) == 0L) {
+    stop("No BSM events with event_time_before_present are available to plot.", call. = FALSE)
+  }
+
+  ggplot2::ggplot(plot_data, ggplot2::aes(x = event_time_before_present, colour = event_label)) +
+    ggplot2::stat_ecdf(linewidth = 0.9) +
+    ggplot2::scale_x_reverse() +
+    ggplot2::facet_wrap(stats::as.formula("~ model")) +
+    ggplot2::labs(
+      x = "Time before present",
+      y = "Cumulative proportion of sampled events",
+      colour = "Event",
+      title = "BSM event timing"
+    ) +
+    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme(legend.position = "bottom")
+}
+
+plot_bsm_dispersal_routes <- function(bsm_dispersal_routes, route_type = "all_dispersal") {
+  required <- c("route_type", "source_region", "target_region", "mean_count")
+  missing <- setdiff(required, names(bsm_dispersal_routes))
+  if (length(missing) > 0L) {
+    stop("bsm_dispersal_routes is missing required columns: ", paste(missing, collapse = ", "), call. = FALSE)
+  }
+  plot_data <- bsm_dispersal_routes[bsm_dispersal_routes$route_type == route_type, , drop = FALSE]
+  plot_data <- plot_data[!is.na(plot_data$mean_count) & plot_data$mean_count > 0, , drop = FALSE]
+  if (nrow(plot_data) == 0L) {
+    stop("No positive BSM dispersal routes are available to plot.", call. = FALSE)
+  }
+
+  ggplot2::ggplot(plot_data, ggplot2::aes(x = target_region, y = source_region, fill = mean_count)) +
+    ggplot2::geom_tile(colour = "white", linewidth = 0.35) +
+    ggplot2::geom_text(ggplot2::aes(label = round(mean_count, 2)), size = 3) +
+    ggplot2::facet_wrap(stats::as.formula("~ model")) +
+    ggplot2::scale_fill_gradient(low = "#f7fbff", high = "#08519c") +
+    ggplot2::labs(
+      x = "Target region",
+      y = "Source region",
+      fill = "Mean count",
+      title = "BSM dispersal directions",
+      subtitle = route_type
+    ) +
+    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme(panel.grid = ggplot2::element_blank())
+}
+
 #' Plot model comparison results
 #'
 #' @param comparison Model comparison table returned by [compare_models()].
@@ -247,7 +339,7 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, model = NULL
       size = 2.8,
       colour = "#111827",
       fill = "white",
-      label.size = 0.15,
+      linewidth = 0.15,
       alpha = 0.9
     ) +
     ggplot2::scale_size_continuous(limits = c(0, 1), range = c(2.4, 7.2), name = "Best-state probability") +
@@ -380,6 +472,21 @@ generate_figures <- function(model_comparison, standardized_tables, project_path
     plots$event_summary <- plot_event_summary(event_summary)
   }
 
+  bsm_event_summary <- standardized_tables$bsm_event_summary %||% data.frame()
+  if (nrow(bsm_event_summary) > 0L) {
+    plots$bsm_event_summary <- plot_bsm_event_summary(bsm_event_summary)
+  }
+
+  bsm_events <- standardized_tables$bsm_events %||% data.frame()
+  if (nrow(bsm_events) > 0L) {
+    plots$bsm_event_times <- plot_bsm_event_times(bsm_events)
+  }
+
+  bsm_routes <- standardized_tables$bsm_dispersal_routes %||% data.frame()
+  if (nrow(bsm_routes) > 0L && any(bsm_routes$route_type == "all_dispersal" & bsm_routes$mean_count > 0, na.rm = TRUE)) {
+    plots$bsm_dispersal_routes <- plot_bsm_dispersal_routes(bsm_routes)
+  }
+
   manifest <- do.call(rbind, lapply(names(plots), function(name) {
     save_plot_outputs(
       plot = plots[[name]],
@@ -431,6 +538,15 @@ plot_output_dimensions <- function(name) {
   }
   if (identical(name, "event_summary")) {
     return(list(width = 7.5, height = 4.8))
+  }
+  if (identical(name, "bsm_event_summary")) {
+    return(list(width = 7.8, height = 5.1))
+  }
+  if (identical(name, "bsm_event_times")) {
+    return(list(width = 7.8, height = 4.8))
+  }
+  if (identical(name, "bsm_dispersal_routes")) {
+    return(list(width = 7.2, height = 5.6))
   }
   list(width = 7, height = 4.5)
 }

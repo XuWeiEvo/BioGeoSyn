@@ -4,6 +4,9 @@ test_that("read_config fills defaults", {
   expect_equal(cfg$project$name, "example_clade")
   expect_true("DEC+J" %in% cfg$models$run)
   expect_false(cfg$methodology$auto_declare_best_model)
+  expect_false(cfg$analysis$run_stochastic_mapping)
+  expect_equal(cfg$analysis$stochastic_mapping_model, "best")
+  expect_equal(cfg$analysis$stochastic_mapping_replicates, 100L)
   expect_true(all(c(
     "times_file",
     "dists_file",

@@ -19,6 +19,12 @@ models:
 
 analysis:
   run_stochastic_mapping: false
+  stochastic_mapping_model: best
+  stochastic_mapping_replicates: 100
+  stochastic_mapping_max_maps_to_try: 200
+  stochastic_mapping_maxtries_per_branch: 40000
+  stochastic_mapping_seed: 1
+  stochastic_mapping_save_after_every_try: false
   time_bins: null
   resume_completed_models: true
   retry_failed_only: false

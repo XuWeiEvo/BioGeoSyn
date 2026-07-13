@@ -37,6 +37,12 @@ node_state_sensitivity <- read_table_if_exists("node_state_sensitivity.csv")
 event_summary <- read_table_if_exists("event_summary.csv")
 best_fit_events <- read_table_if_exists("best_fit_events.csv")
 range_change_events <- read_table_if_exists("range_change_events.csv")
+bsm_run_status <- read_table_if_exists("bsm_run_status.csv")
+bsm_event_summary <- read_table_if_exists("bsm_event_summary.csv")
+bsm_replicate_counts <- read_table_if_exists("bsm_replicate_counts.csv")
+bsm_dispersal_routes <- read_table_if_exists("bsm_dispersal_routes.csv")
+bsm_events <- read_table_if_exists("bsm_events.csv")
+bsm_event_times <- read_table_if_exists("bsm_event_times.csv")
 root_state_probabilities <- read_table_if_exists("root_state_probabilities.csv")
 workflow_manifest <- read_table_if_exists("workflow_manifest.csv")
 
@@ -99,6 +105,15 @@ warning_count_total <- function() {
   as.character(sum(model_status$warning_count, na.rm = TRUE))
 }
 
+bsm_summary_label <- function() {
+  if (is.null(bsm_run_status) || nrow(bsm_run_status) == 0L) {
+    return("Not run")
+  }
+  completed <- sum(bsm_run_status$status %in% c("completed", "partial"), na.rm = TRUE)
+  maps <- sum(bsm_run_status$completed_maps, na.rm = TRUE)
+  paste0(completed, " model(s), ", maps, " completed map(s)")
+}
+
 j_caution_label <- function() {
   plus_j_near <- identical(answer_for("plus_j_models_within_delta_aicc_2"), "yes")
   best_is_j <- identical(answer_for("best_overall_is_plus_j"), "yes")
@@ -118,6 +133,7 @@ executive_summary <- data.frame(
     "Fitted models",
     "Best statistical model",
     "+J caution triggered",
+    "BSM stochastic mapping",
     "Captured warning count",
     "Tables directory",
     "Figures directory",
@@ -127,6 +143,7 @@ executive_summary <- data.frame(
     completed_model_count(),
     best_model_label(),
     j_caution_label(),
+    bsm_summary_label(),
     warning_count_total(),
     tables_dir,
     figures_dir,
@@ -312,6 +329,91 @@ if (!is.null(best_fit_events)) {
     event_rows <- event_rows[order(-event_rows$event_time_midpoint), , drop = FALSE]
   }
   print_table(event_rows[intersect(best_fit_event_cols, names(event_rows))])
+} else {
+  print_table(NULL)
+}
+```
+
+### Biogeographical Stochastic Mapping (BSM)
+
+This section reports formal BioGeoBEARS stochastic mapping output when
+`analysis$run_stochastic_mapping` was enabled. These tables should be preferred
+over deterministic best-state changes when discussing event counts, event
+timing, and source-to-target dispersal directions.
+
+```{r}
+if (!is.null(bsm_run_status)) {
+  bsm_status_cols <- c(
+    "model", "status", "requested_maps", "completed_maps",
+    "maxtries_per_branch", "seed", "log_file", "error_message"
+  )
+  print_table(bsm_run_status[intersect(bsm_status_cols, names(bsm_run_status))])
+} else {
+  cat("BSM stochastic mapping was not run for this workflow.\n")
+}
+```
+
+```{r}
+bsm_event_summary_png <- figure_path("bsm_event_summary")
+if (!is.null(bsm_event_summary_png)) {
+  knitr::include_graphics(bsm_event_summary_png)
+}
+```
+
+```{r}
+bsm_summary_cols <- c(
+  "model", "event_label", "mean_count", "sd_count", "sum_count",
+  "replicate_count", "interpretation_note"
+)
+if (!is.null(bsm_event_summary)) {
+  bsm_rows <- bsm_event_summary[order(bsm_event_summary$model, -bsm_event_summary$mean_count), , drop = FALSE]
+  print_table(bsm_rows[intersect(bsm_summary_cols, names(bsm_rows))])
+} else {
+  print_table(NULL)
+}
+```
+
+```{r}
+bsm_routes_png <- figure_path("bsm_dispersal_routes")
+if (!is.null(bsm_routes_png)) {
+  knitr::include_graphics(bsm_routes_png)
+}
+```
+
+```{r}
+bsm_route_cols <- c(
+  "model", "route_type", "direction_label", "mean_count", "sd_count",
+  "interpretation_note"
+)
+if (!is.null(bsm_dispersal_routes)) {
+  route_rows <- bsm_dispersal_routes[
+    !is.na(bsm_dispersal_routes$mean_count) & bsm_dispersal_routes$mean_count > 0,
+    ,
+    drop = FALSE
+  ]
+  route_rows <- route_rows[order(route_rows$model, route_rows$route_type, -route_rows$mean_count), , drop = FALSE]
+  print_table(utils::head(route_rows[intersect(bsm_route_cols, names(route_rows))], 30L))
+} else {
+  print_table(NULL)
+}
+```
+
+```{r}
+bsm_times_png <- figure_path("bsm_event_times")
+if (!is.null(bsm_times_png)) {
+  knitr::include_graphics(bsm_times_png)
+}
+```
+
+```{r}
+bsm_time_cols <- c(
+  "model", "replicate", "event_class", "event_label",
+  "event_time_before_present", "direction_label", "parent_state",
+  "child_state", "node_label"
+)
+if (!is.null(bsm_event_times)) {
+  time_rows <- bsm_event_times[order(bsm_event_times$model, bsm_event_times$replicate, -bsm_event_times$event_time_before_present), , drop = FALSE]
+  print_table(utils::head(time_rows[intersect(bsm_time_cols, names(time_rows))], 50L))
 } else {
   print_table(NULL)
 }

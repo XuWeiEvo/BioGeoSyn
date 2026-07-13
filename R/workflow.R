@@ -55,6 +55,7 @@ run_workflow <- function(
   model_sensitivity_table <- attr(model_result, "sensitivity_table")
   node_state_sensitivity <- attr(model_result, "node_state_sensitivity")
   best_fit_events <- attr(model_result, "best_fit_events")
+  bsm_tables <- attr(model_result, "bsm_tables")
   standardized_tables <- attr(model_result, "standardized_tables")
   model_comparison <- if (isTRUE(dry_run)) NULL else model_result
   figure_manifest <- if (!isTRUE(dry_run) && !is.null(model_comparison)) {
@@ -84,6 +85,7 @@ run_workflow <- function(
     model_sensitivity_table = model_sensitivity_table,
     node_state_sensitivity = node_state_sensitivity,
     best_fit_events = best_fit_events,
+    bsm_tables = bsm_tables,
     standardized_tables = standardized_tables,
     figure_manifest = figure_manifest,
     workflow_manifest = workflow_manifest,

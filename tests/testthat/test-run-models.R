@@ -188,3 +188,42 @@ test_that("run_models executes a DEC smoke run when BioGeoBEARS is available", {
   node_summary <- utils::read.csv(file.path(paths$tables, "node_state_summary.csv"), check.names = FALSE)
   expect_true(all(c("model", "node_index", "best_state", "best_probability") %in% names(node_summary)))
 })
+
+test_that("run_models executes a one-map BSM smoke run when BioGeoBEARS is available", {
+  testthat::skip_if_not_installed("BioGeoBEARS")
+  testthat::skip_if_not_installed("ape")
+
+  out <- tempfile("ibgb-bsm-smoke-")
+  cfg <- list(
+    project = list(name = "bsm_smoke", output_dir = out),
+    inputs = list(
+      tree_file = system.file("example_data", "tree.nwk", package = "iBiogeobears"),
+      geography_file = system.file("example_data", "geography.csv", package = "iBiogeobears"),
+      regions_file = system.file("example_data", "regions.csv", package = "iBiogeobears"),
+      max_range_size = 3L
+    ),
+    models = list(run = "DEC"),
+    analysis = list(
+      run_stochastic_mapping = TRUE,
+      stochastic_mapping_model = "best",
+      stochastic_mapping_replicates = 1L,
+      stochastic_mapping_max_maps_to_try = 1L,
+      stochastic_mapping_maxtries_per_branch = 1000L,
+      stochastic_mapping_seed = 123L
+    ),
+    methodology = list(),
+    advanced = list(),
+    .config_file = system.file("templates", "analysis.yml", package = "iBiogeobears")
+  )
+  paths <- create_project(out)
+
+  result <- suppressWarnings(run_models(cfg, paths, execute = TRUE))
+  bsm_tables <- attr(result, "bsm_tables")
+
+  expect_equal(bsm_tables$bsm_run_status$status, "completed")
+  expect_equal(bsm_tables$bsm_run_status$completed_maps, 1L)
+  expect_true(file.exists(file.path(paths$tables, "bsm_event_summary.csv")))
+  expect_true(file.exists(file.path(paths$tables, "bsm_event_times.csv")))
+  expect_true(nrow(bsm_tables$bsm_event_summary) > 0L)
+  expect_true(all(c("event_time_before_present", "direction_label") %in% names(bsm_tables$bsm_event_times)))
+})

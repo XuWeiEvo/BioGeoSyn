@@ -17,7 +17,8 @@ run_models(config, project_paths, execute = FALSE)
 A data frame describing planned or executed model runs. Executed
 runs also write raw \code{.rds} outputs, logs, \code{model_fit_raw.csv},
 \code{model_comparison.csv}, \code{model_sensitivity.csv},
-\code{model_sensitivity.rds}, \code{node_state_sensitivity.csv}, and warning
+\code{model_sensitivity.rds}, \code{node_state_sensitivity.csv},
+\code{best_fit_events.csv}, optional BSM stochastic mapping tables, and warning
 summaries in \code{model_run_status.csv}.
 }
 \description{
