@@ -14,3 +14,8 @@
 ^.*\.zip$
 ^paper$
 ^paper/
+^.*\.docx$
+^.*\.doc$
+^.*\.xlsx$
+^.*\.pptx$
+^~\$

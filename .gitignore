@@ -5,3 +5,5 @@ iBioGeoBEARS-scaffold.zip
 .Rhistory
 .Rproj.user/
 .Ruserdata
+# Office lock files (e.g. ~$notes.docx) — always junk
+~$*

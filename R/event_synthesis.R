@@ -188,10 +188,7 @@ plot_biogeographic_process_synthesis <- function(process_summary) {
     ) +
     ggplot2::coord_flip() +
     ggplot2::facet_wrap(stats::as.formula("~ model")) +
-    ggplot2::scale_fill_manual(values = c(
-      "Cladogenetic (speciation mode)" = "#2c7fb8",
-      "Anagenetic (range evolution)" = "#d95f0e"
-    )) +
+    ggplot2::scale_fill_manual(values = ibgb_palette()$process) +
     ggplot2::labs(
       x = NULL,
       y = "Mean count per stochastic map",
@@ -199,11 +196,8 @@ plot_biogeographic_process_synthesis <- function(process_summary) {
       title = "Biogeographic process synthesis",
       subtitle = "Formal BioGeoBEARS stochastic mapping, grouped by process type"
     ) +
-    ggplot2::theme_minimal(base_size = 11) +
-    ggplot2::theme(
-      panel.grid.major.y = ggplot2::element_blank(),
-      legend.position = "bottom"
-    )
+    theme_ibgb() +
+    ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
 }
 
 empty_process_summary_table <- function() {
