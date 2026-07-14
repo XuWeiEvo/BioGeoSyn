@@ -524,6 +524,9 @@ test_that("Shiny simplified primary results body helpers are available", {
   expect_match(ui_html, "primary_bsm_event_times_table", fixed = TRUE)
   expect_match(ui_html, "primary_event_summary_table", fixed = TRUE)
   expect_match(ui_html, "primary_best_fit_events_table", fixed = TRUE)
+  # Both dispersal views are previewed: the arrow network and the heatmap.
+  expect_match(ui_html, "primary_figure_bsm_dispersal_network", fixed = TRUE)
+  expect_match(ui_html, "primary_figure_bsm_dispersal_routes", fixed = TRUE)
 })
 
 test_that("Wizard shell renders all steps including elevated cross-clade", {
