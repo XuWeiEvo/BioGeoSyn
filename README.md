@@ -121,12 +121,12 @@ best or near-best.
 
 ## Reports (HTML / PDF)
 
-After a real run the app auto-generates the summary report, and you can also
-call `render_report(result, format = "html")` (or `"pdf"`, or `"source"`).
-Report rendering needs extra tools; if they are missing, `render_report()`
-still writes the `.qmd` source and returns its path, so **a missing renderer
-does not block the run or lose results** — you just get the source instead of a
-rendered HTML/PDF.
+Generate the summary report on demand — click **生成报告** on the results step
+after a run, or call `render_report(result, format = "html")` (or `"pdf"`, or
+`"source"`). Report rendering is kept separate from the run so it never blocks
+the analysis; and if the tools are missing, `render_report()` still writes the
+`.qmd` source and returns its path, so **a missing renderer never blocks the run
+or loses results** — you just get the source instead of a rendered HTML/PDF.
 
 **HTML reports** need the Quarto command-line tool plus the `quarto` R package:
 

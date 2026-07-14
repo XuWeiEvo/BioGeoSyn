@@ -85,7 +85,7 @@ assert(body_has("Dry run completed"), "Dry-run workflow action did not report su
 # 5. Single-clade results step: two downloads and the output-file legend.
 app$click(selector = nth_tab(3))
 app$wait_for_idle(timeout = 30000)
-for (id in c("download_bundle", "download_report", "output_file_legend_table")) {
+for (id in c("render_report", "download_bundle", "download_report", "output_file_legend_table")) {
   assert(exists_id(id), paste("Missing results-step element:", id))
 }
 

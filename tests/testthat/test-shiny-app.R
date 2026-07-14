@@ -381,6 +381,8 @@ test_that("Results step is single-clade, slims exports, and shows a file legend"
   ui <- as.character(wizard_step_results())
   expect_match(ui, "单一类群结果", fixed = TRUE)
   expect_false(grepl("ibgb-step-intro", ui, fixed = TRUE))
+  # Reports are generated on demand here (not auto-rendered during the run).
+  expect_match(ui, "render_report", fixed = TRUE)
   expect_match(ui, "download_bundle", fixed = TRUE)
   expect_match(ui, "download_report", fixed = TRUE)
   # The heavy advanced-results panel is replaced by a file legend.

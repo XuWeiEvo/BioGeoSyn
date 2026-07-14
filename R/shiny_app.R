@@ -324,17 +324,20 @@ iBGB_shiny_server <- function(input, output, session) {
           refresh_shiny_result_exports(session, state)
           append_app_stage(state, "Workflow", "outputs refreshed", result$project_paths$root)
           append_app_message(state, if (isTRUE(result$dry_run)) "Dry run completed." else "Workflow completed.")
-          if (!isTRUE(result$dry_run)) {
-            auto_report <- tryCatch(
-              render_report(state$result, format = input$report_format %||% "html"),
-              error = function(e) NULL
-            )
-            if (!is.null(auto_report)) {
-              state$report <- auto_report
-              refresh_shiny_result_exports(session, state)
-              append_app_stage(state, "Report", "auto-generated", auto_report)
-            }
-          }
+          shiny::incProgress(1)
+          })
+        })
+      })
+
+      shiny::observeEvent(input$render_report, {
+        run_app_action(state, {
+          require_workflow_result(state$result)
+          shiny::withProgress(message = "Rendering report", value = 0, {
+          append_app_stage(state, "Report", "render started", state$result$project_paths$root)
+          report <- render_report(state$result, format = "html")
+          state$report <- report
+          refresh_shiny_result_exports(session, state)
+          append_app_message(state, paste("Report ready:", report))
           shiny::incProgress(1)
           })
         })
@@ -3682,7 +3685,7 @@ wizard_step_analysis <- function() {
       shiny_action_grid(shiny::actionButton("run", "\u70b9\u51fb\u5f00\u59cb\u5206\u6790")),
       shiny::tags$div(
         class = "ibgb-home-note",
-        "\u8fd0\u884c\u7ed3\u675f\u540e\u4f1a\u81ea\u52a8\u751f\u6210\u62a5\u544a\uff0c\u5230\u201c3 \u00b7 \u7ed3\u679c\u201d\u6807\u7b7e\u67e5\u770b\u8be6\u60c5\u548c\u4e0b\u8f7d\u3002"
+        "\u8fd0\u884c\u7ed3\u675f\u540e\u5230\u201c3 \u00b7 \u5355\u4e00\u7c7b\u7fa4\u7ed3\u679c\u201d\u6807\u7b7e\u67e5\u770b\u7ed3\u679c\uff1b\u9700\u8981\u56fe\u6587\u62a5\u544a\u65f6\u5728\u90a3\u91cc\u70b9\u201c\u751f\u6210\u62a5\u544a\u201d\uff0c\u518d\u4e0b\u8f7d\u3002"
       )
     ),
     shiny::checkboxInput("dry_run", "\u8bd5\u8fd0\u884c\uff1a\u53ea\u68c0\u67e5\uff0c\u4e0d\u771f\u6b63\u8fd0\u884c BioGeoBEARS", value = TRUE),
@@ -3716,10 +3719,15 @@ wizard_step_results <- function() {
     shiny_primary_results_body(),
     shiny_control_section(
       "\u5bfc\u51fa",
+      shiny_action_grid(shiny::actionButton("render_report", "\u751f\u6210\u62a5\u544a")),
       shiny::tags$div(
         class = "ibgb-downloads",
         shiny::downloadButton("download_bundle", "\u4e0b\u8f7d\u7ed3\u679c\u538b\u7f29\u5305\uff08\u5168\u90e8\u7ed3\u679c\u6587\u4ef6\uff09"),
         shiny::downloadButton("download_report", "\u4e0b\u8f7d\u62a5\u544a")
+      ),
+      shiny::tags$div(
+        class = "ibgb-home-note",
+        "\u8fd0\u884c\u5b8c\u5148\u5728\u4e0a\u9762\u770b\u7ed3\u679c\u3002\u9700\u8981\u56fe\u6587\u62a5\u544a\u65f6\u70b9\u201c\u751f\u6210\u62a5\u544a\u201d\uff1a\u88c5\u4e86 Quarto \u51fa HTML\uff0c\u6ca1\u88c5\u5219\u751f\u6210 .qmd \u6e90\u6587\u4ef6\uff0c\u90fd\u53ef\u7528\u201c\u4e0b\u8f7d\u62a5\u544a\u201d\u4e0b\u8f7d\u3002"
       )
     ),
     shiny_collapsible_section(
