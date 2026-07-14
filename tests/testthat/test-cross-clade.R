@@ -164,7 +164,30 @@ test_that("render_cross_clade_report writes a self-contained HTML with figures",
   expect_match(txt, "Region-resolved", fixed = TRUE)
   expect_match(txt, "data:image/png;base64", fixed = TRUE)
 
-  # A compact summary table is embedded, and an empty report errors clearly.
+  # Both the full per-clade long table and the clade-pooled summary appear.
+  expect_match(txt, "Combined rates per clade", fixed = TRUE)
+  expect_match(txt, "all clades pooled", fixed = TRUE)
   expect_match(txt, "Summed mean events", fixed = TRUE)
   expect_error(render_cross_clade_report(NULL, NULL), "No cross-clade results")
+})
+
+test_that("keep_first_model drops extra models so cross-clade curves are single", {
+  root <- tempfile("ibgb-multimodel-")
+  tables <- file.path(root, "Anolis", "tables")
+  dir.create(tables, recursive = TRUE, showWarnings = FALSE)
+  two_model <- rbind(
+    data.frame(model = "DEC", process_key = "range_expansion", process_label = "Range expansion",
+      process_group = "anagenetic", region = "A", time_bin = 1:3, bin_midpoint = (1:3) - 0.5,
+      mean_count = c(1, 2, 3), stringsAsFactors = FALSE),
+    data.frame(model = "DEC+J", process_key = "range_expansion", process_label = "Range expansion",
+      process_group = "anagenetic", region = "A", time_bin = 1:3, bin_midpoint = (1:3) - 0.5,
+      mean_count = c(9, 9, 9), stringsAsFactors = FALSE)
+  )
+  utils::write.csv(two_model, file.path(tables, "region_process_rates_through_time.csv"), row.names = FALSE)
+  combined <- combine_region_process_rates_across_clades(
+    file.path(tables, "region_process_rates_through_time.csv")
+  )
+  # Only the first model's rows survive: one row per (region, process, bin).
+  expect_equal(unique(combined$model), "DEC")
+  expect_equal(nrow(combined), 3L)
 })

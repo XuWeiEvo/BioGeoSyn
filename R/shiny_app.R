@@ -3817,9 +3817,7 @@ wizard_step_cross_clade <- function() {
         class = "ibgb-home-note",
         "\u6bcf\u4e2a\u751f\u7269\u5730\u7406\u8fc7\u7a0b\u4e00\u4e2a\u9762\u677f\uff0c\u6bcf\u4e2a\u7c7b\u7fa4\u4e00\u6761\u66f2\u7ebf\uff1b\u66f2\u7ebf\u4e3a\u5747\u503c\uff0c\u8272\u5e26\u4e3a 95% CI\uff08\u968f\u673a\u6620\u5c04\u7684 2.5\u201397.5% \u5206\u4f4d\uff09\u3002"
       ),
-      shiny::div(class = "ibgb-preview", shiny::imageOutput("cross_clade_plot", height = "520px")),
-      shiny::tableOutput("cross_clade_table"),
-      shiny::downloadButton("download_cross_clade", "\u4e0b\u8f7d\u603b\u4f53\u6574\u5408\u7ed3\u679c\uff08\u8868\u683c CSV + \u56fe PNG/PDF\uff09")
+      shiny::div(class = "ibgb-preview", shiny::imageOutput("cross_clade_plot", height = "520px"))
     ),
     shiny::tags$div(
       class = "ibgb-choice-card",
@@ -3828,19 +3826,19 @@ wizard_step_cross_clade <- function() {
         class = "ibgb-home-note",
         "\u884c=\u8fc7\u7a0b\u3001\u5217=\u7c7b\u7fa4\uff0c\u6bcf\u4e2a\u5730\u533a\u4e00\u6761\u66f2\u7ebf\uff0c\u6bd4\u8f83\u5404\u5730\u533a\u5728\u4e0d\u540c\u7c7b\u7fa4\u91cc\u8fc7\u7a0b\u901f\u7387\u968f\u65f6\u95f4\u7684\u53d8\u5316\u3002"
       ),
-      shiny::div(class = "ibgb-preview", shiny::imageOutput("cross_clade_region_plot", height = "560px")),
-      shiny::tableOutput("cross_clade_region_table"),
-      shiny::downloadButton("download_cross_clade_region", "\u4e0b\u8f7d\u5206\u533a\u57df\u6574\u5408\u7ed3\u679c\uff08\u8868\u683c CSV + \u56fe PNG/PDF\uff09")
+      shiny::div(class = "ibgb-preview", shiny::imageOutput("cross_clade_region_plot", height = "560px"))
     ),
     shiny::tags$div(
       class = "ibgb-choice-card",
-      shiny::tags$div(class = "ibgb-control-title", "4 \u00b7 \u591a\u7c7b\u7fa4\u6574\u5408\u62a5\u544a"),
+      shiny::tags$div(class = "ibgb-control-title", "4 \u00b7 \u5bfc\u51fa\u4e0e\u62a5\u544a"),
       shiny::tags$div(
         class = "ibgb-home-note",
-        "\u628a\u4e0a\u9762\u7684\u603b\u4f53\u548c\u5206\u533a\u57df\u6574\u5408\u7ed3\u679c\u6c47\u603b\u6210\u4e00\u4efd\u53ef\u5206\u4eab\u7684 HTML \u62a5\u544a\uff08\u542b\u56fe\u548c\u6c47\u603b\u8868\uff09\u3002\u5148\u70b9\u201c\u751f\u6210\u62a5\u544a\u201d\uff0c\u518d\u70b9\u201c\u4e0b\u8f7d\u62a5\u544a\u201d\u3002"
+        "\u4e0b\u8f7d\u6574\u5408\u7ed3\u679c\uff08\u8868\u683c CSV + \u56fe PNG/PDF\uff09\uff0c\u6216\u751f\u6210\u4e00\u4efd\u53ef\u5206\u4eab\u7684 HTML \u62a5\u544a\u2014\u2014\u62a5\u544a\u91cc\u542b\u603b\u4f53\u4e0e\u5206\u533a\u57df\u7684\u6574\u5408\u56fe\u3001\u5b8c\u6574\u7684\u5206\u7c7b\u7fa4\u957f\u8868\uff0c\u4ee5\u53ca\u628a\u6240\u6709\u7c7b\u7fa4\u52a0\u5728\u4e00\u8d77\u7684\u8de8\u7c7b\u7fa4\u6c47\u603b\u8868\u3002\u5148\u70b9\u201c\u751f\u6210\u62a5\u544a\u201d\uff0c\u518d\u70b9\u201c\u4e0b\u8f7d\u62a5\u544a\u201d\u3002"
       ),
       shiny::tags$div(
         class = "ibgb-downloads",
+        shiny::downloadButton("download_cross_clade", "\u4e0b\u8f7d\u603b\u4f53\u6574\u5408\u7ed3\u679c\uff08CSV + \u56fe\uff09"),
+        shiny::downloadButton("download_cross_clade_region", "\u4e0b\u8f7d\u5206\u533a\u57df\u6574\u5408\u7ed3\u679c\uff08CSV + \u56fe\uff09"),
         shiny::actionButton("render_xclade_report", "\u751f\u6210\u62a5\u544a"),
         shiny::downloadButton("download_xclade_report", "\u4e0b\u8f7d\u62a5\u544a")
       ),

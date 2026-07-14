@@ -39,6 +39,7 @@ combine_process_rates_across_clades <- function(files, clade_names = NULL) {
     if (!all(required %in% names(df))) {
       return(NULL)
     }
+    df <- keep_first_model(df)
     clade <- if (!is.null(clade_names) && length(clade_names) >= i && !is.na(clade_names[[i]]) && nzchar(clade_names[[i]])) {
       clade_names[[i]]
     } else {
@@ -80,6 +81,16 @@ derive_clade_name <- function(file) {
     }
   }
   if (!nzchar(base)) "clade" else base
+}
+
+# Cross-clade comparison uses a single model per clade. If an uploaded rate file
+# contains several models (e.g. BSM was run on all models), keep only the first
+# model so each clade shows one curve instead of overlapping models.
+keep_first_model <- function(df) {
+  if ("model" %in% names(df) && length(unique(df$model)) > 1L) {
+    df <- df[df$model == df$model[[1L]], , drop = FALSE]
+  }
+  df
 }
 
 #' Plot process rates through time across clades
@@ -181,6 +192,7 @@ combine_clade_rate_files <- function(files, clade_names, required, empty) {
     if (is.null(df) || nrow(df) == 0L || !all(required %in% names(df))) {
       return(NULL)
     }
+    df <- keep_first_model(df)
     clade <- if (!is.null(clade_names) && length(clade_names) >= i && !is.na(clade_names[[i]]) && nzchar(clade_names[[i]])) {
       clade_names[[i]]
     } else {
@@ -265,38 +277,49 @@ empty_combined_region_rates_table <- function() {
   cbind(clade = character(), tbl)
 }
 
-# Summed mean events per clade and process (overall cross-clade summary).
+# Summed mean events per process, pooled across all clades (overall summary).
 xclade_process_summary <- function(df) {
-  req <- c("clade", "process_label", "mean_count")
+  req <- c("process_label", "mean_count")
   if (is.null(df) || !all(req %in% names(df)) || nrow(df) == 0L) {
     return(NULL)
   }
   agg <- stats::aggregate(
     list(events = suppressWarnings(as.numeric(df$mean_count))),
-    by = list(Clade = df$clade, Process = df$process_label),
+    by = list(Process = df$process_label),
     FUN = function(x) round(sum(x, na.rm = TRUE), 2)
   )
-  agg <- agg[order(agg$Clade, -agg$events), , drop = FALSE]
-  names(agg)[names(agg) == "events"] <- "Summed mean events"
+  agg <- agg[order(-agg$events), , drop = FALSE]
+  names(agg)[names(agg) == "events"] <- "Summed mean events (all clades)"
   row.names(agg) <- NULL
   agg
 }
 
-# Summed mean events per clade, region and process (region-resolved summary).
+# Summed mean events per region and process, pooled across all clades.
 xclade_region_summary <- function(df) {
-  req <- c("clade", "region", "process_label", "mean_count")
+  req <- c("region", "process_label", "mean_count")
   if (is.null(df) || !all(req %in% names(df)) || nrow(df) == 0L) {
     return(NULL)
   }
   agg <- stats::aggregate(
     list(events = suppressWarnings(as.numeric(df$mean_count))),
-    by = list(Clade = df$clade, Region = df$region, Process = df$process_label),
+    by = list(Region = df$region, Process = df$process_label),
     FUN = function(x) round(sum(x, na.rm = TRUE), 2)
   )
-  agg <- agg[order(agg$Clade, agg$Region, -agg$events), , drop = FALSE]
-  names(agg)[names(agg) == "events"] <- "Summed mean events"
+  agg <- agg[order(agg$Region, -agg$events), , drop = FALSE]
+  names(agg)[names(agg) == "events"] <- "Summed mean events (all clades)"
   row.names(agg) <- NULL
   agg
+}
+
+# Select and round the key columns of a combined rate table for the report's
+# full (per-clade, per-time-bin) long table.
+xclade_long_table <- function(df, cols) {
+  keep <- intersect(cols, names(df))
+  out <- df[, keep, drop = FALSE]
+  num <- vapply(out, is.numeric, logical(1))
+  out[num] <- lapply(out[num], function(x) round(x, 3))
+  row.names(out) <- NULL
+  out
 }
 
 # Render a self-contained HTML report of the cross-clade integrated results
@@ -371,11 +394,16 @@ render_cross_clade_report <- function(overall_combined = NULL,
       tryCatch(
         embed_plot(plot_process_rates_across_clades(overall_combined), 8.6, 5.2),
         error = function(e) sprintf("<p class=\"note\">Figure unavailable: %s</p>", conditionMessage(e))
-      )
+      ),
+      "<h3>Combined rates per clade and time bin</h3>",
+      html_table(xclade_long_table(
+        overall_combined,
+        c("clade", "process_group", "process_label", "bin_midpoint", "mean_count", "ci_lower", "ci_upper")
+      ))
     )
     summ <- xclade_process_summary(overall_combined)
     if (!is.null(summ)) {
-      parts <- c(parts, "<h3>Summed mean events per clade and process</h3>", html_table(summ))
+      parts <- c(parts, "<h3>Summed mean events per process (all clades pooled)</h3>", html_table(summ))
     }
   }
 
@@ -386,11 +414,16 @@ render_cross_clade_report <- function(overall_combined = NULL,
       tryCatch(
         embed_plot(plot_region_process_rates_across_clades(region_combined), 9, 6),
         error = function(e) sprintf("<p class=\"note\">Figure unavailable: %s</p>", conditionMessage(e))
-      )
+      ),
+      "<h3>Combined rates per clade, region and time bin</h3>",
+      html_table(xclade_long_table(
+        region_combined,
+        c("clade", "region", "process_label", "bin_midpoint", "mean_count", "ci_lower", "ci_upper")
+      ))
     )
     summ <- xclade_region_summary(region_combined)
     if (!is.null(summ)) {
-      parts <- c(parts, "<h3>Summed mean events per clade, region and process</h3>", html_table(summ))
+      parts <- c(parts, "<h3>Summed mean events per region and process (all clades pooled)</h3>", html_table(summ))
     }
   }
 

@@ -423,6 +423,9 @@ test_that("Cross-clade step is numbered, adds per-region and CI, and export butt
   # The cross-clade report lives on this tab (moved off the single-clade tab).
   expect_match(ui, "render_xclade_report", fixed = TRUE)
   expect_match(ui, "download_xclade_report", fixed = TRUE)
+  # Only figures on the tab; the long tables live in the report, not here.
+  expect_false(grepl("cross_clade_table", ui, fixed = TRUE))
+  expect_false(grepl("cross_clade_region_table", ui, fixed = TRUE))
   # Single-clade event panels are NOT copied here.
   expect_false(grepl("primary_figure_process_synthesis", ui, fixed = TRUE))
 })
