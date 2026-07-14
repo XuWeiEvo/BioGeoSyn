@@ -336,13 +336,35 @@ test_that("Wizard data step is a single own-data card with merged output locatio
   expect_match(action_html, "open_user_guide", fixed = TRUE)
 })
 
-test_that("Advanced constraints moved off the analysis step", {
+test_that("Analysis step is the run action plus run and BSM option folds", {
   testthat::skip_if_not_installed("shiny")
 
   analysis_html <- as.character(wizard_step_analysis())
-  # The constraint text inputs (constraint_<field>) no longer live on this step.
+  # A single primary run action (renamed) and the two option folds.
+  expect_match(analysis_html, "点击开始分析", fixed = TRUE)
+  expect_match(analysis_html, "运行选项", fixed = TRUE)
+  expect_match(analysis_html, "BSM 随机映射", fixed = TRUE)
+  expect_match(analysis_html, "run_stochastic_mapping", fixed = TRUE)
+  expect_match(analysis_html, "stochastic_mapping_replicates", fixed = TRUE)
+  # The report button, config editor, env-install fold, and constraint inputs
+  # were removed from this step.
+  expect_false(grepl("render_report", analysis_html, fixed = TRUE))
+  expect_false(grepl("use_config_editor", analysis_html, fixed = TRUE))
   expect_false(grepl("constraint_times_file", analysis_html, fixed = TRUE))
-  expect_false(grepl("constraint_areas_allowed_file", analysis_html, fixed = TRUE))
+  expect_false(grepl("install_biogeobears", analysis_html, fixed = TRUE))
+})
+
+test_that("Environment check lives in a top-level section, not the help step", {
+  testthat::skip_if_not_installed("shiny")
+
+  env_html <- as.character(wizard_env_section())
+  expect_match(env_html, "install_biogeobears", fixed = TRUE)
+  expect_match(env_html, "refresh_setup", fixed = TRUE)
+  expect_match(env_html, "installation_table", fixed = TRUE)
+  expect_match(env_html, "biogeobears_install_plan_table", fixed = TRUE)
+
+  help_html <- as.character(wizard_step_help())
+  expect_false(grepl("installation_table", help_html, fixed = TRUE))
 })
 
 test_that("constraint_template_path resolves every constraint template", {
@@ -425,7 +447,7 @@ test_that("Shiny constraint input helpers expose advanced fields", {
       "area_of_areas_file"
     )
   )
-  expect_true(all(grepl("^constraint_", shiny_constraint_input_ids())))
+  expect_true(all(nzchar(fields$template)))
 })
 
 test_that("resolve_shiny_config_path prefers uploaded YAML files", {
@@ -454,24 +476,28 @@ test_that("resolve_shiny_config_path requires a config source", {
   )
 })
 
-test_that("Shiny config editor applies GUI overrides and writes runnable YAML", {
-  project <- create_example_project(tempfile("ibgb-shiny-config-editor-"))
+test_that("Wizard overrides apply and write a runnable YAML with absolute paths", {
+  project <- create_example_project(tempfile("ibgb-shiny-wizard-cfg-"))
   cfg <- read_config(project$config)
-  writeLines("0 1", file.path(project$root, "data", "times.txt"))
-  writeLines("1 1", file.path(project$root, "data", "dists.txt"))
+  times <- constraint_template_path("times_file")
+  upload <- function(path) {
+    data.frame(name = basename(path), datapath = path, stringsAsFactors = FALSE)
+  }
   input <- list(
-    use_config_editor = TRUE,
-    project_name = "edited_clade",
-    tree_file = "data/tree.nwk",
-    geography_file = "data/geography.csv",
-    regions_file = "data/regions.csv",
-    max_range_size = "2",
-    models_run = c("DEC", "DEC+J"),
-    constraint_times_file = "data/times.txt",
-    constraint_dists_file = "data/dists.txt"
+    wizard_project_name = "edited_clade",
+    wizard_tree = upload(project$tree_file),
+    wizard_geography = upload(project$geography_file),
+    wizard_regions = upload(project$regions_file),
+    wizard_max_range_size = 2L,
+    wizard_models = c("DEC", "DEC+J"),
+    wizard_constraint_times_file = upload(times)
   )
 
-  edited <- apply_shiny_config_overrides(cfg, input, output_dir = file.path(project$root, "edited-results"))
+  edited <- apply_shiny_config_overrides(
+    apply_shiny_wizard_overrides(cfg, input),
+    input,
+    output_dir = file.path(project$root, "edited-results")
+  )
   config_path <- write_shiny_workflow_config(edited, source_config = project$config)
   roundtrip <- read_config(config_path)
 
@@ -479,13 +505,10 @@ test_that("Shiny config editor applies GUI overrides and writes runnable YAML", 
   expect_equal(edited$inputs$max_range_size, 2L)
   expect_equal(edited$models$run, c("DEC", "DEC+J"))
   expect_true(grepl("edited-results$", edited$project$output_dir))
-  expect_equal(edited$advanced$constraints$times_file, "data/times.txt")
-  expect_equal(edited$advanced$constraints$dists_file, "data/dists.txt")
   expect_true(file.exists(roundtrip$inputs$tree_file))
   expect_true(file.exists(roundtrip$inputs$geography_file))
   expect_true(file.exists(roundtrip$inputs$regions_file))
   expect_true(file.exists(roundtrip$advanced$constraints$times_file))
-  expect_true(file.exists(roundtrip$advanced$constraints$dists_file))
   expect_equal(roundtrip$models$run, c("DEC", "DEC+J"))
 })
 
@@ -1366,45 +1389,6 @@ test_that("Shiny server validates and dry-runs a workflow", {
   })
 })
 
-test_that("Shiny server uses GUI config editor overrides", {
-  testthat::skip_if_not_installed("shiny")
-
-  project <- create_example_project(tempfile("ibgb-shiny-server-editor-"))
-  writeLines("0 1", file.path(project$root, "data", "times.txt"))
-  edited_output <- file.path(project$root, "results", "edited_clade")
-
-  shiny::testServer(iBGB_shiny_server, {
-    session$setInputs(
-      config_path = project$config,
-      output_dir = edited_output,
-      use_config_editor = TRUE,
-      project_name = "edited_clade",
-      tree_file = "data/tree.nwk",
-      geography_file = "data/geography.csv",
-      regions_file = "data/regions.csv",
-      max_range_size = "2",
-      models_run = "DEC",
-      constraint_times_file = "data/times.txt",
-      dry_run = TRUE,
-      require_biogeobears = FALSE,
-      force = FALSE,
-      report_format = "source"
-    )
-
-    session$setInputs(validate = 1)
-    state <- session$userData$state
-    expect_true(all(state$validation$ok))
-    expect_equal(state$model_table$model, "DEC")
-
-    session$setInputs(run = 1)
-    expect_equal(state$result$config$project$name, "edited_clade")
-    expect_equal(state$result$config$inputs$max_range_size, 2L)
-    expect_equal(state$result$config$models$run, "DEC")
-    expect_true(file.exists(state$result$config$advanced$constraints$times_file))
-    expect_equal(state$result$project_paths$root, edited_output)
-  })
-})
-
 test_that("Shiny wizard uploads drive validation and the workflow directly", {
   testthat::skip_if_not_installed("shiny")
 
@@ -1480,12 +1464,13 @@ test_that("Shiny server renders reports and bundles dry-run results", {
     expect_s3_class(state$result, "iBGB_workflow_result")
     expect_true(file.exists(file.path(state$result$project_paths$tables, "shiny_run_summary.csv")))
 
-    session$setInputs(render_report = 1)
+    # A real run auto-generates the report; here we exercise the source render
+    # directly on the dry-run result (the manual report button was removed).
+    state$report <- render_report(state$result, format = "source")
+    refresh_shiny_result_exports(session, state)
     expect_true(file.exists(state$report))
-    expect_match(state$message, "Report ready:", fixed = TRUE)
     expect_equal(report_preview_path(state), as_path(state$report))
     expect_equal(shiny_key_files_table(state)$status[match("Report", shiny_key_files_table(state)$file)], "Available")
-    expect_true(any(grepl("Report: render started", state$messages, fixed = TRUE)))
 
     session$setInputs(refresh_key_files = 1)
     expect_true(file.exists(file.path(state$result$project_paths$tables, "shiny_run_summary.csv")))

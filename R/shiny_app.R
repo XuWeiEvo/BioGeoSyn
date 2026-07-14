@@ -133,10 +133,6 @@ shiny_constraint_fields <- function() {
   )
 }
 
-shiny_constraint_input_ids <- function() {
-  paste0("constraint_", shiny_constraint_fields()$field)
-}
-
 shiny_wizard_constraint_inputs <- function() {
   fields <- shiny_constraint_fields()
   shiny::tagList(lapply(seq_len(nrow(fields)), function(i) {
@@ -334,19 +330,17 @@ iBGB_shiny_server <- function(input, output, session) {
           refresh_shiny_result_exports(session, state)
           append_app_stage(state, "Workflow", "outputs refreshed", result$project_paths$root)
           append_app_message(state, if (isTRUE(result$dry_run)) "Dry run completed." else "Workflow completed.")
-          shiny::incProgress(1)
-          })
-        })
-      })
-
-      shiny::observeEvent(input$render_report, {
-        run_app_action(state, {
-          require_workflow_result(state$result)
-          shiny::withProgress(message = "Rendering report", value = 0, {
-          append_app_stage(state, "Report", "render started", input$report_format)
-          state$report <- render_report(state$result, format = input$report_format)
-          refresh_shiny_result_exports(session, state)
-          append_app_message(state, paste("Report ready:", state$report))
+          if (!isTRUE(result$dry_run)) {
+            auto_report <- tryCatch(
+              render_report(state$result, format = input$report_format %||% "html"),
+              error = function(e) NULL
+            )
+            if (!is.null(auto_report)) {
+              state$report <- auto_report
+              refresh_shiny_result_exports(session, state)
+              append_app_stage(state, "Report", "auto-generated", auto_report)
+            }
+          }
           shiny::incProgress(1)
           })
         })
@@ -3297,46 +3291,7 @@ apply_shiny_config_overrides <- function(config, input, output_dir = NULL) {
   if (!is.null(output_dir)) {
     cfg$project$output_dir <- output_dir
   }
-  cfg <- apply_shiny_run_option_overrides(cfg, input)
-
-  if (!isTRUE(input$use_config_editor %||% FALSE)) {
-    return(cfg)
-  }
-
-  project_name <- shiny_trimmed_input(input, "project_name")
-  tree_file <- shiny_trimmed_input(input, "tree_file")
-  geography_file <- shiny_trimmed_input(input, "geography_file")
-  regions_file <- shiny_trimmed_input(input, "regions_file")
-  max_range_size <- shiny_trimmed_input(input, "max_range_size")
-  models <- input$models_run %||% character()
-  constraints <- shiny_constraint_override_values(input)
-
-  if (!is.null(project_name)) {
-    cfg$project$name <- project_name
-  }
-  if (!is.null(tree_file)) {
-    cfg$inputs$tree_file <- tree_file
-  }
-  if (!is.null(geography_file)) {
-    cfg$inputs$geography_file <- geography_file
-  }
-  if (!is.null(regions_file)) {
-    cfg$inputs$regions_file <- regions_file
-  }
-  if (!is.null(max_range_size)) {
-    parsed <- suppressWarnings(as.integer(max_range_size))
-    cfg$inputs$max_range_size <- if (!is.na(parsed)) parsed else max_range_size
-  }
-  cfg$models$run <- as.character(models)
-  if (length(constraints) > 0L) {
-    cfg$advanced <- cfg$advanced %||% list()
-    cfg$advanced$constraints <- cfg$advanced$constraints %||% list()
-    for (field in names(constraints)) {
-      cfg$advanced$constraints[[field]] <- constraints[[field]]
-    }
-  }
-
-  cfg
+  apply_shiny_run_option_overrides(cfg, input)
 }
 
 apply_shiny_run_option_overrides <- function(config, input) {
@@ -3357,18 +3312,6 @@ apply_shiny_run_option_overrides <- function(config, input) {
     cfg$analysis$stochastic_mapping_seed <- seed
   }
   cfg
-}
-
-shiny_constraint_override_values <- function(input) {
-  fields <- shiny_constraint_fields()$field
-  values <- list()
-  for (field in fields) {
-    value <- shiny_trimmed_input(input, paste0("constraint_", field))
-    if (!is.null(value)) {
-      values[[field]] <- value
-    }
-  }
-  values
 }
 
 shiny_trimmed_input <- function(input, id) {
@@ -3485,11 +3428,28 @@ iBGB_head_styles <- function() {
   )
 }
 
+wizard_env_section <- function() {
+  shiny_collapsible_section(
+    "\u73af\u5883\u4e0e\u5b89\u88c5\uff08\u7b2c\u4e00\u6b21\u4f7f\u7528\u53ef\u5c55\u5f00\u68c0\u67e5 BioGeoBEARS\uff09",
+    shiny_action_grid(
+      shiny::actionButton("refresh_setup", "\u5237\u65b0\u73af\u5883\u68c0\u67e5"),
+      shiny::actionButton("show_install_plan", "\u67e5\u770b BioGeoBEARS \u5b89\u88c5\u8ba1\u5212"),
+      shiny::actionButton("install_biogeobears", "\u5b89\u88c5 BioGeoBEARS"),
+      shiny::actionButton("open_user_guide", "\u6253\u5f00\u4e2d\u6587\u6559\u7a0b")
+    ),
+    shiny::tags$div(class = "ibgb-key-files-title", "\u5b89\u88c5\u72b6\u6001"),
+    shiny::tableOutput("installation_table"),
+    shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS \u5b89\u88c5\u8ba1\u5212"),
+    shiny::tableOutput("biogeobears_install_plan_table")
+  )
+}
+
 iBGB_app_ui <- function(default_config, default_output, example_project_dir) {
   shiny::fluidPage(
     iBGB_head_styles(),
     shiny::titlePanel("iBiogeobears"),
     shiny::uiOutput("status"),
+    wizard_env_section(),
     shiny::tabsetPanel(
       id = "wizard_nav",
       type = "tabs",
@@ -3589,15 +3549,12 @@ wizard_step_data <- function(default_config, default_output, example_project_dir
 wizard_step_analysis <- function() {
   shiny::tabPanel(
     "2 \u00b7 \u5206\u6790",
-    shiny::tags$p(
-      class = "ibgb-step-intro",
-      "\u7b2c\u4e8c\u6b65\uff1a\u6a21\u578b\u62df\u5408\u3001\u6a21\u578b\u6bd4\u8f83\u3001\u7956\u5148\u5206\u5e03\u4f30\u8ba1\uff0c\u5e76\u53ef\u9009\u505a BSM \u968f\u673a\u6620\u5c04\u3002\u9ad8\u7ea7\u53c2\u6570\u90fd\u6536\u5728\u4e0b\u9762\u7684\u6298\u53e0\u83dc\u5355\u91cc\u3002"
-    ),
     shiny_control_section(
       "\u8fd0\u884c",
-      shiny_action_grid(
-        shiny::actionButton("run", "\u8fd0\u884c\u5206\u6790\u6d41\u7a0b"),
-        shiny::actionButton("render_report", "\u751f\u6210\u62a5\u544a")
+      shiny_action_grid(shiny::actionButton("run", "\u70b9\u51fb\u5f00\u59cb\u5206\u6790")),
+      shiny::tags$div(
+        class = "ibgb-home-note",
+        "\u8fd0\u884c\u7ed3\u675f\u540e\u4f1a\u81ea\u52a8\u751f\u6210\u62a5\u544a\uff0c\u5230\u201c3 \u00b7 \u7ed3\u679c\u201d\u6807\u7b7e\u67e5\u770b\u8be6\u60c5\u548c\u4e0b\u8f7d\u3002"
       )
     ),
     shiny_collapsible_section(
@@ -3606,7 +3563,10 @@ wizard_step_analysis <- function() {
       shiny::checkboxInput("require_biogeobears", "\u771f\u5b9e\u8fd0\u884c\u65f6\u8981\u6c42 BioGeoBEARS \u53ef\u7528", value = FALSE),
       shiny::checkboxInput("resume_completed_models", "\u590d\u7528\u5df2\u5b8c\u6210\u7684\u6a21\u578b", value = TRUE),
       shiny::checkboxInput("retry_failed_only", "\u53ea\u91cd\u8dd1\u5931\u8d25\u7684\u6a21\u578b", value = FALSE),
-      shiny::checkboxInput("force", "\u9a8c\u8bc1\u5931\u8d25\u540e\u5f3a\u5236\u8fd0\u884c", value = FALSE),
+      shiny::checkboxInput("force", "\u9a8c\u8bc1\u5931\u8d25\u540e\u5f3a\u5236\u8fd0\u884c", value = FALSE)
+    ),
+    shiny_collapsible_section(
+      "BSM \u968f\u673a\u6620\u5c04",
       shiny::checkboxInput("run_stochastic_mapping", "\u8fd0\u884c BSM \u968f\u673a\u6620\u5c04", value = FALSE),
       shiny::selectInput(
         "stochastic_mapping_model",
@@ -3621,25 +3581,6 @@ wizard_step_analysis <- function() {
       ),
       shiny::numericInput("stochastic_mapping_replicates", "BSM \u6620\u5c04\u6b21\u6570", value = 100L, min = 1L, step = 1L),
       shiny::numericInput("stochastic_mapping_seed", "BSM \u968f\u673a\u79cd\u5b50", value = 1L, min = 1L, step = 1L)
-    ),
-    shiny_collapsible_section(
-      "\u9ad8\u7ea7\uff1a\u5b89\u88c5\u548c\u73af\u5883",
-      shiny_action_grid(
-        shiny::actionButton("refresh_setup", "\u5237\u65b0\u73af\u5883\u68c0\u67e5"),
-        shiny::actionButton("open_user_guide", "\u6253\u5f00\u4e2d\u6587\u6559\u7a0b"),
-        shiny::actionButton("show_install_plan", "\u67e5\u770b BioGeoBEARS \u5b89\u88c5\u8ba1\u5212"),
-        shiny::actionButton("install_biogeobears", "\u5b89\u88c5 BioGeoBEARS")
-      )
-    ),
-    shiny_collapsible_section(
-      "\u9ad8\u7ea7\uff1a\u914d\u7f6e\u7f16\u8f91\u5668",
-      shiny::checkboxInput("use_config_editor", "\u4f7f\u7528\u754c\u9762\u914d\u7f6e\u8986\u76d6", value = FALSE),
-      shiny::textInput("project_name", "\u9879\u76ee\u540d", value = ""),
-      shiny::textInput("tree_file", "\u7cfb\u7edf\u6811\u6587\u4ef6", value = ""),
-      shiny::textInput("geography_file", "\u5206\u5e03\u77e9\u9635\u6587\u4ef6", value = ""),
-      shiny::textInput("regions_file", "\u533a\u57df\u4fe1\u606f\u6587\u4ef6", value = ""),
-      shiny::textInput("max_range_size", "\u6700\u5927\u5206\u5e03\u533a\u6570\u91cf", value = ""),
-      shiny::checkboxGroupInput("models_run", "\u6a21\u578b", choices = valid_models(), selected = valid_models())
     )
   )
 }
@@ -3774,15 +3715,7 @@ wizard_step_cross_clade <- function() {
 wizard_step_help <- function() {
   shiny::tabPanel(
     "\u5e2e\u52a9",
-    shiny::tags$p(class = "ibgb-step-intro", "\u73af\u5883\u68c0\u67e5\u3001\u6392\u9519\u548c\u5f15\u7528\u4fe1\u606f\u90fd\u5728\u8fd9\u91cc\u3002"),
-    shiny_collapsible_section(
-      "\u73af\u5883\u68c0\u67e5",
-      shiny::tags$div(class = "ibgb-key-files-title", "\u5b89\u88c5\u72b6\u6001"),
-      shiny::tableOutput("installation_table"),
-      shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS \u5b89\u88c5\u8ba1\u5212"),
-      shiny::tableOutput("biogeobears_install_plan_table"),
-      open = TRUE
-    ),
+    shiny::tags$p(class = "ibgb-step-intro", "\u6392\u9519\u548c\u5f15\u7528\u4fe1\u606f\u90fd\u5728\u8fd9\u91cc\u3002\u73af\u5883\u68c0\u67e5\u5728\u9875\u9762\u6700\u4e0a\u65b9\u7684\u201c\u73af\u5883\u4e0e\u5b89\u88c5\u201d\u91cc\u3002"),
     shiny_collapsible_section(
       "\u6392\u9519",
       shiny::tags$div(class = "ibgb-key-files-title", "\u8b66\u544a\u6458\u8981"),
