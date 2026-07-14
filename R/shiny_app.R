@@ -103,17 +103,6 @@ shiny_primary_results_body <- function() {
   )
 }
 
-shiny_constraint_inputs <- function() {
-  fields <- shiny_constraint_fields()
-  shiny::tagList(lapply(seq_len(nrow(fields)), function(i) {
-    shiny::textInput(
-      inputId = paste0("constraint_", fields$field[[i]]),
-      label = fields$label[[i]],
-      value = ""
-    )
-  }))
-}
-
 shiny_constraint_fields <- function() {
   data.frame(
     field = c(
@@ -132,12 +121,57 @@ shiny_constraint_fields <- function() {
       "\u533a\u57df\u76f8\u90bb\u6587\u4ef6",
       "\u533a\u57df\u9762\u79ef\u6587\u4ef6"
     ),
+    template = c(
+      "times.txt",
+      "distances.txt",
+      "dispersal_multipliers.txt",
+      "areas_allowed.txt",
+      "areas_adjacency.txt",
+      "area_of_areas.txt"
+    ),
     stringsAsFactors = FALSE
   )
 }
 
 shiny_constraint_input_ids <- function() {
   paste0("constraint_", shiny_constraint_fields()$field)
+}
+
+shiny_wizard_constraint_inputs <- function() {
+  fields <- shiny_constraint_fields()
+  shiny::tagList(lapply(seq_len(nrow(fields)), function(i) {
+    shiny::fileInput(
+      inputId = paste0("wizard_constraint_", fields$field[[i]]),
+      label = fields$label[[i]],
+      accept = c(".txt", ".tsv", ".csv")
+    )
+  }))
+}
+
+shiny_constraint_template_downloads <- function() {
+  fields <- shiny_constraint_fields()
+  shiny::tags$div(
+    class = "ibgb-downloads",
+    lapply(seq_len(nrow(fields)), function(i) {
+      shiny::downloadButton(
+        outputId = paste0("download_constraint_", fields$field[[i]]),
+        label = fields$label[[i]]
+      )
+    })
+  )
+}
+
+constraint_template_path <- function(field) {
+  fields <- shiny_constraint_fields()
+  idx <- match(field, fields$field)
+  if (length(idx) != 1L || is.na(idx)) {
+    stop("Unknown constraint template: ", paste(field, collapse = ", "), call. = FALSE)
+  }
+  path <- system.file("example_data", "constraints", fields$template[[idx]], package = "iBiogeobears")
+  if (!file.exists(path)) {
+    stop("Installed constraint template could not be found: ", fields$template[[idx]], call. = FALSE)
+  }
+  path
 }
 
 shiny_figure_panel <- function(title, output_id) {
@@ -797,6 +831,20 @@ iBGB_shiny_server <- function(input, output, session) {
           copy_download_file(input_template_path("regions"), file)
         }
       )
+
+      for (constraint_field in shiny_constraint_fields()$field) {
+        local({
+          field <- constraint_field
+          fields <- shiny_constraint_fields()
+          template_name <- fields$template[fields$field == field]
+          output[[paste0("download_constraint_", field)]] <- shiny::downloadHandler(
+            filename = function() template_name,
+            content = function(file) {
+              copy_download_file(constraint_template_path(field), file)
+            }
+          )
+        })
+      }
 }
 
 shiny_installation_table <- function(checks = check_installation()) {
@@ -3215,6 +3263,21 @@ apply_shiny_wizard_overrides <- function(config, input) {
   if (length(models) > 0L) {
     cfg$models$run <- as.character(models)
   }
+  constraint_fields <- shiny_constraint_fields()$field
+  uploaded_constraints <- list()
+  for (field in constraint_fields) {
+    path <- shiny_optional_upload_path(input[[paste0("wizard_constraint_", field)]])
+    if (!is.null(path)) {
+      uploaded_constraints[[field]] <- path
+    }
+  }
+  if (length(uploaded_constraints) > 0L) {
+    cfg$advanced <- cfg$advanced %||% list()
+    cfg$advanced$constraints <- cfg$advanced$constraints %||% list()
+    for (field in names(uploaded_constraints)) {
+      cfg$advanced$constraints[[field]] <- uploaded_constraints[[field]]
+    }
+  }
   cfg
 }
 
@@ -3453,6 +3516,18 @@ wizard_step_data <- function(default_config, default_output, example_project_dir
       ),
       shiny::fileInput("wizard_geography", "\u5206\u5e03\u77e9\u9635 CSV", accept = ".csv"),
       shiny::fileInput("wizard_regions", "\u533a\u57df\u4fe1\u606f CSV", accept = ".csv"),
+      shiny_collapsible_section(
+        "\u9ad8\u7ea7\u7ea6\u675f\uff08\u53ef\u9009\uff0c\u65f6\u95f4\u5206\u5c42\u7b49\u9ad8\u7ea7\u5206\u6790\u7528\uff09",
+        shiny::tags$p(
+          class = "ibgb-home-note",
+          "\u8fd9\u4e9b\u6587\u4ef6\u7528\u4e8e\u65f6\u95f4\u5206\u5c42\u3001\u6269\u6563\u4e58\u6570\u3001\u533a\u57df\u76f8\u90bb\u7b49\u9ad8\u7ea7\u5206\u6790\uff0c\u4e00\u822c\u7528\u4e0d\u5230\uff0c\u53ef\u7559\u7a7a\u3002\u683c\u5f0f\u8bf7\u5bf9\u7167\u4e0b\u9762\u7684\u6a21\u677f\u3002"
+        ),
+        shiny_wizard_constraint_inputs(),
+        shiny_collapsible_section(
+          "\u9ad8\u7ea7\u7ea6\u675f\u6a21\u677f",
+          shiny_constraint_template_downloads()
+        )
+      ),
       shiny::tags$div(
         class = "ibgb-downloads",
         shiny::downloadButton("download_tree_template", "\u4e0b\u8f7d\u6811\u6a21\u677f"),
@@ -3564,9 +3639,7 @@ wizard_step_analysis <- function() {
       shiny::textInput("geography_file", "\u5206\u5e03\u77e9\u9635\u6587\u4ef6", value = ""),
       shiny::textInput("regions_file", "\u533a\u57df\u4fe1\u606f\u6587\u4ef6", value = ""),
       shiny::textInput("max_range_size", "\u6700\u5927\u5206\u5e03\u533a\u6570\u91cf", value = ""),
-      shiny::checkboxGroupInput("models_run", "\u6a21\u578b", choices = valid_models(), selected = valid_models()),
-      shiny::tags$div(class = "ibgb-key-files-title", "\u9ad8\u7ea7\u7ea6\u675f"),
-      shiny_constraint_inputs()
+      shiny::checkboxGroupInput("models_run", "\u6a21\u578b", choices = valid_models(), selected = valid_models())
     )
   )
 }

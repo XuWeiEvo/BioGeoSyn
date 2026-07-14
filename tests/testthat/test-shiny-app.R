@@ -304,6 +304,10 @@ test_that("Wizard data step is a single own-data card with merged output locatio
   expect_match(panel_html, "wizard_tree", fixed = TRUE)
   expect_match(panel_html, "wizard_geography", fixed = TRUE)
   expect_match(panel_html, "download_geography_template", fixed = TRUE)
+  # Advanced constraint uploads and their templates live on the data step.
+  expect_match(panel_html, "高级约束", fixed = TRUE)
+  expect_match(panel_html, "wizard_constraint_times_file", fixed = TRUE)
+  expect_match(panel_html, "download_constraint_dispersal_multipliers_file", fixed = TRUE)
   # Output location is merged into this step with an inline picker; the raw YAML
   # handle is kept but hidden.
   expect_match(panel_html, "output_dir", fixed = TRUE)
@@ -330,6 +334,55 @@ test_that("Wizard data step is a single own-data card with merged output locatio
   expect_false(grepl("open_output", panel_html, fixed = TRUE))
   expect_false(grepl("guided_workflow_table", panel_html, fixed = TRUE))
   expect_match(action_html, "open_user_guide", fixed = TRUE)
+})
+
+test_that("Advanced constraints moved off the analysis step", {
+  testthat::skip_if_not_installed("shiny")
+
+  analysis_html <- as.character(wizard_step_analysis())
+  # The constraint text inputs (constraint_<field>) no longer live on this step.
+  expect_false(grepl("constraint_times_file", analysis_html, fixed = TRUE))
+  expect_false(grepl("constraint_areas_allowed_file", analysis_html, fixed = TRUE))
+})
+
+test_that("constraint_template_path resolves every constraint template", {
+  fields <- shiny_constraint_fields()$field
+  for (field in fields) {
+    path <- constraint_template_path(field)
+    expect_true(file.exists(path))
+    expect_gt(length(readLines(path)), 0L)
+  }
+  expect_error(constraint_template_path("not_a_constraint"), "Unknown constraint template")
+})
+
+test_that("wizard constraint uploads flow into the config", {
+  base <- list(
+    project = list(name = "x"),
+    inputs = list(),
+    models = list(),
+    advanced = list(constraints = list())
+  )
+  times <- constraint_template_path("times_file")
+  adjacency <- constraint_template_path("areas_adjacency_file")
+  input <- list(
+    wizard_constraint_times_file = data.frame(
+      name = "times.txt", datapath = times, stringsAsFactors = FALSE
+    ),
+    wizard_constraint_areas_adjacency_file = data.frame(
+      name = "areas_adjacency.txt", datapath = adjacency, stringsAsFactors = FALSE
+    )
+  )
+  cfg <- apply_shiny_wizard_overrides(base, input)
+  expect_equal(
+    normalizePath(cfg$advanced$constraints$times_file, winslash = "/"),
+    normalizePath(times, winslash = "/")
+  )
+  expect_equal(
+    normalizePath(cfg$advanced$constraints$areas_adjacency_file, winslash = "/"),
+    normalizePath(adjacency, winslash = "/")
+  )
+  # Constraints without an upload are left untouched.
+  expect_null(cfg$advanced$constraints$dists_file)
 })
 
 test_that("Shiny simplified primary results body helpers are available", {

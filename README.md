@@ -415,9 +415,12 @@ advanced:
     area_of_areas_file: null
 ```
 
-The Shiny config editor exposes these same advanced constraint file fields.
-Relative paths are resolved against the selected `analysis.yml` location when
-the workflow writes its temporary GUI-edited config.
+In the Shiny wizard these constraint files are uploaded from a collapsed
+"advanced constraints" section on the data step, alongside downloadable example
+templates that follow the BioGeoBEARS time-stratified format (bundled under
+`inst/example_data/constraints/`). Relative paths are resolved against the
+selected `analysis.yml` location when the workflow writes its temporary
+GUI-edited config.
 
 ## Outputs
 
