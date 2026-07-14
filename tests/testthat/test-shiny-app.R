@@ -412,7 +412,7 @@ test_that("Cross-clade step takes bundle uploads and shows integrated panels", {
   # One result-bundle zip per clade drives everything.
   expect_match(ui, "cross_clade_bundles", fixed = TRUE)
   # Integrated panels: synthesis, rates (overall + region), exchange matrix,
-  # network, heatmap, budget, event times, event stats.
+  # network, heatmap, budget, event stats.
   expect_match(ui, "cc_synth_plot", fixed = TRUE)
   expect_match(ui, "cross_clade_plot", fixed = TRUE)
   expect_match(ui, "cross_clade_region_plot", fixed = TRUE)
@@ -420,8 +420,9 @@ test_that("Cross-clade step takes bundle uploads and shows integrated panels", {
   expect_match(ui, "cc_network_plot", fixed = TRUE)
   expect_match(ui, "cc_heatmap_plot", fixed = TRUE)
   expect_match(ui, "cc_budget_plot", fixed = TRUE)
-  expect_match(ui, "cc_etimes_plot", fixed = TRUE)
   expect_match(ui, "cc_esum_table", fixed = TRUE)
+  # The redundant BSM event-times ECDF panel was removed from the cross-clade tab.
+  expect_false(grepl("cc_etimes_plot", ui, fixed = TRUE))
   # Export + report.
   expect_match(ui, "download_cross_clade", fixed = TRUE)
   expect_match(ui, "render_xclade_report", fixed = TRUE)

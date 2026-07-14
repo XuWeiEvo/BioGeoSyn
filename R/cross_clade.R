@@ -616,10 +616,6 @@ render_cross_clade_report <- function(x, file = NULL) {
     parts <- c(parts, "<h2>Regional dispersal budget (immigration / emigration)</h2>",
       figure(plot_region_process_budget(x$budgets), 7.5, 4.5))
   }
-  if (has("event_times")) {
-    parts <- c(parts, "<h2>Event times and direction</h2>",
-      figure(plot_bsm_event_times(x$event_times), 8, 4.5))
-  }
   if (has("event_summary")) {
     parts <- c(parts, "<h2>Event statistics</h2>",
       html_table(xclade_long_table(x$event_summary, c("event_type", "event_label", "mean_count"))))
@@ -675,7 +671,6 @@ write_cross_clade_full_bundle <- function(file, x) {
     save_fig(plot_bsm_dispersal_routes(all_dispersal(x$routes)), "dispersal_routes_heatmap", 7, 5)
   }
   if (ok_df(x$budgets)) save_fig(plot_region_process_budget(x$budgets), "region_dispersal_budget", 7.5, 4.5)
-  if (ok_df(x$event_times)) save_fig(plot_bsm_event_times(x$event_times), "event_times", 8, 4.5)
 
   if (length(written) == 0L) {
     stop("No cross-clade results to bundle; upload clade bundles first.", call. = FALSE)

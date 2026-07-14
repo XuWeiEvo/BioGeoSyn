@@ -599,7 +599,6 @@ iBGB_shiny_server <- function(input, output, session) {
       output$cc_network_plot <- cc_image(cc_routes, function(d) plot_bsm_dispersal_network(cc_all_dispersal(d)), 6.5, 5.5)
       output$cc_heatmap_plot <- cc_image(cc_routes, function(d) plot_bsm_dispersal_routes(cc_all_dispersal(d)), 7, 5)
       output$cc_budget_plot <- cc_image(cc_budgets, plot_region_process_budget, 7.5, 4.5)
-      output$cc_etimes_plot <- cc_image(cc_etimes, plot_bsm_event_times, 8, 4.5)
 
       output$cc_exchange_table <- shiny::renderTable({
         d <- cc_exlong()
@@ -3752,8 +3751,7 @@ wizard_step_cross_clade <- function() {
     card("6 \u00b7 \u533a\u57df\u95f4\u6269\u6563\u7f51\u7edc", preview("cc_network_plot", "520px")),
     card("7 \u00b7 \u6269\u6563\u8def\u7ebf\u70ed\u56fe", preview("cc_heatmap_plot", "460px")),
     card("8 \u00b7 \u5404\u533a\u8fc1\u5165 / \u8fc1\u51fa\uff08immigration / emigration\uff09", preview("cc_budget_plot", "440px")),
-    card("9 \u00b7 BSM \u4e8b\u4ef6\u65f6\u95f4\u4e0e\u65b9\u5411", preview("cc_etimes_plot", "440px")),
-    card("10 \u00b7 \u4e8b\u4ef6\u7edf\u8ba1\u660e\u7ec6", shiny::tableOutput("cc_esum_table")),
+    card("9 \u00b7 \u4e8b\u4ef6\u7edf\u8ba1\u660e\u7ec6", shiny::tableOutput("cc_esum_table")),
     shiny::tags$div(
       class = "ibgb-choice-card",
       shiny::tags$div(class = "ibgb-control-title", "\u5bfc\u51fa\u4e0e\u62a5\u544a"),
