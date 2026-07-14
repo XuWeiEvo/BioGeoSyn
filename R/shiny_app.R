@@ -90,7 +90,9 @@ shiny_primary_results_body <- function() {
       shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_bsm_event_summary")),
       shiny::tags$h4("BSM \u4e8b\u4ef6\u65f6\u95f4\u4e0e\u65b9\u5411"),
       shiny::tableOutput("primary_bsm_event_times_table"),
-      shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_bsm_dispersal_routes")),
+      shiny::tags$h4("BSM \u533a\u57df\u95f4\u6269\u6563\u7f51\u7edc"),
+      shiny::tags$p("\u6709\u5411\u7bad\u5934\u4ece\u6e90\u533a\u6307\u5411\u76ee\u6807\u533a\uff0c\u7bad\u5934\u7c97\u7ec6\u53cd\u6620\u5e73\u5747\u6269\u6563\u6b21\u6570\uff08mean count\uff09\u3002\u70ed\u56fe\u7248\u672c\u5728\u201c\u9ad8\u7ea7\u7ed3\u679c - \u56fe\u8868\u9762\u677f\u201d\u91cc\u3002"),
+      shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_bsm_dispersal_network")),
       shiny::tags$h4("\u786e\u5b9a\u6027\u66ff\u4ee3\u4e8b\u4ef6\u7edf\u8ba1"),
       shiny::tableOutput("primary_event_summary_table"),
       shiny::tags$h4("\u6700\u4f18\u6a21\u578b\u4e8b\u4ef6\u65f6\u95f4\u548c\u65b9\u5411"),
@@ -789,8 +791,12 @@ iBGB_shiny_server <- function(input, output, session) {
         shiny_named_figure_image(state, "bsm_dispersal_routes")
       }, deleteFile = FALSE)
 
-      output$primary_figure_bsm_dispersal_routes <- shiny::renderImage({
-        shiny_named_figure_image(state, "bsm_dispersal_routes")
+      output$figure_bsm_dispersal_network <- shiny::renderImage({
+        shiny_named_figure_image(state, "bsm_dispersal_network")
+      }, deleteFile = FALSE)
+
+      output$primary_figure_bsm_dispersal_network <- shiny::renderImage({
+        shiny_named_figure_image(state, "bsm_dispersal_network")
       }, deleteFile = FALSE)
 
       output$table_preview_output <- shiny::renderTable({
@@ -3752,7 +3758,8 @@ wizard_step_results <- function() {
             shiny_figure_panel("\u4e8b\u4ef6\u7edf\u8ba1", "figure_event_summary"),
             shiny_figure_panel("BSM \u4e8b\u4ef6\u6458\u8981", "figure_bsm_event_summary"),
             shiny_figure_panel("BSM \u4e8b\u4ef6\u65f6\u95f4", "figure_bsm_event_times"),
-            shiny_figure_panel("BSM \u6269\u6563\u8def\u7ebf", "figure_bsm_dispersal_routes")
+            shiny_figure_panel("BSM \u6269\u6563\u7f51\u7edc\uff08\u7bad\u5934\uff09", "figure_bsm_dispersal_network"),
+            shiny_figure_panel("BSM \u6269\u6563\u8def\u7ebf\uff08\u70ed\u56fe\uff09", "figure_bsm_dispersal_routes")
           )
         ),
         shiny::tabPanel(

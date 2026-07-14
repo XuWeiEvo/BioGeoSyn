@@ -423,6 +423,13 @@ if (!is.null(bsm_event_summary)) {
 ```
 
 ```{r}
+bsm_network_png <- figure_path("bsm_dispersal_network")
+if (!is.null(bsm_network_png)) {
+  knitr::include_graphics(bsm_network_png)
+}
+```
+
+```{r}
 bsm_routes_png <- figure_path("bsm_dispersal_routes")
 if (!is.null(bsm_routes_png)) {
   knitr::include_graphics(bsm_routes_png)
