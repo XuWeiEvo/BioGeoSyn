@@ -224,9 +224,13 @@ combine_clade_rate_files <- function(files, clade_names, required, empty) {
 
 #' Plot region-resolved process rates through time across clades
 #'
-#' Draw region-resolved process rates through time with one panel per process
-#' and clade and a coloured curve per region, from a table produced by
-#' [combine_region_process_rates_across_clades()].
+#' Draw region-resolved process rates through time with one panel per
+#' biogeographic process and one coloured curve per region, pooled across all
+#' clades, from a table produced by
+#' [combine_region_process_rates_across_clades()]. This is the region-resolved
+#' counterpart of [plot_process_rates_across_clades()]: clades are summed
+#' together (not shown separately), and within each process panel each region is
+#' a separate curve.
 #'
 #' @param combined_region_rates A data frame from
 #'   [combine_region_process_rates_across_clades()].
@@ -251,18 +255,30 @@ plot_region_process_rates_across_clades <- function(combined_region_rates, proce
     stop("combined_region_rates has no rows to plot.", call. = FALSE)
   }
 
-  ggplot2::ggplot(data, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = region)) +
+  # Pool across clades: one curve per region within each process panel.
+  data$mean_count <- suppressWarnings(as.numeric(data$mean_count))
+  pooled <- stats::aggregate(
+    list(mean_count = data$mean_count),
+    by = list(
+      process_label = data$process_label,
+      region = data$region,
+      bin_midpoint = data$bin_midpoint
+    ),
+    FUN = function(x) sum(x, na.rm = TRUE)
+  )
+
+  ggplot2::ggplot(pooled, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = region)) +
     ggplot2::geom_line(linewidth = 0.8) +
-    ggplot2::geom_point(size = 1.2) +
+    ggplot2::geom_point(size = 1.3) +
     ggplot2::scale_x_reverse() +
     scale_colour_ibgb() +
-    ggplot2::facet_grid(stats::as.formula("process_label ~ clade"), scales = "free_y") +
+    ggplot2::facet_wrap(stats::as.formula("~ process_label"), scales = "free_y") +
     ggplot2::labs(
       x = "Time before present",
-      y = "Mean events per stochastic map",
+      y = "Mean events per stochastic map (summed across clades)",
       colour = "Region",
       title = "Cross-clade region-resolved process rates through time",
-      subtitle = "Rows = process, columns = clade; each region shown as a separate curve"
+      subtitle = "One panel per process; each region a curve, pooled across all clades"
     ) +
     theme_ibgb()
 }
