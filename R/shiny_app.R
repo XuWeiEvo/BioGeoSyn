@@ -184,8 +184,9 @@ iBGB_shiny_server <- function(input, output, session) {
       })
 
       current_config <- shiny::reactive({
+        cfg <- apply_shiny_wizard_overrides(read_config(current_config_path()), input)
         apply_shiny_config_overrides(
-          read_config(current_config_path()),
+          cfg,
           input = input,
           output_dir = current_output_dir()
         )
@@ -256,59 +257,6 @@ iBGB_shiny_server <- function(input, output, session) {
         })
       })
 
-      shiny::observeEvent(input$create_analysis_project, {
-        run_app_action(state, {
-          project_name <- normalize_project_name(input$wizard_project_name)
-          parent <- trimws(input$wizard_project_parent %||% "")
-          if (!nzchar(parent)) {
-            parent <- default_project_parent()
-          }
-          target <- file.path(parent, project_name)
-          tree_file <- shiny_upload_path(input$wizard_tree, "\u7cfb\u7edf\u6811\u6587\u4ef6")
-          geography_file <- shiny_upload_path(input$wizard_geography, "\u5206\u5e03\u77e9\u9635 CSV")
-          regions_file <- shiny_upload_path(input$wizard_regions, "\u533a\u57df\u4fe1\u606f CSV")
-
-          append_app_stage(state, "Project wizard", "creating project", target)
-          project <- create_analysis_project(
-            path = target,
-            project_name = project_name,
-            tree_file = tree_file,
-            geography_file = geography_file,
-            regions_file = regions_file,
-            max_range_size = input$wizard_max_range_size,
-            models = input$wizard_models
-          )
-
-          shiny::updateTextInput(session, "config_path", value = project$config)
-          shiny::updateTextInput(session, "output_dir", value = project$output_dir)
-          shiny::updateTextInput(session, "project_name", value = project$project_name)
-          shiny::updateTextInput(session, "tree_file", value = file.path("data", basename(project$tree_file)))
-          shiny::updateTextInput(session, "geography_file", value = "data/geography.csv")
-          shiny::updateTextInput(session, "regions_file", value = "data/regions.csv")
-          shiny::updateTextInput(
-            session,
-            "max_range_size",
-            value = as.character(input$wizard_max_range_size)
-          )
-          shiny::updateCheckboxGroupInput(session, "models_run", selected = input$wizard_models)
-          shiny::updateCheckboxInput(session, "use_config_editor", value = FALSE)
-
-          state$result <- NULL
-          state$validation <- project$validation
-          state$model_table <- planned_model_table(read_config(project$config))
-          state$manifest <- NULL
-          state$report <- NULL
-          state$bundle <- NULL
-          state$diagnostic_bundle <- NULL
-          append_app_stage(
-            state,
-            "Project wizard",
-            if (all(project$validation$ok)) "project ready" else "project created with validation errors",
-            project$root
-          )
-        })
-      })
-
       shiny::observeEvent(input$validate, {
         run_app_action(state, {
           shiny::withProgress(message = "Validating", value = 0, {
@@ -318,23 +266,6 @@ iBGB_shiny_server <- function(input, output, session) {
           state$model_table <- planned_model_table(cfg)
           append_app_stage(state, "Validation", "model plan ready", paste(nrow(state$model_table), "model(s)"))
           append_app_message(state, if (all(state$validation$ok)) "Validation passed." else "Validation failed.")
-          shiny::incProgress(1)
-          })
-        })
-      })
-
-      shiny::observeEvent(input$load_results, {
-        run_app_action(state, {
-          shiny::withProgress(message = "Loading existing results", value = 0, {
-          append_app_stage(state, "Load existing results", "started", current_output_dir())
-          result <- load_existing_workflow_result(current_output_dir())
-          state$result <- result
-          state$validation <- result$validation
-          state$model_table <- result$model_run_status
-          state$manifest <- result$workflow_manifest
-          state$report <- report_preview_path(state)
-          refresh_shiny_result_exports(session, state)
-          append_app_stage(state, "Load existing results", "ready", result$project_paths$root)
           shiny::incProgress(1)
           })
         })
@@ -482,10 +413,6 @@ iBGB_shiny_server <- function(input, output, session) {
         )
         shiny_home_next_action(workflow)
       })
-
-      output$wizard_upload_preview_table <- shiny::renderTable({
-        shiny_upload_preview_table(input)
-      }, striped = TRUE, bordered = TRUE, na = "")
 
       output$data_overview_table <- shiny::renderTable({
         shiny_data_overview_table(current_input_summary())
@@ -3262,6 +3189,46 @@ resolve_shiny_config_path <- function(input) {
   path
 }
 
+apply_shiny_wizard_overrides <- function(config, input) {
+  cfg <- config
+  name <- shiny_trimmed_input(input, "wizard_project_name")
+  if (!is.null(name)) {
+    cfg$project$name <- name
+  }
+  tree_file <- shiny_optional_upload_path(input$wizard_tree)
+  if (!is.null(tree_file)) {
+    cfg$inputs$tree_file <- tree_file
+  }
+  geography_file <- shiny_optional_upload_path(input$wizard_geography)
+  if (!is.null(geography_file)) {
+    cfg$inputs$geography_file <- geography_file
+  }
+  regions_file <- shiny_optional_upload_path(input$wizard_regions)
+  if (!is.null(regions_file)) {
+    cfg$inputs$regions_file <- regions_file
+  }
+  max_range_size <- suppressWarnings(as.integer(input$wizard_max_range_size %||% NA_integer_))
+  if (!is.na(max_range_size) && max_range_size >= 1L) {
+    cfg$inputs$max_range_size <- max_range_size
+  }
+  models <- input$wizard_models %||% character()
+  if (length(models) > 0L) {
+    cfg$models$run <- as.character(models)
+  }
+  cfg
+}
+
+shiny_optional_upload_path <- function(upload) {
+  if (is.null(upload) || !is.data.frame(upload) || nrow(upload) == 0L || !"datapath" %in% names(upload)) {
+    return(NULL)
+  }
+  path <- upload$datapath[[1L]]
+  if (is.null(path) || is.na(path) || !file.exists(path)) {
+    return(NULL)
+  }
+  as_path(path)
+}
+
 apply_shiny_config_overrides <- function(config, input, output_dir = NULL) {
   cfg <- config
   if (!is.null(output_dir)) {
@@ -3464,7 +3431,6 @@ iBGB_app_ui <- function(default_config, default_output, example_project_dir) {
       id = "wizard_nav",
       type = "tabs",
       wizard_step_data(default_config, default_output, example_project_dir),
-      wizard_step_overview(),
       wizard_step_analysis(),
       wizard_step_results(),
       wizard_step_cross_clade(),
@@ -3480,7 +3446,6 @@ wizard_step_data <- function(default_config, default_output, example_project_dir
       class = "ibgb-choice-card",
       shiny::tags$div(class = "ibgb-control-title", "\u4f7f\u7528\u4f60\u81ea\u5df1\u7684\u6570\u636e"),
       shiny::textInput("wizard_project_name", "\u9879\u76ee\u540d", value = "my_clade"),
-      shiny::textInput("wizard_project_parent", "\u9879\u76ee\u4fdd\u5b58\u4f4d\u7f6e", value = default_project_parent()),
       shiny::fileInput(
         "wizard_tree",
         "\u7cfb\u7edf\u6811\u6587\u4ef6",
@@ -3498,8 +3463,6 @@ wizard_step_data <- function(default_config, default_output, example_project_dir
         class = "ibgb-home-note",
         "\u6ca1\u6709\u6570\u636e\uff1f\u4e0b\u8f7d\u4e0a\u9762\u4e09\u4e2a\u6a21\u677f\u5373\u53ef\u2014\u2014\u5b83\u4eec\u5c31\u662f\u5185\u7f6e\u793a\u4f8b\u6570\u636e\uff08\u51e0\u4e2a\u7269\u79cd\u3001\u51e0\u4e2a\u533a\u57df\uff09\uff0c\u6539\u6210\u4f60\u81ea\u5df1\u7684\u6570\u636e\u540e\u518d\u4e0a\u4f20\u3002"
       ),
-      shiny::tags$div(class = "ibgb-key-files-title", "\u4e0a\u4f20\u9884\u89c8"),
-      shiny::tableOutput("wizard_upload_preview_table"),
       shiny::numericInput("wizard_max_range_size", "\u6700\u5927\u5206\u5e03\u533a\u6570\u91cf", value = 3L, min = 1L, step = 1L),
       shiny::checkboxGroupInput(
         "wizard_models",
@@ -3515,11 +3478,30 @@ wizard_step_data <- function(default_config, default_output, example_project_dir
       ),
       shiny::tags$div(
         class = "ibgb-home-note",
-        "\u8fd0\u884c\u540e\u4f1a\u5728\u8fd9\u4e2a\u76ee\u5f55\u4e0b\u751f\u6210 tables\u3001figures\u3001reports\u3001logs\u3002"
+        "\u8fd0\u884c\u540e\u4f1a\u5728\u8fd9\u4e2a\u76ee\u5f55\u4e0b\u751f\u6210 tables\u3001figures\u3001reports\u3001logs\u3002\u4e0a\u4f20\u6570\u636e\u540e\u4e0b\u65b9\u4f1a\u663e\u793a\u6982\u51b5\uff0c\u786e\u8ba4\u65e0\u8bef\u5c31\u5230\u201c\u5206\u6790\u201d\u6807\u7b7e\u8fd0\u884c\u3002"
+      )
+    ),
+    shiny::tags$div(
+      class = "ibgb-choice-card",
+      shiny::tags$div(class = "ibgb-control-title", "\u6570\u636e\u6982\u51b5"),
+      shiny::tags$p(
+        class = "ibgb-home-note",
+        "\u4e0a\u4f20\u6570\u636e\u540e\u8fd9\u91cc\u663e\u793a\u6982\u51b5\uff08\u7c7b\u4f3c RASP\uff09\uff1a\u6811\u91cc\u6709\u591a\u5c11\u4e2a tip\u3001\u6bcf\u4e2a\u533a\u57df\u6709\u591a\u5c11\u7269\u79cd\u3001\u5206\u5e03\u533a\u5927\u5c0f\u5982\u4f55\u5206\u5e03\u3002\u70b9\u201c\u68c0\u67e5\u8f93\u5165\u201d\u505a\u4e00\u81f4\u6027\u6821\u9a8c\u3002"
       ),
-      shiny_action_grid(
-        shiny::actionButton("create_analysis_project", "\u521b\u5efa\u6211\u81ea\u5df1\u7684\u5206\u6790\u9879\u76ee"),
-        shiny::actionButton("load_results", "\u52a0\u8f7d\u8be5\u76ee\u5f55\u4e0b\u5df2\u6709\u7ed3\u679c")
+      shiny_action_grid(shiny::actionButton("validate", "\u68c0\u67e5\u8f93\u5165")),
+      shiny::tags$div(
+        class = "ibgb-two-col",
+        shiny::tags$div(
+          shiny::tableOutput("data_overview_table"),
+          shiny::tags$div(class = "ibgb-key-files-title", "\u5404\u533a\u57df\u7269\u79cd\u6570"),
+          shiny::tableOutput("region_occupancy_table"),
+          shiny::tags$div(class = "ibgb-key-files-title", "\u5206\u5e03\u533a\u5927\u5c0f\u5206\u5e03"),
+          shiny::tableOutput("range_size_table")
+        ),
+        shiny::tags$div(
+          shiny::tags$div(class = "ibgb-key-files-title", "\u8f93\u5165\u9a8c\u8bc1"),
+          shiny::tableOutput("validation_table")
+        )
       )
     ),
     shiny::tags$div(
@@ -3529,38 +3511,12 @@ wizard_step_data <- function(default_config, default_output, example_project_dir
   )
 }
 
-wizard_step_overview <- function() {
-  shiny::tabPanel(
-    "2 \u00b7 \u6982\u51b5",
-    shiny::tags$p(
-      class = "ibgb-step-intro",
-      "\u7b2c\u4e8c\u6b65\uff1a\u52a0\u8f7d\u6570\u636e\u540e\u5148\u770b\u6570\u636e\u6982\u51b5\uff08\u7c7b\u4f3c RASP\uff09\uff1a\u6811\u91cc\u6709\u591a\u5c11\u4e2a tip\u3001\u6bcf\u4e2a\u533a\u57df\u6709\u591a\u5c11\u7269\u79cd\u3001\u5206\u5e03\u533a\u5927\u5c0f\u5982\u4f55\u5206\u5e03\u3002\u786e\u8ba4\u65e0\u8bef\u518d\u8fdb\u5165\u5206\u6790\u3002\u70b9\u201c\u68c0\u67e5\u8f93\u5165\u201d\u505a\u4e00\u81f4\u6027\u6821\u9a8c\u3002"
-    ),
-    shiny_action_grid(shiny::actionButton("validate", "\u68c0\u67e5\u8f93\u5165")),
-    shiny::tags$div(
-      class = "ibgb-two-col",
-      shiny::tags$div(
-        shiny::tags$div(class = "ibgb-key-files-title", "\u6570\u636e\u6982\u51b5"),
-        shiny::tableOutput("data_overview_table"),
-        shiny::tags$div(class = "ibgb-key-files-title", "\u5404\u533a\u57df\u7269\u79cd\u6570"),
-        shiny::tableOutput("region_occupancy_table"),
-        shiny::tags$div(class = "ibgb-key-files-title", "\u5206\u5e03\u533a\u5927\u5c0f\u5206\u5e03"),
-        shiny::tableOutput("range_size_table")
-      ),
-      shiny::tags$div(
-        shiny::tags$div(class = "ibgb-key-files-title", "\u8f93\u5165\u9a8c\u8bc1"),
-        shiny::tableOutput("validation_table")
-      )
-    )
-  )
-}
-
 wizard_step_analysis <- function() {
   shiny::tabPanel(
-    "3 \u00b7 \u5206\u6790",
+    "2 \u00b7 \u5206\u6790",
     shiny::tags$p(
       class = "ibgb-step-intro",
-      "\u7b2c\u4e09\u6b65\uff1a\u6a21\u578b\u62df\u5408\u3001\u6a21\u578b\u6bd4\u8f83\u3001\u7956\u5148\u5206\u5e03\u4f30\u8ba1\uff0c\u5e76\u53ef\u9009\u505a BSM \u968f\u673a\u6620\u5c04\u3002\u9ad8\u7ea7\u53c2\u6570\u90fd\u6536\u5728\u4e0b\u9762\u7684\u6298\u53e0\u83dc\u5355\u91cc\u3002"
+      "\u7b2c\u4e8c\u6b65\uff1a\u6a21\u578b\u62df\u5408\u3001\u6a21\u578b\u6bd4\u8f83\u3001\u7956\u5148\u5206\u5e03\u4f30\u8ba1\uff0c\u5e76\u53ef\u9009\u505a BSM \u968f\u673a\u6620\u5c04\u3002\u9ad8\u7ea7\u53c2\u6570\u90fd\u6536\u5728\u4e0b\u9762\u7684\u6298\u53e0\u83dc\u5355\u91cc\u3002"
     ),
     shiny_control_section(
       "\u8fd0\u884c",
@@ -3617,10 +3573,10 @@ wizard_step_analysis <- function() {
 
 wizard_step_results <- function() {
   shiny::tabPanel(
-    "4 \u00b7 \u7ed3\u679c",
+    "3 \u00b7 \u7ed3\u679c",
     shiny::tags$p(
       class = "ibgb-step-intro",
-      "\u7b2c\u56db\u6b65\uff1a\u5148\u770b\u6700\u91cd\u8981\u7684\u7ed3\u679c\u9884\u89c8\u2014\u2014\u7956\u5148\u5206\u5e03\u91cd\u5efa\u3001\u6a21\u578b\u6bd4\u8f83\u3001\u751f\u7269\u5730\u7406\u8fc7\u7a0b\u7efc\u5408\u3001\u4e8b\u4ef6\u7edf\u8ba1\u3002\u5b8c\u6574\u8868\u683c\u3001\u56fe\u7247\u548c\u6392\u9519\u5728\u4e0b\u9762\u7684\u201c\u9ad8\u7ea7\u7ed3\u679c\u201d\u91cc\uff0c\u9ad8\u6e05\u56fe\u53ef\u5728\u201c\u56fe\u7247\u201d\u91cc\u4e0b\u8f7d\u3002"
+      "\u7b2c\u4e09\u6b65\uff1a\u5148\u770b\u6700\u91cd\u8981\u7684\u7ed3\u679c\u9884\u89c8\u2014\u2014\u7956\u5148\u5206\u5e03\u91cd\u5efa\u3001\u6a21\u578b\u6bd4\u8f83\u3001\u751f\u7269\u5730\u7406\u8fc7\u7a0b\u7efc\u5408\u3001\u4e8b\u4ef6\u7edf\u8ba1\u3002\u5b8c\u6574\u8868\u683c\u3001\u56fe\u7247\u548c\u6392\u9519\u5728\u4e0b\u9762\u7684\u201c\u9ad8\u7ea7\u7ed3\u679c\u201d\u91cc\uff0c\u9ad8\u6e05\u56fe\u53ef\u5728\u201c\u56fe\u7247\u201d\u91cc\u4e0b\u8f7d\u3002"
     ),
     shiny_primary_results_body(),
     shiny_collapsible_section(

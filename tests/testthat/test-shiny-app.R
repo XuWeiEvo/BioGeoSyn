@@ -300,41 +300,36 @@ test_that("Wizard data step is a single own-data card with merged output locatio
   ))
 
   expect_match(panel_html, "数据", fixed = TRUE)
-  # Own-data inputs, templates, upload preview, and the create action are present.
+  # Own-data inputs and templates are present.
   expect_match(panel_html, "wizard_tree", fixed = TRUE)
   expect_match(panel_html, "wizard_geography", fixed = TRUE)
   expect_match(panel_html, "download_geography_template", fixed = TRUE)
-  expect_match(panel_html, "wizard_upload_preview_table", fixed = TRUE)
-  expect_match(panel_html, "create_analysis_project", fixed = TRUE)
-  # Output location is merged into this step with an inline picker and the
-  # existing-results loader; the raw YAML handle is kept but hidden.
+  # Output location is merged into this step with an inline picker; the raw YAML
+  # handle is kept but hidden.
   expect_match(panel_html, "output_dir", fixed = TRUE)
   expect_match(panel_html, "choose_output_dir", fixed = TRUE)
-  expect_match(panel_html, "load_results", fixed = TRUE)
   expect_match(panel_html, "config_path", fixed = TRUE)
-  # The output picker sits inline with the path box, and the config handle is hidden.
   expect_match(panel_html, "ibgb-output-row", fixed = TRUE)
   expect_match(panel_html, "display:none", fixed = TRUE)
-  # The example card, start-choice radio, YAML upload, open-output button, and
-  # the home guidance block were removed to declutter the landing page.
+  # The RASP-style overview (formerly a separate tab) is merged into this step.
+  expect_match(panel_html, "概况", fixed = TRUE)
+  expect_match(panel_html, "validate", fixed = TRUE)
+  expect_match(panel_html, "data_overview_table", fixed = TRUE)
+  expect_match(panel_html, "region_occupancy_table", fixed = TRUE)
+  expect_match(panel_html, "range_size_table", fixed = TRUE)
+  expect_match(panel_html, "validation_table", fixed = TRUE)
+  # The explicit create/load buttons, project parent, raw preview, example card,
+  # start-choice radio, YAML upload, open-output button, and guidance were removed.
+  expect_false(grepl("create_analysis_project", panel_html, fixed = TRUE))
+  expect_false(grepl("load_results", panel_html, fixed = TRUE))
+  expect_false(grepl("wizard_project_parent", panel_html, fixed = TRUE))
+  expect_false(grepl("wizard_upload_preview_table", panel_html, fixed = TRUE))
   expect_false(grepl("workflow_start_choice", panel_html, fixed = TRUE))
   expect_false(grepl("create_example", panel_html, fixed = TRUE))
   expect_false(grepl("config_upload", panel_html, fixed = TRUE))
   expect_false(grepl("open_output", panel_html, fixed = TRUE))
   expect_false(grepl("guided_workflow_table", panel_html, fixed = TRUE))
   expect_match(action_html, "open_user_guide", fixed = TRUE)
-})
-
-test_that("Wizard overview step surfaces the RASP-like data overview outputs", {
-  testthat::skip_if_not_installed("shiny")
-
-  ui_html <- as.character(wizard_step_overview())
-
-  expect_match(ui_html, "概况", fixed = TRUE)
-  expect_match(ui_html, "data_overview_table", fixed = TRUE)
-  expect_match(ui_html, "region_occupancy_table", fixed = TRUE)
-  expect_match(ui_html, "range_size_table", fixed = TRUE)
-  expect_match(ui_html, "validation_table", fixed = TRUE)
 })
 
 test_that("Shiny simplified primary results body helpers are available", {
@@ -1357,11 +1352,11 @@ test_that("Shiny server uses GUI config editor overrides", {
   })
 })
 
-test_that("Shiny project wizard creates and validates a user project", {
+test_that("Shiny wizard uploads drive validation and the workflow directly", {
   testthat::skip_if_not_installed("shiny")
 
   source <- create_example_project(tempfile("ibgb-shiny-wizard-source-"))
-  parent <- tempfile("ibgb-shiny-wizard-parent-")
+  output_dir <- tempfile("ibgb-shiny-wizard-output-")
   upload <- function(path, name, type) {
     data.frame(
       name = name,
@@ -1374,53 +1369,40 @@ test_that("Shiny project wizard creates and validates a user project", {
 
   shiny::testServer(iBGB_shiny_server, {
     session$setInputs(
+      config_path = source$config,
+      output_dir = output_dir,
       wizard_project_name = "Bird clade",
-      wizard_project_parent = parent,
       wizard_tree = upload(source$tree_file, "tree.nwk", "text/plain"),
       wizard_geography = upload(source$geography_file, "geography.csv", "text/csv"),
       wizard_regions = upload(source$regions_file, "regions.csv", "text/csv"),
       wizard_max_range_size = 2L,
-      wizard_models = c("DEC", "DEC+J")
+      wizard_models = c("DEC", "DEC+J"),
+      dry_run = TRUE,
+      require_biogeobears = FALSE
     )
-    session$setInputs(create_analysis_project = 1)
 
+    # Uploads flow straight into the config used everywhere, with no create step.
+    cfg <- current_config()
+    expect_equal(cfg$project$name, "Bird clade")
+    expect_equal(cfg$inputs$max_range_size, 2L)
+    expect_equal(cfg$models$run, c("DEC", "DEC+J"))
+    expect_true(file.exists(cfg$inputs$tree_file))
+    expect_equal(
+      normalizePath(cfg$inputs$tree_file, winslash = "/"),
+      normalizePath(source$tree_file, winslash = "/")
+    )
+
+    session$setInputs(validate = 1)
     state <- session$userData$state
-    project_root <- file.path(parent, "Bird_clade")
-    config_path <- file.path(project_root, "analysis.yml")
-    cfg <- read_config(config_path)
-
-    expect_true(file.exists(config_path))
     expect_true(all(state$validation$ok))
     expect_equal(state$model_table$model, c("DEC", "DEC+J"))
-    expect_equal(cfg$project$name, "Bird_clade")
-    expect_equal(cfg$inputs$max_range_size, 2L)
-    expect_match(state$message, "Project wizard: project ready", fixed = TRUE)
-    expect_true(any(grepl("Project wizard: creating project", state$messages, fixed = TRUE)))
-  })
-})
 
-test_that("Shiny server loads existing result directories", {
-  testthat::skip_if_not_installed("shiny")
-
-  paths <- create_project(tempfile("ibgb-shiny-existing-results-"))
-  utils::write.csv(data.frame(check = "tree_file", ok = TRUE), file.path(paths$tables, "input_validation.csv"), row.names = FALSE)
-  utils::write.csv(data.frame(model = "DEC", status = "completed", warning_count = 0L), file.path(paths$tables, "model_run_status.csv"), row.names = FALSE)
-  utils::write.csv(data.frame(model = "DEC", AICc = 10, delta_aicc = 0), file.path(paths$tables, "model_comparison.csv"), row.names = FALSE)
-
-  shiny::testServer(iBGB_shiny_server, {
-    session$setInputs(output_dir = paths$root)
-    session$setInputs(load_results = 1)
-
-    state <- session$userData$state
+    session$setInputs(run = 1)
     expect_s3_class(state$result, "iBGB_workflow_result")
-    expect_equal(state$model_table$model, "DEC")
-    expect_equal(state$result$model_comparison$model, "DEC")
-    expect_true(any(grepl("Load existing results: started", state$messages, fixed = TRUE)))
-    expect_true(any(grepl("Load existing results: ready", state$messages, fixed = TRUE)))
-    expect_true(any(state$manifest$relative_path == "tables/model_comparison.csv"))
-    expect_true(any(state$manifest$relative_path == "tables/shiny_run_summary.csv"))
-    expect_true(file.exists(file.path(paths$tables, "shiny_run_summary.csv")))
-    expect_match(state$message, "Load existing results: ready", fixed = TRUE)
+    expect_true(isTRUE(state$result$dry_run))
+    expect_equal(state$result$config$project$name, "Bird clade")
+    expect_equal(state$result$config$inputs$max_range_size, 2L)
+    expect_equal(state$result$config$models$run, c("DEC", "DEC+J"))
   })
 })
 
