@@ -291,28 +291,41 @@ test_that("Shiny sidebar helper builds grouped controls", {
   expect_match(html, "Workflow", fixed = TRUE)
 })
 
-test_that("Shiny app exposes first-run checklist and user guide action", {
+test_that("Wizard data step exposes the start choice and guidance", {
   testthat::skip_if_not_installed("shiny")
 
-  panel_html <- as.character(shiny_start_here_panel())
+  panel_html <- as.character(wizard_step_data("analysis.yml", "results/out", "example"))
   action_html <- as.character(shiny_action_grid(
     shiny::actionButton("open_user_guide", "Open user guide")
   ))
 
-  expect_match(panel_html, "从这里开始", fixed = TRUE)
-  expect_match(panel_html, "首页", fixed = TRUE)
+  expect_match(panel_html, "数据", fixed = TRUE)
+  expect_match(panel_html, "workflow_start_choice", fixed = TRUE)
+  expect_match(panel_html, "create_example", fixed = TRUE)
+  expect_match(panel_html, "create_analysis_project", fixed = TRUE)
   expect_match(panel_html, "home_next_action", fixed = TRUE)
   expect_match(panel_html, "guided_workflow_table", fixed = TRUE)
   expect_match(panel_html, "first_steps_table", fixed = TRUE)
   expect_match(action_html, "open_user_guide", fixed = TRUE)
 })
 
-test_that("Shiny simplified primary results panel helpers are available", {
+test_that("Wizard overview step surfaces the RASP-like data overview outputs", {
   testthat::skip_if_not_installed("shiny")
 
-  ui_html <- as.character(shiny_primary_results_panel())
+  ui_html <- as.character(wizard_step_overview())
 
-  expect_match(ui_html, "结果", fixed = TRUE)
+  expect_match(ui_html, "概况", fixed = TRUE)
+  expect_match(ui_html, "data_overview_table", fixed = TRUE)
+  expect_match(ui_html, "region_occupancy_table", fixed = TRUE)
+  expect_match(ui_html, "range_size_table", fixed = TRUE)
+  expect_match(ui_html, "validation_table", fixed = TRUE)
+})
+
+test_that("Shiny simplified primary results body helpers are available", {
+  testthat::skip_if_not_installed("shiny")
+
+  ui_html <- as.character(shiny_primary_results_body())
+
   expect_match(ui_html, "祖先分布重建图", fixed = TRUE)
   expect_match(ui_html, "模型比较表", fixed = TRUE)
   expect_match(ui_html, "事件统计", fixed = TRUE)
@@ -320,6 +333,18 @@ test_that("Shiny simplified primary results panel helpers are available", {
   expect_match(ui_html, "primary_bsm_event_times_table", fixed = TRUE)
   expect_match(ui_html, "primary_event_summary_table", fixed = TRUE)
   expect_match(ui_html, "primary_best_fit_events_table", fixed = TRUE)
+})
+
+test_that("Wizard shell renders all steps including elevated cross-clade", {
+  testthat::skip_if_not_installed("shiny")
+
+  ui_html <- as.character(iBGB_app_ui("analysis.yml", "results/out", "example"))
+
+  expect_match(ui_html, "wizard_nav", fixed = TRUE)
+  expect_match(ui_html, "跨类群", fixed = TRUE)
+  expect_match(ui_html, "cross_clade_files", fixed = TRUE)
+  expect_match(ui_html, "data_overview_table", fixed = TRUE)
+  expect_match(ui_html, "status", fixed = TRUE)
 })
 
 test_that("Shiny constraint input helpers expose advanced fields", {

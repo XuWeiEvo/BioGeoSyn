@@ -21,303 +21,7 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
   default_output <- startup$output_dir
 
   shiny::shinyApp(
-    ui = shiny::fluidPage(
-      shiny::tags$head(
-        shiny::tags$style(shiny::HTML(
-          ".container-fluid{max-width:1180px} .well{border-radius:4px} ",
-          ".btn{border-radius:4px} .ibgb-status{font-weight:600;margin:8px 0} ",
-          ".ibgb-status.info{color:#22577a} .ibgb-status.error{color:#b00020} ",
-          ".ibgb-control-section{border-top:1px solid #ddd;margin-top:14px;padding-top:12px} ",
-          ".ibgb-control-section:first-child{border-top:0;margin-top:0;padding-top:0} ",
-          ".ibgb-control-title{font-weight:600;margin-bottom:8px} ",
-          ".ibgb-action-grid{display:grid;grid-template-columns:1fr;gap:7px} ",
-          ".ibgb-action-grid .btn{width:100%;text-align:left} ",
-          ".ibgb-downloads{margin:0} .ibgb-downloads .btn{width:100%;text-align:left;margin-bottom:7px} ",
-          ".ibgb-run-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:0 0 12px 0} ",
-          ".ibgb-run-summary-card{border:1px solid #d8dee4;border-left:4px solid #6b7280;border-radius:4px;padding:10px;background:#fff} ",
-          ".ibgb-run-summary-card.info{border-left-color:#22577a} .ibgb-run-summary-card.warning{border-left-color:#b26a00} ",
-          ".ibgb-run-summary-card.good{border-left-color:#2e7d32} .ibgb-run-summary-card.muted{border-left-color:#8c959f} ",
-          ".ibgb-run-summary-label{font-size:12px;font-weight:600;color:#57606a;margin-bottom:4px} ",
-          ".ibgb-run-summary-value{font-size:15px;font-weight:600;color:#24292f;overflow-wrap:anywhere} ",
-          ".ibgb-key-files-title{font-weight:600;margin:12px 0 6px 0} ",
-          ".ibgb-home-note{background:#f6f8fa;border:1px solid #d8dee4;border-radius:4px;padding:10px 12px;margin:8px 0 14px 0} ",
-          ".ibgb-next-action{border:1px solid #bfdbfe;border-left:4px solid #2563eb;background:#eff6ff;border-radius:4px;padding:10px 12px;margin:8px 0 14px 0} ",
-          ".ibgb-next-action-title{font-size:12px;font-weight:600;color:#1d4ed8;margin-bottom:4px} ",
-          ".ibgb-next-action-step{font-size:15px;font-weight:600;color:#1f2937;margin-bottom:3px} ",
-          ".ibgb-next-action-detail{color:#374151} ",
-          ".ibgb-collapsible{border-top:1px solid #ddd;margin-top:12px;padding-top:10px} ",
-          ".ibgb-collapsible summary{font-weight:600;cursor:pointer;margin-bottom:8px} ",
-          ".ibgb-primary-result{border-top:1px solid #e5e7eb;margin-top:18px;padding-top:16px} ",
-          ".ibgb-primary-result:first-child{border-top:0;margin-top:0;padding-top:0} ",
-          ".ibgb-preview img{max-width:100%;height:auto;border:1px solid #ddd} ",
-          ".ibgb-figure-dashboard{display:grid;grid-template-columns:1fr;gap:18px} ",
-          ".ibgb-figure-dashboard h4{margin:6px 0 8px 0} ",
-          ".ibgb-figure-dashboard img{max-width:100%;height:auto;border:1px solid #ddd}"
-        ))
-      ),
-      shiny::titlePanel("iBiogeobears"),
-      shiny::sidebarLayout(
-        shiny::sidebarPanel(
-          shiny_control_section(
-            "\u5f00\u59cb",
-            shiny::radioButtons(
-              "workflow_start_choice",
-              "\u4ece\u54ea\u91cc\u5f00\u59cb",
-              choices = c(
-                "\u5185\u7f6e\u793a\u4f8b\u6570\u636e" = "example",
-                "\u6211\u81ea\u5df1\u7684\u6570\u636e" = "own",
-                "\u5df2\u6709\u5206\u6790\u7ed3\u679c" = "existing"
-              ),
-              selected = "example"
-            ),
-            shiny_action_grid(
-              shiny::actionButton("create_example", "1 \u521b\u5efa\u793a\u4f8b\u9879\u76ee"),
-              shiny::actionButton("validate", "2 \u68c0\u67e5\u8f93\u5165"),
-              shiny::actionButton("run", "3 \u8fd0\u884c\u6d41\u7a0b"),
-              shiny::actionButton("render_report", "4 \u751f\u6210\u62a5\u544a")
-            )
-          ),
-          shiny_control_section(
-            "\u7ed3\u679c\u4fdd\u5b58\u4f4d\u7f6e",
-            shiny::textInput("output_dir", "\u6240\u6709\u7ed3\u679c\u4fdd\u5b58\u5230", value = default_output),
-            shiny::tags$div(
-              class = "ibgb-home-note",
-              "\u8fd0\u884c\u540e\u4f1a\u5728\u8fd9\u4e2a\u76ee\u5f55\u4e0b\u751f\u6210 tables\u3001figures\u3001reports\u3001logs\u3002\u53ef\u4ee5\u5148\u9009\u76ee\u5f55\uff0c\u518d\u8fd0\u884c\u6d41\u7a0b\u3002"
-            ),
-            shiny_action_grid(
-              shiny::actionButton("choose_output_dir", "\u9009\u62e9\u7ed3\u679c\u76ee\u5f55"),
-              shiny::actionButton("open_output", "\u6253\u5f00\u7ed3\u679c\u76ee\u5f55")
-            )
-          ),
-          shiny_control_section(
-            "\u4f7f\u7528\u81ea\u5df1\u7684\u6570\u636e",
-            shiny::textInput("wizard_project_name", "\u9879\u76ee\u540d", value = "my_clade"),
-            shiny::textInput("wizard_project_parent", "\u9879\u76ee\u4fdd\u5b58\u4f4d\u7f6e", value = default_project_parent()),
-            shiny::fileInput(
-              "wizard_tree",
-              "\u7cfb\u7edf\u6811\u6587\u4ef6",
-              accept = c(".nwk", ".newick", ".tree", ".tre")
-            ),
-            shiny::fileInput("wizard_geography", "\u5206\u5e03\u77e9\u9635 CSV", accept = ".csv"),
-            shiny::fileInput("wizard_regions", "\u533a\u57df\u4fe1\u606f CSV", accept = ".csv"),
-            shiny::tags$div(
-              class = "ibgb-downloads",
-              shiny::downloadButton("download_tree_template", "\u4e0b\u8f7d\u6811\u6a21\u677f"),
-              shiny::downloadButton("download_geography_template", "\u4e0b\u8f7d\u5206\u5e03\u77e9\u9635\u6a21\u677f"),
-              shiny::downloadButton("download_regions_template", "\u4e0b\u8f7d\u533a\u57df\u4fe1\u606f\u6a21\u677f")
-            ),
-            shiny::tags$div(class = "ibgb-key-files-title", "\u4e0a\u4f20\u9884\u89c8"),
-            shiny::tableOutput("wizard_upload_preview_table"),
-            shiny::numericInput("wizard_max_range_size", "\u6700\u5927\u5206\u5e03\u533a\u6570\u91cf", value = 3L, min = 1L, step = 1L),
-            shiny::checkboxGroupInput(
-              "wizard_models",
-              "\u8981\u8fd0\u884c\u7684\u6a21\u578b",
-              choices = valid_models(),
-              selected = valid_models()
-            ),
-            shiny_action_grid(
-              shiny::actionButton("create_analysis_project", "\u521b\u5efa\u81ea\u5df1\u7684\u5206\u6790\u9879\u76ee")
-            )
-          ),
-          shiny_collapsible_section(
-            "\u9ad8\u7ea7\uff1a\u5df2\u6709\u9879\u76ee\u548c YAML",
-            shiny::textInput("config_path", "analysis.yml", value = default_config),
-            shiny::fileInput("config_upload", "\u4e0a\u4f20 analysis.yml", accept = c(".yml", ".yaml")),
-            shiny::textInput("example_project_dir", "\u793a\u4f8b\u9879\u76ee\u76ee\u5f55", value = startup$example_project_dir),
-            shiny_action_grid(
-              shiny::actionButton("load_results", "\u52a0\u8f7d\u5df2\u6709\u7ed3\u679c")
-            )
-          ),
-          shiny_collapsible_section(
-            "\u9ad8\u7ea7\uff1a\u5b89\u88c5\u548c\u73af\u5883",
-            shiny_action_grid(
-              shiny::actionButton("refresh_setup", "\u5237\u65b0\u73af\u5883\u68c0\u67e5"),
-              shiny::actionButton("open_user_guide", "\u6253\u5f00\u4e2d\u6587\u6559\u7a0b"),
-              shiny::actionButton("show_install_plan", "\u67e5\u770b BioGeoBEARS \u5b89\u88c5\u8ba1\u5212"),
-              shiny::actionButton("install_biogeobears", "\u5b89\u88c5 BioGeoBEARS")
-            )
-          ),
-          shiny_collapsible_section(
-            "\u9ad8\u7ea7\uff1a\u914d\u7f6e\u7f16\u8f91\u5668",
-            shiny::checkboxInput("use_config_editor", "\u4f7f\u7528\u754c\u9762\u914d\u7f6e\u8986\u76d6", value = FALSE),
-            shiny::textInput("project_name", "\u9879\u76ee\u540d", value = ""),
-            shiny::textInput("tree_file", "\u7cfb\u7edf\u6811\u6587\u4ef6", value = ""),
-            shiny::textInput("geography_file", "\u5206\u5e03\u77e9\u9635\u6587\u4ef6", value = ""),
-            shiny::textInput("regions_file", "\u533a\u57df\u4fe1\u606f\u6587\u4ef6", value = ""),
-            shiny::textInput("max_range_size", "\u6700\u5927\u5206\u5e03\u533a\u6570\u91cf", value = ""),
-            shiny::checkboxGroupInput("models_run", "\u6a21\u578b", choices = valid_models(), selected = valid_models()),
-            shiny::tags$div(class = "ibgb-key-files-title", "\u9ad8\u7ea7\u7ea6\u675f"),
-            shiny_constraint_inputs()
-          ),
-          shiny_collapsible_section(
-            "\u9ad8\u7ea7\uff1a\u8fd0\u884c\u9009\u9879",
-            shiny::checkboxInput("dry_run", "\u8bd5\u8fd0\u884c\uff1a\u53ea\u68c0\u67e5\uff0c\u4e0d\u771f\u6b63\u8fd0\u884c BioGeoBEARS", value = TRUE),
-            shiny::checkboxInput("require_biogeobears", "\u771f\u5b9e\u8fd0\u884c\u65f6\u8981\u6c42 BioGeoBEARS \u53ef\u7528", value = FALSE),
-            shiny::checkboxInput("resume_completed_models", "\u590d\u7528\u5df2\u5b8c\u6210\u7684\u6a21\u578b", value = TRUE),
-            shiny::checkboxInput("retry_failed_only", "\u53ea\u91cd\u8dd1\u5931\u8d25\u7684\u6a21\u578b", value = FALSE),
-            shiny::checkboxInput("force", "\u9a8c\u8bc1\u5931\u8d25\u540e\u5f3a\u5236\u8fd0\u884c", value = FALSE),
-            shiny::checkboxInput("run_stochastic_mapping", "\u8fd0\u884c BSM \u968f\u673a\u6620\u5c04", value = FALSE),
-            shiny::selectInput(
-              "stochastic_mapping_model",
-              "BSM \u4f7f\u7528\u7684\u6a21\u578b",
-              choices = c("\u6700\u4f18\u7edf\u8ba1\u6a21\u578b" = "best", "\u6700\u4f18\u975e +J \u6a21\u578b" = "best_non_j", "\u6700\u4f18 +J \u6a21\u578b" = "best_plus_j", "\u6240\u6709\u5df2\u5b8c\u6210\u6a21\u578b" = "all"),
-              selected = "best"
-            ),
-            shiny::numericInput("stochastic_mapping_replicates", "BSM \u6620\u5c04\u6b21\u6570", value = 100L, min = 1L, step = 1L),
-            shiny::numericInput("stochastic_mapping_seed", "BSM \u968f\u673a\u79cd\u5b50", value = 1L, min = 1L, step = 1L)
-          ),
-          shiny_collapsible_section(
-            "\u5bfc\u51fa\u548c\u6392\u9519",
-            shiny::selectInput("report_format", "\u62a5\u544a\u683c\u5f0f", choices = c("source", "html", "pdf"), selected = "html"),
-            shiny_action_grid(
-              shiny::actionButton("open_report", "\u6253\u5f00\u62a5\u544a"),
-              shiny::actionButton("refresh_key_files", "\u5237\u65b0\u5173\u952e\u6587\u4ef6"),
-              shiny::actionButton("bundle", "\u751f\u6210\u7ed3\u679c\u538b\u7f29\u5305"),
-              shiny::actionButton("diagnostic_bundle", "\u751f\u6210\u8bca\u65ad\u538b\u7f29\u5305")
-            ),
-            shiny::tags$div(
-              class = "ibgb-downloads",
-              shiny::downloadButton("download_run_summary", "\u4e0b\u8f7d\u8fd0\u884c\u6458\u8981"),
-              shiny::downloadButton("download_report", "\u4e0b\u8f7d\u62a5\u544a"),
-              shiny::downloadButton("download_bundle", "\u4e0b\u8f7d\u7ed3\u679c\u538b\u7f29\u5305"),
-              shiny::downloadButton("download_diagnostic_bundle", "\u4e0b\u8f7d\u8bca\u65ad\u538b\u7f29\u5305")
-            )
-          )
-        ),
-        shiny::mainPanel(
-          shiny::uiOutput("status"),
-          shiny::tabsetPanel(
-            shiny_start_here_panel(),
-            shiny_primary_results_panel(),
-            shiny::tabPanel(
-              "\u73af\u5883\u68c0\u67e5",
-              shiny::tags$div(class = "ibgb-key-files-title", "\u5b89\u88c5\u72b6\u6001"),
-              shiny::tableOutput("installation_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS \u5b89\u88c5\u8ba1\u5212"),
-              shiny::tableOutput("biogeobears_install_plan_table")
-            ),
-            shiny::tabPanel(
-              "\u9ad8\u7ea7\u7ed3\u679c",
-              shiny::tabsetPanel(
-                shiny::tabPanel(
-                  "\u8fd0\u884c\u6458\u8981",
-                  shiny::tags$div(class = "ibgb-key-files-title", "\u5173\u952e\u6587\u4ef6"),
-                  shiny::tableOutput("key_files_table"),
-                  shiny::tableOutput("run_summary_table")
-                ),
-                shiny::tabPanel("\u8f93\u5165\u9a8c\u8bc1", shiny::tableOutput("validation_table")),
-                shiny::tabPanel(
-                  "\u6a21\u578b\u6bd4\u8f83",
-                  shiny::tags$div(class = "ibgb-key-files-title", "\u62df\u5408\u6458\u8981"),
-                  shiny::tableOutput("model_fit_summary_table"),
-                  shiny::tags$div(class = "ibgb-key-files-title", "\u6a21\u578b\u6bd4\u8f83\u8be6\u60c5"),
-                  shiny::tableOutput("model_comparison_table")
-                ),
-                shiny::tabPanel(
-                  "+J \u654f\u611f\u6027",
-                  shiny::tags$div(class = "ibgb-key-files-title", "+J \u654f\u611f\u6027\u6458\u8981"),
-                  shiny::tableOutput("plus_j_summary_table"),
-                  shiny::tags$div(class = "ibgb-key-files-title", "+J \u654f\u611f\u6027\u8be6\u60c5"),
-                  shiny::tableOutput("model_sensitivity_table")
-                ),
-                shiny::tabPanel("\u8282\u70b9\u72b6\u6001", shiny::tableOutput("node_state_summary_table")),
-                shiny::tabPanel("\u8282\u70b9\u654f\u611f\u6027", shiny::tableOutput("node_state_sensitivity_table")),
-                shiny::tabPanel("\u6700\u4f18\u6a21\u578b\u4e8b\u4ef6", shiny::tableOutput("best_fit_events_table")),
-                shiny::tabPanel("\u4e8b\u4ef6\u8be6\u60c5", shiny::tableOutput("range_change_events_table")),
-                shiny::tabPanel(
-                  "BSM",
-                  shiny::tags$div(class = "ibgb-key-files-title", "BSM \u53ef\u9760\u6027\u68c0\u67e5"),
-                  shiny::tableOutput("bsm_qc_table"),
-                  shiny::tags$div(class = "ibgb-key-files-title", "BSM \u8fd0\u884c\u72b6\u6001"),
-                  shiny::tableOutput("bsm_run_status_table"),
-                  shiny::tags$div(class = "ibgb-key-files-title", "BSM \u4e8b\u4ef6\u6458\u8981"),
-                  shiny::tableOutput("bsm_event_summary_table"),
-                  shiny::tags$div(class = "ibgb-key-files-title", "BSM \u6269\u6563\u8def\u7ebf"),
-                  shiny::tableOutput("bsm_dispersal_routes_table"),
-                  shiny::tags$div(class = "ibgb-key-files-title", "BSM \u4e8b\u4ef6\u65f6\u95f4"),
-                  shiny::tableOutput("bsm_event_times_table")
-                ),
-                shiny::tabPanel("\u6587\u4ef6\u6e05\u5355", shiny::tableOutput("manifest_table")),
-                shiny::tabPanel(
-                  "\u56fe\u8868\u9762\u677f",
-                  shiny::tableOutput("figure_dashboard_table"),
-                  shiny::tags$div(
-                    class = "ibgb-figure-dashboard",
-                    shiny_figure_panel("\u6a21\u578b\u6bd4\u8f83", "figure_model_comparison"),
-                    shiny_figure_panel("\u6839\u72b6\u6001\u6982\u7387", "figure_root_states"),
-                    shiny_figure_panel("\u6700\u4f18\u6a21\u578b\u8282\u70b9\u72b6\u6001", "figure_node_best"),
-                    shiny_figure_panel("\u6700\u4f18\u975e +J \u8282\u70b9\u72b6\u6001", "figure_node_non_j"),
-                    shiny_figure_panel("\u6700\u4f18 +J \u8282\u70b9\u72b6\u6001", "figure_node_plus_j"),
-                    shiny_figure_panel("\u8282\u70b9\u72b6\u6001\u654f\u611f\u6027", "figure_node_sensitivity"),
-                    shiny_figure_panel("\u4e8b\u4ef6\u7edf\u8ba1", "figure_event_summary"),
-                    shiny_figure_panel("BSM \u4e8b\u4ef6\u6458\u8981", "figure_bsm_event_summary"),
-                    shiny_figure_panel("BSM \u4e8b\u4ef6\u65f6\u95f4", "figure_bsm_event_times"),
-                    shiny_figure_panel("BSM \u6269\u6563\u8def\u7ebf", "figure_bsm_dispersal_routes")
-                  )
-                ),
-                shiny::tabPanel(
-                  "\u6570\u636e\u8868",
-                  shiny::tags$div(class = "ibgb-key-files-title", "\u6570\u636e\u8868\u72b6\u6001"),
-                  shiny::tableOutput("table_status_table"),
-                  shiny::selectInput("table_preview", "\u9009\u62e9\u6570\u636e\u8868", choices = c("\u6682\u65e0\u53ef\u7528\u7684 CSV \u6570\u636e\u8868" = "")),
-                  shiny::tableOutput("table_preview_output"),
-                  shiny::verbatimTextOutput("table_path_text")
-                ),
-                shiny::tabPanel(
-                  "\u56fe\u7247",
-                  shiny::selectInput("figure_preview", "\u9009\u62e9\u56fe\u7247", choices = c("\u6682\u65e0\u53ef\u7528\u7684 PNG \u56fe\u7247" = "")),
-                  shiny::div(class = "ibgb-preview", shiny::imageOutput("figure_image")),
-                  shiny::verbatimTextOutput("figure_path_text")
-                )
-              )
-            ),
-            shiny::tabPanel(
-              "\u8de8\u7c7b\u7fa4",
-              shiny::tags$div(
-                class = "ibgb-home-note",
-                "\u628a\u591a\u4e2a\u7c7b\u7fa4\u7684\u7ed3\u679c\u6574\u5408\u5230\u4e00\u8d77\u6bd4\u8f83\u5404\u751f\u7269\u5730\u7406\u8fc7\u7a0b\u7684\u901f\u7387\u968f\u65f6\u95f4\u53d8\u5316\u3002\u4e0a\u4f20\u6bcf\u4e2a\u7c7b\u7fa4\u7684 process_rates_through_time.csv \u6587\u4ef6\uff08\u5728\u6bcf\u4e2a\u5206\u6790\u9879\u76ee\u7684 tables/ \u76ee\u5f55\u4e0b\uff09\u3002\u5efa\u8bae\u5148\u628a\u6bcf\u4e2a\u6587\u4ef6\u91cd\u547d\u540d\u4e3a\u7c7b\u7fa4\u540d\uff08\u5982 CladeA.csv\uff09\uff0c\u7cfb\u7edf\u4f1a\u7528\u6587\u4ef6\u540d\u4f5c\u4e3a\u7c7b\u7fa4\u6807\u7b7e\u3002\u53ef\u4e00\u6b21\u591a\u9009\u6279\u91cf\u4e0a\u4f20\u3002\u5404\u7c7b\u7fa4\u9700\u4f7f\u7528\u53ef\u6bd4\u8f83\u7684\u65f6\u95f4\u5355\u4f4d\u3002"
-              ),
-              shiny::fileInput(
-                "cross_clade_files",
-                "\u4e0a\u4f20\u5404\u7c7b\u7fa4\u7684 process_rates_through_time.csv\uff08\u53ef\u591a\u9009\uff09",
-                multiple = TRUE,
-                accept = ".csv"
-              ),
-              shiny::uiOutput("cross_clade_status"),
-              shiny::div(class = "ibgb-preview", shiny::imageOutput("cross_clade_plot", height = "520px")),
-              shiny::tags$div(class = "ibgb-key-files-title", "\u5408\u5e76\u6570\u636e\u9884\u89c8"),
-              shiny::tableOutput("cross_clade_table")
-            ),
-            shiny::tabPanel(
-              "\u6392\u9519",
-              shiny::tags$div(class = "ibgb-key-files-title", "\u8b66\u544a\u6458\u8981"),
-              shiny::tableOutput("warning_summary_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "\u8b66\u544a\u8be6\u60c5"),
-              shiny::tableOutput("warnings_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "\u5931\u8d25\u6a21\u578b\u8bca\u65ad"),
-              shiny::tableOutput("failed_models_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "\u6a21\u578b\u72b6\u6001\u8be6\u60c5"),
-              shiny::tableOutput("model_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "\u62a5\u544a"),
-              shiny::verbatimTextOutput("report_path_text"),
-              shiny::tags$div(class = "ibgb-key-files-title", "\u8def\u5f84"),
-              shiny::verbatimTextOutput("paths_text"),
-              shiny::tags$div(class = "ibgb-key-files-title", "\u6d88\u606f"),
-              shiny::verbatimTextOutput("messages_text")
-            ),
-            shiny::tabPanel(
-              "\u5173\u4e8e\u548c\u5f15\u7528",
-              shiny::tags$div(class = "ibgb-key-files-title", "\u8f6f\u4ef6\u72b6\u6001"),
-              shiny::tableOutput("about_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "\u62a5\u544a\u73af\u5883"),
-              shiny::tableOutput("report_environment_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS \u5f15\u7528"),
-              shiny::verbatimTextOutput("citation_text")
-            )
-          )
-        )
-      )
-    ),
+    ui = iBGB_app_ui(default_config, default_output, startup$example_project_dir),
     server = iBGB_shiny_server
   )
 }
@@ -344,44 +48,38 @@ shiny_action_grid <- function(...) {
   shiny::tags$div(class = "ibgb-action-grid", ...)
 }
 
-shiny_start_here_panel <- function() {
-  shiny::tabPanel(
-    "\u9996\u9875",
-    shiny::tags$h3("\u4ece\u8fd9\u91cc\u5f00\u59cb"),
-    shiny::tags$div(
-      class = "ibgb-home-note",
-      "\u63a8\u8350\u6d41\u7a0b\uff1a\u5148\u7528\u5185\u7f6e\u793a\u4f8b\u8dd1\u901a\uff0c\u518d\u6362\u6210\u81ea\u5df1\u7684\u6570\u636e\u3002\u6bcf\u4e00\u6b65\u5148\u770b\u4e0b\u9762\u7684\u201c\u4e0b\u4e00\u6b65\u201d\u3002"
-    ),
+shiny_home_guidance_body <- function() {
+  shiny::tagList(
     shiny::uiOutput("home_next_action"),
     shiny::tags$div(class = "ibgb-key-files-title", "\u5f15\u5bfc\u6d41\u7a0b"),
     shiny::tableOutput("guided_workflow_table"),
-    shiny::tags$div(class = "ibgb-key-files-title", "\u8be6\u7ec6\u72b6\u6001"),
-    shiny::tableOutput("first_steps_table")
+    shiny_collapsible_section(
+      "\u8be6\u7ec6\u72b6\u6001",
+      shiny::tableOutput("first_steps_table")
+    )
   )
 }
 
-shiny_primary_results_panel <- function() {
-  shiny::tabPanel(
-    "\u7ed3\u679c",
-    shiny::tags$div(class = "ibgb-home-note", "\u8fd9\u91cc\u5148\u53ea\u663e\u793a\u6700\u91cd\u8981\u7684\u4e09\u7c7b\u7ed3\u679c\u3002\u5b8c\u6574\u8868\u683c\u3001\u65e5\u5fd7\u548c\u9ad8\u7ea7\u8bca\u65ad\u5728\u201c\u9ad8\u7ea7\u7ed3\u679c\u201d\u548c\u201c\u6392\u9519\u201d\u91cc\u3002"),
+shiny_primary_results_body <- function() {
+  shiny::tagList(
     shiny::uiOutput("run_summary_cards"),
     shiny::tags$div(
       class = "ibgb-primary-result",
       shiny::tags$h4("1. \u7956\u5148\u5206\u5e03\u91cd\u5efa\u56fe"),
       shiny::tags$p("\u5148\u770b\u6700\u4f73\u7edf\u8ba1\u6a21\u578b\u4e0b\u7684\u7956\u5148\u5206\u5e03\u91cd\u5efa\u56fe\uff0c\u518d\u7ed3\u5408\u6a21\u578b\u6bd4\u8f83\u548c +J \u63d0\u793a\u89e3\u91ca\u3002"),
-      shiny::imageOutput("primary_figure_node_best")
+      shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_node_best"))
     ),
     shiny::tags$div(
       class = "ibgb-primary-result",
       shiny::tags$h4("2. \u6a21\u578b\u6bd4\u8f83\u8868"),
       shiny::tableOutput("primary_model_comparison_table"),
-      shiny::imageOutput("primary_figure_model_comparison")
+      shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_model_comparison"))
     ),
     shiny::tags$div(
       class = "ibgb-primary-result",
       shiny::tags$h4("3. \u751f\u7269\u5730\u7406\u8fc7\u7a0b\u7efc\u5408"),
       shiny::tags$p("\u628a BSM \u968f\u673a\u6620\u5c04\u7ed3\u679c\u7ffb\u8bd1\u6210\u53ef\u89e3\u91ca\u7684\u751f\u7269\u5730\u7406\u8fc7\u7a0b\uff1a\u5206\u652f\u5f62\u6210\u4e8b\u4ef6\uff08\u539f\u5730/\u540c\u57df\u7269\u79cd\u5f62\u6210\u3001subset sympatry\u3001vicariance\u3001founder-event \u8df3\u8dc3\u7269\u79cd\u5f62\u6210\uff09\u548c\u652f\u7cfb\u5185\u5206\u5e03\u533a\u6f14\u5316\uff08range expansion\u3001\u5c40\u90e8\u706d\u7edd\u3001range switching\uff09\u3002\u4ec5\u5728\u8fd0\u884c BSM \u540e\u663e\u793a\u3002"),
-      shiny::imageOutput("primary_figure_process_synthesis"),
+      shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_process_synthesis")),
       shiny::tableOutput("primary_process_summary_table")
     ),
     shiny::tags$div(
@@ -389,16 +87,16 @@ shiny_primary_results_panel <- function() {
       shiny::tags$h4("4. \u4e8b\u4ef6\u7edf\u8ba1\u660e\u7ec6"),
       shiny::tags$p("\u5982\u679c\u8fd0\u884c\u4e86 BSM \u968f\u673a\u6620\u5c04\uff0c\u8fd9\u91cc\u4f18\u5148\u663e\u793a BSM \u7ed3\u679c\uff1b\u5426\u5219\u663e\u793a\u57fa\u4e8e\u6700\u9ad8\u6982\u7387\u7956\u5148\u72b6\u6001\u7684\u786e\u5b9a\u6027\u4e8b\u4ef6\u7edf\u8ba1\u4f5c\u4e3a\u66ff\u4ee3\u3002"),
       shiny::tableOutput("primary_bsm_event_summary_table"),
-      shiny::imageOutput("primary_figure_bsm_event_summary"),
+      shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_bsm_event_summary")),
       shiny::tags$h4("BSM \u4e8b\u4ef6\u65f6\u95f4\u4e0e\u65b9\u5411"),
       shiny::tableOutput("primary_bsm_event_times_table"),
-      shiny::imageOutput("primary_figure_bsm_dispersal_routes"),
+      shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_bsm_dispersal_routes")),
       shiny::tags$h4("\u786e\u5b9a\u6027\u66ff\u4ee3\u4e8b\u4ef6\u7edf\u8ba1"),
       shiny::tableOutput("primary_event_summary_table"),
       shiny::tags$h4("\u6700\u4f18\u6a21\u578b\u4e8b\u4ef6\u65f6\u95f4\u548c\u65b9\u5411"),
       shiny::tags$p("\u65f6\u95f4\u4e3a\u5206\u652f\u4e2d\u70b9\u8fd1\u4f3c\u503c\uff0c\u5355\u4f4d\u4e0e\u8f93\u5165\u6811\u5206\u652f\u957f\u5ea6\u4e00\u81f4\uff1b\u65b9\u5411\u6765\u81ea\u6700\u9ad8\u6982\u7387\u7956\u5148\u72b6\u6001\u7684\u53d8\u5316\u3002"),
       shiny::tableOutput("primary_best_fit_events_table"),
-      shiny::imageOutput("primary_figure_event_summary")
+      shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_event_summary"))
     )
   )
 }
@@ -493,6 +191,10 @@ iBGB_shiny_server <- function(input, output, session) {
 
       current_workflow_config_path <- shiny::reactive({
         write_shiny_workflow_config(current_config(), source_config = current_config_path())
+      })
+
+      current_input_summary <- shiny::reactive({
+        tryCatch(summarize_input_data(current_config()), error = function(e) NULL)
       })
 
       shiny::observeEvent(input$create_example, {
@@ -821,6 +523,18 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$wizard_upload_preview_table <- shiny::renderTable({
         shiny_upload_preview_table(input)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$data_overview_table <- shiny::renderTable({
+        shiny_data_overview_table(current_input_summary())
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$region_occupancy_table <- shiny::renderTable({
+        shiny_region_occupancy_table(current_input_summary())
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$range_size_table <- shiny::renderTable({
+        shiny_range_size_table(current_input_summary())
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$installation_table <- shiny::renderTable({
@@ -1237,6 +951,97 @@ shiny_validation_table <- function(validation) {
   }
   out <- validation[c("label", "status", "detail", "next_step")]
   names(out) <- c("Check", "Status", "Detail", "How to fix")
+  out
+}
+
+shiny_data_overview_table <- function(summary) {
+  if (is.null(summary)) {
+    return(data.frame())
+  }
+  items <- character(0)
+  values <- character(0)
+  add <- function(item, value) {
+    items[[length(items) + 1L]] <<- item
+    values[[length(values) + 1L]] <<- as.character(value)
+  }
+  tr <- summary$tree
+  if (!is.null(tr)) {
+    add("\u7cfb\u7edf\u6811 tip \u6570", tr$n_tips)
+    if (isTRUE(tr$has_branch_lengths) && !is.na(tr$root_age)) {
+      add("\u6811\u6839\u5e74\u9f84\uff08\u6811\u9ad8\uff09", formatC(tr$root_age, format = "fg", digits = 3))
+    }
+    if (!is.na(tr$is_ultrametric)) {
+      add("\u8d85\u5ea6\u91cf\u6811", if (isTRUE(tr$is_ultrametric)) "\u662f" else "\u5426")
+    }
+  }
+  g <- summary$geography
+  if (!is.null(g)) {
+    add("\u5730\u533a\u6570", g$n_areas)
+    add("\u7269\u79cd\u6570", g$n_species)
+    if (!is.na(g$max_range_size_setting)) {
+      add("\u6700\u5927\u5206\u5e03\u533a\u6570\u91cf\uff08\u8bbe\u5b9a\uff09", g$max_range_size_setting)
+    }
+    add("\u89c2\u6d4b\u5230\u7684\u6700\u5927\u5206\u5e03\u533a\u6570", g$max_range_size_observed)
+    add("\u5e73\u5747\u5206\u5e03\u533a\u6570", formatC(g$mean_range_size, format = "fg", digits = 3))
+    add("\u5e7f\u5e03\u79cd\uff08\u5206\u5e03\u533a >1\uff09", g$widespread_species)
+  }
+  tm <- summary$taxon_match
+  if (!is.null(tm)) {
+    add(
+      "\u6811\u4e0e\u5206\u5e03\u540d\u79f0\u5339\u914d",
+      if (isTRUE(tm$all_match)) {
+        "\u662f"
+      } else {
+        paste0(
+          "\u5426\uff08\u5206\u5e03\u7f3a ", length(tm$missing_from_geography),
+          "\uff0c\u6811\u7f3a ", length(tm$missing_from_tree), "\uff09"
+        )
+      }
+    )
+  }
+  if (length(items) == 0L) {
+    return(data.frame())
+  }
+  out <- data.frame(item = items, value = values, stringsAsFactors = FALSE)
+  names(out) <- c("\u9879\u76ee", "\u6570\u503c")
+  out
+}
+
+shiny_region_occupancy_table <- function(summary) {
+  if (is.null(summary)) {
+    return(data.frame())
+  }
+  occ <- summary$region_occupancy
+  if (is.null(occ) || nrow(occ) == 0L) {
+    return(data.frame())
+  }
+  out <- data.frame(
+    region = occ$region,
+    label = occ$label,
+    n_species = occ$n_species,
+    n_endemic = occ$n_endemic,
+    proportion = paste0(formatC(100 * occ$proportion, format = "f", digits = 1), "%"),
+    stringsAsFactors = FALSE
+  )
+  names(out) <- c("\u5730\u533a", "\u540d\u79f0", "\u7269\u79cd\u6570", "\u7279\u6709\u79cd", "\u5360\u6bd4")
+  out
+}
+
+shiny_range_size_table <- function(summary) {
+  if (is.null(summary)) {
+    return(data.frame())
+  }
+  dist <- summary$range_size_distribution
+  if (is.null(dist) || nrow(dist) == 0L) {
+    return(data.frame())
+  }
+  out <- data.frame(
+    range_size = dist$range_size,
+    n_species = dist$n_species,
+    proportion = paste0(formatC(100 * dist$proportion, format = "f", digits = 1), "%"),
+    stringsAsFactors = FALSE
+  )
+  names(out) <- c("\u5206\u5e03\u533a\u6570", "\u7269\u79cd\u6570", "\u5360\u6bd4")
   out
 }
 
@@ -3634,4 +3439,402 @@ table_head <- function(x, n = 20L) {
     return(data.frame())
   }
   utils::head(x, n)
+}
+
+iBGB_head_styles <- function() {
+  shiny::tags$head(
+    shiny::tags$style(shiny::HTML(
+      ".container-fluid{max-width:1180px} .well{border-radius:4px} ",
+      ".btn{border-radius:4px} .ibgb-status{font-weight:600;margin:8px 0} ",
+      ".ibgb-status.info{color:#22577a} .ibgb-status.error{color:#b00020} ",
+      ".ibgb-control-section{border-top:1px solid #ddd;margin-top:14px;padding-top:12px} ",
+      ".ibgb-control-section:first-child{border-top:0;margin-top:0;padding-top:0} ",
+      ".ibgb-control-title{font-weight:600;margin-bottom:8px} ",
+      ".ibgb-action-grid{display:grid;grid-template-columns:1fr;gap:7px} ",
+      ".ibgb-action-grid .btn{width:100%;text-align:left} ",
+      ".ibgb-downloads{margin:0} .ibgb-downloads .btn{width:100%;text-align:left;margin-bottom:7px} ",
+      ".ibgb-run-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:0 0 12px 0} ",
+      ".ibgb-run-summary-card{border:1px solid #d8dee4;border-left:4px solid #6b7280;border-radius:4px;padding:10px;background:#fff} ",
+      ".ibgb-run-summary-card.info{border-left-color:#22577a} .ibgb-run-summary-card.warning{border-left-color:#b26a00} ",
+      ".ibgb-run-summary-card.good{border-left-color:#2e7d32} .ibgb-run-summary-card.muted{border-left-color:#8c959f} ",
+      ".ibgb-run-summary-label{font-size:12px;font-weight:600;color:#57606a;margin-bottom:4px} ",
+      ".ibgb-run-summary-value{font-size:15px;font-weight:600;color:#24292f;overflow-wrap:anywhere} ",
+      ".ibgb-key-files-title{font-weight:600;margin:12px 0 6px 0} ",
+      ".ibgb-home-note{background:#f6f8fa;border:1px solid #d8dee4;border-radius:4px;padding:10px 12px;margin:8px 0 14px 0} ",
+      ".ibgb-next-action{border:1px solid #bfdbfe;border-left:4px solid #2563eb;background:#eff6ff;border-radius:4px;padding:10px 12px;margin:8px 0 14px 0} ",
+      ".ibgb-next-action-title{font-size:12px;font-weight:600;color:#1d4ed8;margin-bottom:4px} ",
+      ".ibgb-next-action-step{font-size:15px;font-weight:600;color:#1f2937;margin-bottom:3px} ",
+      ".ibgb-next-action-detail{color:#374151} ",
+      ".ibgb-collapsible{border-top:1px solid #ddd;margin-top:12px;padding-top:10px} ",
+      ".ibgb-collapsible summary{font-weight:600;cursor:pointer;margin-bottom:8px} ",
+      ".ibgb-primary-result{border-top:1px solid #e5e7eb;margin-top:18px;padding-top:16px} ",
+      ".ibgb-primary-result:first-child{border-top:0;margin-top:0;padding-top:0} ",
+      ".ibgb-preview img{max-width:100%;height:auto;border:1px solid #ddd} ",
+      ".ibgb-figure-dashboard{display:grid;grid-template-columns:1fr;gap:18px} ",
+      ".ibgb-figure-dashboard h4{margin:6px 0 8px 0} ",
+      ".ibgb-figure-dashboard img{max-width:100%;height:auto;border:1px solid #ddd} ",
+      "#wizard_nav{margin-top:6px} ",
+      "#wizard_nav.nav-tabs{border-bottom:2px solid #d0d7de} ",
+      "#wizard_nav.nav-tabs>li>a{font-weight:600;color:#57606a;border:0;margin-right:2px} ",
+      "#wizard_nav.nav-tabs>li.active>a{color:#0b3d66;border:0;border-bottom:3px solid #22577a;background:transparent} ",
+      ".ibgb-step-intro{color:#57606a;margin:14px 0 16px 0;font-size:14px} ",
+      ".tab-content>.tab-pane{padding:6px 2px 2px 2px} ",
+      ".ibgb-two-col{display:grid;grid-template-columns:1fr 1fr;gap:22px} ",
+      "@media (max-width:900px){.ibgb-two-col{grid-template-columns:1fr}} ",
+      ".ibgb-choice-card{border:1px solid #d8dee4;border-radius:6px;padding:14px;background:#fff}"
+    ))
+  )
+}
+
+iBGB_app_ui <- function(default_config, default_output, example_project_dir) {
+  shiny::fluidPage(
+    iBGB_head_styles(),
+    shiny::titlePanel("iBiogeobears"),
+    shiny::uiOutput("status"),
+    shiny::tabsetPanel(
+      id = "wizard_nav",
+      type = "tabs",
+      wizard_step_data(default_config, default_output, example_project_dir),
+      wizard_step_overview(),
+      wizard_step_analysis(),
+      wizard_step_results(),
+      wizard_step_cross_clade(),
+      wizard_step_help()
+    )
+  )
+}
+
+wizard_step_data <- function(default_config, default_output, example_project_dir) {
+  shiny::tabPanel(
+    "1 \u00b7 \u6570\u636e",
+    shiny::tags$p(
+      class = "ibgb-step-intro",
+      "\u7b2c\u4e00\u6b65\uff1a\u9009\u62e9\u6570\u636e\u6765\u6e90\u3002\u53ef\u4ee5\u76f4\u63a5\u7528\u5185\u7f6e\u793a\u4f8b\u8dd1\u901a\u6574\u4e2a\u6d41\u7a0b\uff0c\u6216\u4e0a\u4f20\u4f60\u81ea\u5df1\u7684\u6811\u548c\u5206\u5e03\u6570\u636e\u3002"
+    ),
+    shiny::radioButtons(
+      "workflow_start_choice",
+      "\u4ece\u54ea\u91cc\u5f00\u59cb",
+      choices = c(
+        "\u5185\u7f6e\u793a\u4f8b\u6570\u636e" = "example",
+        "\u6211\u81ea\u5df1\u7684\u6570\u636e" = "own",
+        "\u5df2\u6709\u5206\u6790\u7ed3\u679c" = "existing"
+      ),
+      selected = "example"
+    ),
+    shiny::tags$div(
+      class = "ibgb-two-col",
+      shiny::tags$div(
+        class = "ibgb-choice-card",
+        shiny::tags$div(class = "ibgb-control-title", "\u2460 \u5185\u7f6e\u793a\u4f8b\uff08\u6700\u5feb\u4e0a\u624b\uff09"),
+        shiny::tags$p("\u4e00\u952e\u521b\u5efa\u4e00\u4e2a\u53ef\u8fd0\u884c\u7684\u793a\u4f8b\u9879\u76ee\uff0c\u7528\u5b83\u5148\u628a\u6d41\u7a0b\u8dd1\u901a\u3002"),
+        shiny_action_grid(shiny::actionButton("create_example", "\u521b\u5efa\u793a\u4f8b\u9879\u76ee")),
+        shiny_collapsible_section(
+          "\u793a\u4f8b\u9879\u76ee\u76ee\u5f55\uff08\u53ef\u9009\uff09",
+          shiny::textInput("example_project_dir", "\u793a\u4f8b\u9879\u76ee\u76ee\u5f55", value = example_project_dir)
+        )
+      ),
+      shiny::tags$div(
+        class = "ibgb-choice-card",
+        shiny::tags$div(class = "ibgb-control-title", "\u2461 \u4f7f\u7528\u6211\u81ea\u5df1\u7684\u6570\u636e"),
+        shiny::textInput("wizard_project_name", "\u9879\u76ee\u540d", value = "my_clade"),
+        shiny::textInput("wizard_project_parent", "\u9879\u76ee\u4fdd\u5b58\u4f4d\u7f6e", value = default_project_parent()),
+        shiny::fileInput(
+          "wizard_tree",
+          "\u7cfb\u7edf\u6811\u6587\u4ef6",
+          accept = c(".nwk", ".newick", ".tree", ".tre")
+        ),
+        shiny::fileInput("wizard_geography", "\u5206\u5e03\u77e9\u9635 CSV", accept = ".csv"),
+        shiny::fileInput("wizard_regions", "\u533a\u57df\u4fe1\u606f CSV", accept = ".csv"),
+        shiny::tags$div(
+          class = "ibgb-downloads",
+          shiny::downloadButton("download_tree_template", "\u4e0b\u8f7d\u6811\u6a21\u677f"),
+          shiny::downloadButton("download_geography_template", "\u4e0b\u8f7d\u5206\u5e03\u77e9\u9635\u6a21\u677f"),
+          shiny::downloadButton("download_regions_template", "\u4e0b\u8f7d\u533a\u57df\u4fe1\u606f\u6a21\u677f")
+        ),
+        shiny::numericInput("wizard_max_range_size", "\u6700\u5927\u5206\u5e03\u533a\u6570\u91cf", value = 3L, min = 1L, step = 1L),
+        shiny::checkboxGroupInput(
+          "wizard_models",
+          "\u8981\u8fd0\u884c\u7684\u6a21\u578b",
+          choices = valid_models(),
+          selected = valid_models()
+        ),
+        shiny_action_grid(shiny::actionButton("create_analysis_project", "\u521b\u5efa\u6211\u81ea\u5df1\u7684\u5206\u6790\u9879\u76ee")),
+        shiny::tags$div(class = "ibgb-key-files-title", "\u4e0a\u4f20\u9884\u89c8"),
+        shiny::tableOutput("wizard_upload_preview_table")
+      )
+    ),
+    shiny_control_section(
+      "\u7ed3\u679c\u4fdd\u5b58\u4f4d\u7f6e",
+      shiny::textInput("output_dir", "\u6240\u6709\u7ed3\u679c\u4fdd\u5b58\u5230", value = default_output),
+      shiny::tags$div(
+        class = "ibgb-home-note",
+        "\u8fd0\u884c\u540e\u4f1a\u5728\u8fd9\u4e2a\u76ee\u5f55\u4e0b\u751f\u6210 tables\u3001figures\u3001reports\u3001logs\u3002\u53ef\u4ee5\u5148\u9009\u76ee\u5f55\uff0c\u518d\u8fd0\u884c\u6d41\u7a0b\u3002"
+      ),
+      shiny_action_grid(
+        shiny::actionButton("choose_output_dir", "\u9009\u62e9\u7ed3\u679c\u76ee\u5f55"),
+        shiny::actionButton("open_output", "\u6253\u5f00\u7ed3\u679c\u76ee\u5f55")
+      )
+    ),
+    shiny_collapsible_section(
+      "\u9ad8\u7ea7\uff1a\u5df2\u6709\u9879\u76ee\u548c YAML",
+      shiny::textInput("config_path", "analysis.yml", value = default_config),
+      shiny::fileInput("config_upload", "\u4e0a\u4f20 analysis.yml", accept = c(".yml", ".yaml")),
+      shiny_action_grid(shiny::actionButton("load_results", "\u52a0\u8f7d\u5df2\u6709\u7ed3\u679c"))
+    ),
+    shiny::tags$div(class = "ibgb-key-files-title", "\u4e0b\u4e00\u6b65\u8be5\u505a\u4ec0\u4e48"),
+    shiny_home_guidance_body()
+  )
+}
+
+wizard_step_overview <- function() {
+  shiny::tabPanel(
+    "2 \u00b7 \u6982\u51b5",
+    shiny::tags$p(
+      class = "ibgb-step-intro",
+      "\u7b2c\u4e8c\u6b65\uff1a\u52a0\u8f7d\u6570\u636e\u540e\u5148\u770b\u6570\u636e\u6982\u51b5\uff08\u7c7b\u4f3c RASP\uff09\uff1a\u6811\u91cc\u6709\u591a\u5c11\u4e2a tip\u3001\u6bcf\u4e2a\u533a\u57df\u6709\u591a\u5c11\u7269\u79cd\u3001\u5206\u5e03\u533a\u5927\u5c0f\u5982\u4f55\u5206\u5e03\u3002\u786e\u8ba4\u65e0\u8bef\u518d\u8fdb\u5165\u5206\u6790\u3002\u70b9\u201c\u68c0\u67e5\u8f93\u5165\u201d\u505a\u4e00\u81f4\u6027\u6821\u9a8c\u3002"
+    ),
+    shiny_action_grid(shiny::actionButton("validate", "\u68c0\u67e5\u8f93\u5165")),
+    shiny::tags$div(
+      class = "ibgb-two-col",
+      shiny::tags$div(
+        shiny::tags$div(class = "ibgb-key-files-title", "\u6570\u636e\u6982\u51b5"),
+        shiny::tableOutput("data_overview_table"),
+        shiny::tags$div(class = "ibgb-key-files-title", "\u5404\u533a\u57df\u7269\u79cd\u6570"),
+        shiny::tableOutput("region_occupancy_table"),
+        shiny::tags$div(class = "ibgb-key-files-title", "\u5206\u5e03\u533a\u5927\u5c0f\u5206\u5e03"),
+        shiny::tableOutput("range_size_table")
+      ),
+      shiny::tags$div(
+        shiny::tags$div(class = "ibgb-key-files-title", "\u8f93\u5165\u9a8c\u8bc1"),
+        shiny::tableOutput("validation_table")
+      )
+    )
+  )
+}
+
+wizard_step_analysis <- function() {
+  shiny::tabPanel(
+    "3 \u00b7 \u5206\u6790",
+    shiny::tags$p(
+      class = "ibgb-step-intro",
+      "\u7b2c\u4e09\u6b65\uff1a\u6a21\u578b\u62df\u5408\u3001\u6a21\u578b\u6bd4\u8f83\u3001\u7956\u5148\u5206\u5e03\u4f30\u8ba1\uff0c\u5e76\u53ef\u9009\u505a BSM \u968f\u673a\u6620\u5c04\u3002\u9ad8\u7ea7\u53c2\u6570\u90fd\u6536\u5728\u4e0b\u9762\u7684\u6298\u53e0\u83dc\u5355\u91cc\u3002"
+    ),
+    shiny_control_section(
+      "\u8fd0\u884c",
+      shiny_action_grid(
+        shiny::actionButton("run", "\u8fd0\u884c\u5206\u6790\u6d41\u7a0b"),
+        shiny::actionButton("render_report", "\u751f\u6210\u62a5\u544a")
+      )
+    ),
+    shiny_collapsible_section(
+      "\u8fd0\u884c\u9009\u9879",
+      shiny::checkboxInput("dry_run", "\u8bd5\u8fd0\u884c\uff1a\u53ea\u68c0\u67e5\uff0c\u4e0d\u771f\u6b63\u8fd0\u884c BioGeoBEARS", value = TRUE),
+      shiny::checkboxInput("require_biogeobears", "\u771f\u5b9e\u8fd0\u884c\u65f6\u8981\u6c42 BioGeoBEARS \u53ef\u7528", value = FALSE),
+      shiny::checkboxInput("resume_completed_models", "\u590d\u7528\u5df2\u5b8c\u6210\u7684\u6a21\u578b", value = TRUE),
+      shiny::checkboxInput("retry_failed_only", "\u53ea\u91cd\u8dd1\u5931\u8d25\u7684\u6a21\u578b", value = FALSE),
+      shiny::checkboxInput("force", "\u9a8c\u8bc1\u5931\u8d25\u540e\u5f3a\u5236\u8fd0\u884c", value = FALSE),
+      shiny::checkboxInput("run_stochastic_mapping", "\u8fd0\u884c BSM \u968f\u673a\u6620\u5c04", value = FALSE),
+      shiny::selectInput(
+        "stochastic_mapping_model",
+        "BSM \u4f7f\u7528\u7684\u6a21\u578b",
+        choices = c(
+          "\u6700\u4f18\u7edf\u8ba1\u6a21\u578b" = "best",
+          "\u6700\u4f18\u975e +J \u6a21\u578b" = "best_non_j",
+          "\u6700\u4f18 +J \u6a21\u578b" = "best_plus_j",
+          "\u6240\u6709\u5df2\u5b8c\u6210\u6a21\u578b" = "all"
+        ),
+        selected = "best"
+      ),
+      shiny::numericInput("stochastic_mapping_replicates", "BSM \u6620\u5c04\u6b21\u6570", value = 100L, min = 1L, step = 1L),
+      shiny::numericInput("stochastic_mapping_seed", "BSM \u968f\u673a\u79cd\u5b50", value = 1L, min = 1L, step = 1L)
+    ),
+    shiny_collapsible_section(
+      "\u9ad8\u7ea7\uff1a\u5b89\u88c5\u548c\u73af\u5883",
+      shiny_action_grid(
+        shiny::actionButton("refresh_setup", "\u5237\u65b0\u73af\u5883\u68c0\u67e5"),
+        shiny::actionButton("open_user_guide", "\u6253\u5f00\u4e2d\u6587\u6559\u7a0b"),
+        shiny::actionButton("show_install_plan", "\u67e5\u770b BioGeoBEARS \u5b89\u88c5\u8ba1\u5212"),
+        shiny::actionButton("install_biogeobears", "\u5b89\u88c5 BioGeoBEARS")
+      )
+    ),
+    shiny_collapsible_section(
+      "\u9ad8\u7ea7\uff1a\u914d\u7f6e\u7f16\u8f91\u5668",
+      shiny::checkboxInput("use_config_editor", "\u4f7f\u7528\u754c\u9762\u914d\u7f6e\u8986\u76d6", value = FALSE),
+      shiny::textInput("project_name", "\u9879\u76ee\u540d", value = ""),
+      shiny::textInput("tree_file", "\u7cfb\u7edf\u6811\u6587\u4ef6", value = ""),
+      shiny::textInput("geography_file", "\u5206\u5e03\u77e9\u9635\u6587\u4ef6", value = ""),
+      shiny::textInput("regions_file", "\u533a\u57df\u4fe1\u606f\u6587\u4ef6", value = ""),
+      shiny::textInput("max_range_size", "\u6700\u5927\u5206\u5e03\u533a\u6570\u91cf", value = ""),
+      shiny::checkboxGroupInput("models_run", "\u6a21\u578b", choices = valid_models(), selected = valid_models()),
+      shiny::tags$div(class = "ibgb-key-files-title", "\u9ad8\u7ea7\u7ea6\u675f"),
+      shiny_constraint_inputs()
+    )
+  )
+}
+
+wizard_step_results <- function() {
+  shiny::tabPanel(
+    "4 \u00b7 \u7ed3\u679c",
+    shiny::tags$p(
+      class = "ibgb-step-intro",
+      "\u7b2c\u56db\u6b65\uff1a\u5148\u770b\u6700\u91cd\u8981\u7684\u7ed3\u679c\u9884\u89c8\u2014\u2014\u7956\u5148\u5206\u5e03\u91cd\u5efa\u3001\u6a21\u578b\u6bd4\u8f83\u3001\u751f\u7269\u5730\u7406\u8fc7\u7a0b\u7efc\u5408\u3001\u4e8b\u4ef6\u7edf\u8ba1\u3002\u5b8c\u6574\u8868\u683c\u3001\u56fe\u7247\u548c\u6392\u9519\u5728\u4e0b\u9762\u7684\u201c\u9ad8\u7ea7\u7ed3\u679c\u201d\u91cc\uff0c\u9ad8\u6e05\u56fe\u53ef\u5728\u201c\u56fe\u7247\u201d\u91cc\u4e0b\u8f7d\u3002"
+    ),
+    shiny_primary_results_body(),
+    shiny_collapsible_section(
+      "\u5bfc\u51fa\u4e0e\u62a5\u544a",
+      shiny::selectInput("report_format", "\u62a5\u544a\u683c\u5f0f", choices = c("source", "html", "pdf"), selected = "html"),
+      shiny_action_grid(
+        shiny::actionButton("open_report", "\u6253\u5f00\u62a5\u544a"),
+        shiny::actionButton("refresh_key_files", "\u5237\u65b0\u5173\u952e\u6587\u4ef6"),
+        shiny::actionButton("bundle", "\u751f\u6210\u7ed3\u679c\u538b\u7f29\u5305"),
+        shiny::actionButton("diagnostic_bundle", "\u751f\u6210\u8bca\u65ad\u538b\u7f29\u5305")
+      ),
+      shiny::tags$div(
+        class = "ibgb-downloads",
+        shiny::downloadButton("download_run_summary", "\u4e0b\u8f7d\u8fd0\u884c\u6458\u8981"),
+        shiny::downloadButton("download_report", "\u4e0b\u8f7d\u62a5\u544a"),
+        shiny::downloadButton("download_bundle", "\u4e0b\u8f7d\u7ed3\u679c\u538b\u7f29\u5305"),
+        shiny::downloadButton("download_diagnostic_bundle", "\u4e0b\u8f7d\u8bca\u65ad\u538b\u7f29\u5305")
+      )
+    ),
+    shiny_collapsible_section(
+      "\u9ad8\u7ea7\u7ed3\u679c\uff08\u5b8c\u6574\u8868\u683c\u4e0e\u56fe\u7247\uff09",
+      shiny::tabsetPanel(
+        shiny::tabPanel(
+          "\u8fd0\u884c\u6458\u8981",
+          shiny::tags$div(class = "ibgb-key-files-title", "\u5173\u952e\u6587\u4ef6"),
+          shiny::tableOutput("key_files_table"),
+          shiny::tableOutput("run_summary_table")
+        ),
+        shiny::tabPanel(
+          "\u6a21\u578b\u6bd4\u8f83",
+          shiny::tags$div(class = "ibgb-key-files-title", "\u62df\u5408\u6458\u8981"),
+          shiny::tableOutput("model_fit_summary_table"),
+          shiny::tags$div(class = "ibgb-key-files-title", "\u6a21\u578b\u6bd4\u8f83\u8be6\u60c5"),
+          shiny::tableOutput("model_comparison_table")
+        ),
+        shiny::tabPanel(
+          "+J \u654f\u611f\u6027",
+          shiny::tags$div(class = "ibgb-key-files-title", "+J \u654f\u611f\u6027\u6458\u8981"),
+          shiny::tableOutput("plus_j_summary_table"),
+          shiny::tags$div(class = "ibgb-key-files-title", "+J \u654f\u611f\u6027\u8be6\u60c5"),
+          shiny::tableOutput("model_sensitivity_table")
+        ),
+        shiny::tabPanel("\u8282\u70b9\u72b6\u6001", shiny::tableOutput("node_state_summary_table")),
+        shiny::tabPanel("\u8282\u70b9\u654f\u611f\u6027", shiny::tableOutput("node_state_sensitivity_table")),
+        shiny::tabPanel("\u6700\u4f18\u6a21\u578b\u4e8b\u4ef6", shiny::tableOutput("best_fit_events_table")),
+        shiny::tabPanel("\u4e8b\u4ef6\u8be6\u60c5", shiny::tableOutput("range_change_events_table")),
+        shiny::tabPanel(
+          "BSM",
+          shiny::tags$div(class = "ibgb-key-files-title", "BSM \u53ef\u9760\u6027\u68c0\u67e5"),
+          shiny::tableOutput("bsm_qc_table"),
+          shiny::tags$div(class = "ibgb-key-files-title", "BSM \u8fd0\u884c\u72b6\u6001"),
+          shiny::tableOutput("bsm_run_status_table"),
+          shiny::tags$div(class = "ibgb-key-files-title", "BSM \u4e8b\u4ef6\u6458\u8981"),
+          shiny::tableOutput("bsm_event_summary_table"),
+          shiny::tags$div(class = "ibgb-key-files-title", "BSM \u6269\u6563\u8def\u7ebf"),
+          shiny::tableOutput("bsm_dispersal_routes_table"),
+          shiny::tags$div(class = "ibgb-key-files-title", "BSM \u4e8b\u4ef6\u65f6\u95f4"),
+          shiny::tableOutput("bsm_event_times_table")
+        ),
+        shiny::tabPanel("\u6587\u4ef6\u6e05\u5355", shiny::tableOutput("manifest_table")),
+        shiny::tabPanel(
+          "\u56fe\u8868\u9762\u677f",
+          shiny::tableOutput("figure_dashboard_table"),
+          shiny::tags$div(
+            class = "ibgb-figure-dashboard",
+            shiny_figure_panel("\u6a21\u578b\u6bd4\u8f83", "figure_model_comparison"),
+            shiny_figure_panel("\u6839\u72b6\u6001\u6982\u7387", "figure_root_states"),
+            shiny_figure_panel("\u6700\u4f18\u6a21\u578b\u8282\u70b9\u72b6\u6001", "figure_node_best"),
+            shiny_figure_panel("\u6700\u4f18\u975e +J \u8282\u70b9\u72b6\u6001", "figure_node_non_j"),
+            shiny_figure_panel("\u6700\u4f18 +J \u8282\u70b9\u72b6\u6001", "figure_node_plus_j"),
+            shiny_figure_panel("\u8282\u70b9\u72b6\u6001\u654f\u611f\u6027", "figure_node_sensitivity"),
+            shiny_figure_panel("\u4e8b\u4ef6\u7edf\u8ba1", "figure_event_summary"),
+            shiny_figure_panel("BSM \u4e8b\u4ef6\u6458\u8981", "figure_bsm_event_summary"),
+            shiny_figure_panel("BSM \u4e8b\u4ef6\u65f6\u95f4", "figure_bsm_event_times"),
+            shiny_figure_panel("BSM \u6269\u6563\u8def\u7ebf", "figure_bsm_dispersal_routes")
+          )
+        ),
+        shiny::tabPanel(
+          "\u6570\u636e\u8868",
+          shiny::tags$div(class = "ibgb-key-files-title", "\u6570\u636e\u8868\u72b6\u6001"),
+          shiny::tableOutput("table_status_table"),
+          shiny::selectInput("table_preview", "\u9009\u62e9\u6570\u636e\u8868", choices = c("\u6682\u65e0\u53ef\u7528\u7684 CSV \u6570\u636e\u8868" = "")),
+          shiny::tableOutput("table_preview_output"),
+          shiny::verbatimTextOutput("table_path_text")
+        ),
+        shiny::tabPanel(
+          "\u56fe\u7247",
+          shiny::selectInput("figure_preview", "\u9009\u62e9\u56fe\u7247", choices = c("\u6682\u65e0\u53ef\u7528\u7684 PNG \u56fe\u7247" = "")),
+          shiny::div(class = "ibgb-preview", shiny::imageOutput("figure_image")),
+          shiny::verbatimTextOutput("figure_path_text")
+        )
+      )
+    )
+  )
+}
+
+wizard_step_cross_clade <- function() {
+  shiny::tabPanel(
+    "\u8de8\u7c7b\u7fa4",
+    shiny::tags$p(
+      class = "ibgb-step-intro",
+      "\u672c\u8f6f\u4ef6\u7684\u91cd\u70b9\u7279\u8272\uff1a\u628a\u591a\u4e2a\u7c7b\u7fa4\u7684\u4e8b\u4ef6\u7ed3\u679c\u6574\u5408\u5230\u4e00\u8d77\uff0c\u6bd4\u8f83\u5404\u751f\u7269\u5730\u7406\u8fc7\u7a0b\u7684\u901f\u7387\u968f\u65f6\u95f4\u7684\u53d8\u5316\u3002"
+    ),
+    shiny::tags$div(
+      class = "ibgb-home-note",
+      "\u4e0a\u4f20\u6bcf\u4e2a\u7c7b\u7fa4\u7684 process_rates_through_time.csv \u6587\u4ef6\uff08\u5728\u6bcf\u4e2a\u5206\u6790\u9879\u76ee\u7684 tables/ \u76ee\u5f55\u4e0b\uff09\u3002\u5efa\u8bae\u5148\u628a\u6bcf\u4e2a\u6587\u4ef6\u91cd\u547d\u540d\u4e3a\u7c7b\u7fa4\u540d\uff08\u5982 CladeA.csv\uff09\uff0c\u7cfb\u7edf\u4f1a\u7528\u6587\u4ef6\u540d\u4f5c\u4e3a\u7c7b\u7fa4\u6807\u7b7e\u3002\u53ef\u4e00\u6b21\u591a\u9009\u6279\u91cf\u4e0a\u4f20\u3002\u5404\u7c7b\u7fa4\u9700\u4f7f\u7528\u53ef\u6bd4\u8f83\u7684\u65f6\u95f4\u5355\u4f4d\u3002"
+    ),
+    shiny::fileInput(
+      "cross_clade_files",
+      "\u4e0a\u4f20\u5404\u7c7b\u7fa4\u7684 process_rates_through_time.csv\uff08\u53ef\u591a\u9009\uff09",
+      multiple = TRUE,
+      accept = ".csv"
+    ),
+    shiny::uiOutput("cross_clade_status"),
+    shiny::div(class = "ibgb-preview", shiny::imageOutput("cross_clade_plot", height = "520px")),
+    shiny::tags$div(class = "ibgb-key-files-title", "\u5408\u5e76\u6570\u636e\u9884\u89c8"),
+    shiny::tableOutput("cross_clade_table")
+  )
+}
+
+wizard_step_help <- function() {
+  shiny::tabPanel(
+    "\u5e2e\u52a9",
+    shiny::tags$p(class = "ibgb-step-intro", "\u73af\u5883\u68c0\u67e5\u3001\u6392\u9519\u548c\u5f15\u7528\u4fe1\u606f\u90fd\u5728\u8fd9\u91cc\u3002"),
+    shiny_collapsible_section(
+      "\u73af\u5883\u68c0\u67e5",
+      shiny::tags$div(class = "ibgb-key-files-title", "\u5b89\u88c5\u72b6\u6001"),
+      shiny::tableOutput("installation_table"),
+      shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS \u5b89\u88c5\u8ba1\u5212"),
+      shiny::tableOutput("biogeobears_install_plan_table"),
+      open = TRUE
+    ),
+    shiny_collapsible_section(
+      "\u6392\u9519",
+      shiny::tags$div(class = "ibgb-key-files-title", "\u8b66\u544a\u6458\u8981"),
+      shiny::tableOutput("warning_summary_table"),
+      shiny::tags$div(class = "ibgb-key-files-title", "\u8b66\u544a\u8be6\u60c5"),
+      shiny::tableOutput("warnings_table"),
+      shiny::tags$div(class = "ibgb-key-files-title", "\u5931\u8d25\u6a21\u578b\u8bca\u65ad"),
+      shiny::tableOutput("failed_models_table"),
+      shiny::tags$div(class = "ibgb-key-files-title", "\u6a21\u578b\u72b6\u6001\u8be6\u60c5"),
+      shiny::tableOutput("model_table"),
+      shiny::tags$div(class = "ibgb-key-files-title", "\u62a5\u544a"),
+      shiny::verbatimTextOutput("report_path_text"),
+      shiny::tags$div(class = "ibgb-key-files-title", "\u8def\u5f84"),
+      shiny::verbatimTextOutput("paths_text"),
+      shiny::tags$div(class = "ibgb-key-files-title", "\u6d88\u606f"),
+      shiny::verbatimTextOutput("messages_text")
+    ),
+    shiny_collapsible_section(
+      "\u5173\u4e8e\u548c\u5f15\u7528",
+      shiny::tags$div(class = "ibgb-key-files-title", "\u8f6f\u4ef6\u72b6\u6001"),
+      shiny::tableOutput("about_table"),
+      shiny::tags$div(class = "ibgb-key-files-title", "\u62a5\u544a\u73af\u5883"),
+      shiny::tableOutput("report_environment_table"),
+      shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS \u5f15\u7528"),
+      shiny::verbatimTextOutput("citation_text")
+    )
+  )
 }

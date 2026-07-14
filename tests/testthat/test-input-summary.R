@@ -113,3 +113,27 @@ test_that("print.iBGB_input_summary shows the overview and region table", {
   expect_true(any(grepl("Tree tips", out)))
   expect_true(any(grepl("Species per region", out)))
 })
+
+test_that("shiny overview display helpers turn a summary into 2-column tables", {
+  dir <- tempfile("ibgb-input-")
+  config <- make_input_summary_fixture(dir)
+  summary <- summarize_input_data(config, base_dir = dir)
+
+  overview <- shiny_data_overview_table(summary)
+  expect_equal(ncol(overview), 2L)
+  expect_true(nrow(overview) >= 5L)
+
+  occ <- shiny_region_occupancy_table(summary)
+  expect_equal(nrow(occ), 3L)
+  expect_equal(ncol(occ), 5L)
+
+  rng <- shiny_range_size_table(summary)
+  expect_equal(nrow(rng), 2L)
+  expect_equal(ncol(rng), 3L)
+})
+
+test_that("shiny overview display helpers return empty frames for NULL summaries", {
+  expect_equal(nrow(shiny_data_overview_table(NULL)), 0L)
+  expect_equal(nrow(shiny_region_occupancy_table(NULL)), 0L)
+  expect_equal(nrow(shiny_range_size_table(NULL)), 0L)
+})
