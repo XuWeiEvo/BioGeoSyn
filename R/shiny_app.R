@@ -3719,10 +3719,10 @@ wizard_step_results <- function() {
     shiny_primary_results_body(),
     shiny_control_section(
       "\u5bfc\u51fa",
-      shiny_action_grid(shiny::actionButton("render_report", "\u751f\u6210\u62a5\u544a")),
       shiny::tags$div(
         class = "ibgb-downloads",
         shiny::downloadButton("download_bundle", "\u4e0b\u8f7d\u7ed3\u679c\u538b\u7f29\u5305\uff08\u5168\u90e8\u7ed3\u679c\u6587\u4ef6\uff09"),
+        shiny::actionButton("render_report", "\u751f\u6210\u62a5\u544a"),
         shiny::downloadButton("download_report", "\u4e0b\u8f7d\u62a5\u544a")
       ),
       shiny::tags$div(
