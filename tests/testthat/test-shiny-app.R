@@ -348,6 +348,9 @@ test_that("Analysis step is the run action, a bare dry-run toggle, and the BSM f
   expect_match(analysis_html, "BSM 随机映射", fixed = TRUE)
   expect_match(analysis_html, "run_stochastic_mapping", fixed = TRUE)
   expect_match(analysis_html, "stochastic_mapping_replicates", fixed = TRUE)
+  # BSM model selector offers a "DEC only" option for large datasets.
+  expect_match(analysis_html, "stochastic_mapping_model", fixed = TRUE)
+  expect_match(analysis_html, "value=\"DEC\"", fixed = TRUE)
   # The run-options fold and its extra toggles, plus the report button, config
   # editor, env-install fold, and constraint inputs, were removed from this step.
   expect_false(grepl("运行选项", analysis_html, fixed = TRUE))
@@ -357,6 +360,19 @@ test_that("Analysis step is the run action, a bare dry-run toggle, and the BSM f
   expect_false(grepl("use_config_editor", analysis_html, fixed = TRUE))
   expect_false(grepl("constraint_times_file", analysis_html, fixed = TRUE))
   expect_false(grepl("install_biogeobears", analysis_html, fixed = TRUE))
+})
+
+test_that("BSM can be pinned to the DEC model regardless of the best model", {
+  comparison <- data.frame(model = c("DEC", "DEC+J"), AICc = c(12, 10), stringsAsFactors = FALSE)
+  model_results <- list(
+    DEC = list(status = "completed", result = list(ok = TRUE)),
+    `DEC+J` = list(status = "completed", result = list(ok = TRUE))
+  )
+  cfg_dec <- list(analysis = list(stochastic_mapping_model = "DEC"))
+  expect_equal(select_bsm_models(cfg_dec, comparison, model_results), "DEC")
+  # "best" still tracks the lowest-AICc model (DEC+J here), not DEC.
+  cfg_best <- list(analysis = list(stochastic_mapping_model = "best"))
+  expect_equal(select_bsm_models(cfg_best, comparison, model_results), "DEC+J")
 })
 
 test_that("Environment check lives in a top-level section, not the help step", {

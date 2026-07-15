@@ -3721,6 +3721,7 @@ wizard_step_analysis <- function() {
           "\u6700\u4f18\u7edf\u8ba1\u6a21\u578b" = "best",
           "\u6700\u4f18\u975e +J \u6a21\u578b" = "best_non_j",
           "\u6700\u4f18 +J \u6a21\u578b" = "best_plus_j",
+          "\u4ec5 DEC \u6a21\u578b\uff08\u6570\u636e\u91cf\u5927\u65f6\u7edf\u4e00\u7528\u6700\u57fa\u7840\u6a21\u578b\uff09" = "DEC",
           "\u6240\u6709\u5df2\u5b8c\u6210\u6a21\u578b" = "all"
         ),
         selected = "best"
