@@ -534,8 +534,12 @@ test_that("Preview image containers size to their content, not a fixed height", 
   expect_match(styles, "height:auto !important", fixed = TRUE)
   # Buttons are highlighted with a filled accent so they read as clickable,
   # and upload rows lay the template download beside the file input.
-  expect_match(styles, "background-color:#1868b8", fixed = TRUE)
+  expect_match(styles, "background:var(--ibgb-accent)", fixed = TRUE)
   expect_match(styles, ".ibgb-upload-row{display:flex", fixed = TRUE)
+  # The interface accent is the package's Okabe-Ito figure blue, so the app and
+  # the figures it produces share one palette.
+  expect_match(styles, "--ibgb-accent:#0072b2", fixed = TRUE)
+  expect_match(styles, "--ibgb-ink:#1f2937", fixed = TRUE)
   # Collapsible/dropdown summaries get a highlighted arrow marker that rotates.
   expect_match(styles, ".ibgb-collapsible>summary::before", fixed = TRUE)
   expect_match(styles, ".ibgb-collapsible[open]>summary::before{transform:rotate(90deg)}", fixed = TRUE)
