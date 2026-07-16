@@ -2,7 +2,7 @@ test_that("quick acceptance check covers the installed user workflow", {
   # The dedicated CI acceptance step runs this installed-package workflow.
   skip_on_ci()
 
-  out <- tempfile("ibgb-acceptance-")
+  out <- tempfile("bgs-acceptance-")
   result <- run_acceptance_check(out, mode = "quick")
   failed <- result$checks[result$checks$status == "Failed", , drop = FALSE]
   failure_info <- if (nrow(failed) == 0L) {
@@ -20,7 +20,7 @@ test_that("quick acceptance check covers the installed user workflow", {
     )
   }
 
-  expect_s3_class(result, "iBGB_acceptance_result")
+  expect_s3_class(result, "bgs_acceptance_result")
   expect_true(result$passed, info = failure_info)
   expect_true(file.exists(result$results_file))
   expect_true(file.exists(result$session_file))
@@ -48,7 +48,7 @@ test_that("quick acceptance check covers the installed user workflow", {
 })
 
 test_that("acceptance check protects existing directories", {
-  out <- tempfile("ibgb-acceptance-existing-")
+  out <- tempfile("bgs-acceptance-existing-")
   dir.create(out)
   writeLines("keep", file.path(out, "existing.txt"))
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/shiny_app.R
 \name{launch_app}
 \alias{launch_app}
-\title{Launch the iBiogeobears Shiny application}
+\title{Launch the BioGeoSyn Shiny application}
 \usage{
 launch_app(config = NULL, output_dir = NULL, launch.browser = TRUE, ...)
 }
@@ -20,5 +20,5 @@ complete temporary example project is prepared and loaded automatically.}
 The value returned by \code{\link[shiny:runApp]{shiny::runApp()}}.
 }
 \description{
-Launch the iBiogeobears Shiny application
+Launch the BioGeoSyn Shiny application
 }

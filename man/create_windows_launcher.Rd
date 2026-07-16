@@ -19,6 +19,6 @@ The normalized path to the launcher file.
 \description{
 Writes a small \code{.bat} file that starts the installed Shiny interface without
 requiring the user to open RStudio or type \code{launch_app()}. The launcher still
-requires R, \code{iBiogeobears}, Shiny, and BioGeoBEARS to be installed on the
+requires R, \code{BioGeoSyn}, Shiny, and BioGeoBEARS to be installed on the
 user's machine for real analyses.
 }

@@ -37,7 +37,7 @@ test_that("core package guidance distinguishes missing and unloadable packages",
     stringsAsFactors = FALSE
   )
 
-  guidance <- iBiogeobears:::core_package_next_step(status)
+  guidance <- BioGeoSyn:::core_package_next_step(status)
 
   expect_match(guidance, "install.packages\\(c\\('missingPkg'\\)\\)")
   expect_match(guidance, "Installed package\\(s\\) could not be loaded: igraph")

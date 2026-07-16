@@ -22,7 +22,7 @@ runs also write raw \code{.rds} outputs, logs, \code{model_fit_raw.csv},
 summaries in \code{model_run_status.csv}.
 }
 \description{
-Builds BioGeoBEARS run objects from an iBiogeobears configuration and,
+Builds BioGeoBEARS run objects from a BioGeoSyn configuration and,
 when requested, executes the selected models. BioGeoBEARS is not bundled
 with this package and is checked only at runtime.
 }

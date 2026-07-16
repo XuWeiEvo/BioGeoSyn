@@ -1,26 +1,26 @@
-# iBiogeobears Ordinary-User Quick Start
+# BioGeoSyn Ordinary-User Quick Start
 
 This guide is for first-time users who want to run a BioGeoBEARS analysis
-through `iBiogeobears` — one clade, and then several clades integrated
+through `BioGeoSyn` — one clade, and then several clades integrated
 together.
 
-`iBiogeobears` does not bundle BioGeoBEARS. BioGeoBEARS must be installed
+`BioGeoSyn` does not bundle BioGeoBEARS. BioGeoBEARS must be installed
 separately before real model execution. You can still run dry-run checks and
 prepare projects before BioGeoBEARS is available.
 
-## 1. Install iBiogeobears
+## 1. Install BioGeoSyn
 
 Run this in R:
 
 ```r
 install.packages("remotes")
-remotes::install_github("XuWeiEvo/iBioGeoBEARS")
+remotes::install_github("XuWeiEvo/BioGeoSyn")
 ```
 
 Load the package and check the local setup:
 
 ```r
-library(iBiogeobears)
+library(BioGeoSyn)
 check_installation()
 ```
 
@@ -53,7 +53,7 @@ check_biogeobears(required = FALSE)
 Create a self-contained example project:
 
 ```r
-project <- create_example_project("ibgb_example")
+project <- create_example_project("bgs_example")
 ```
 
 Run a dry check first. This does not require BioGeoBEARS:
@@ -110,7 +110,7 @@ On Windows, you can create a double-click launcher:
 create_windows_launcher()
 ```
 
-After that, double-click `start-iBiogeobears.bat` on the Desktop instead of
+After that, double-click `start-BioGeoSyn.bat` on the Desktop instead of
 opening RStudio and typing `launch_app()`.
 
 The app is a five-step wizard. The interface is English; so is everything the
@@ -175,7 +175,7 @@ From the console:
 
 ```r
 project <- create_analysis_project(
-  path = "my_ibgb_project",
+  path = "my_bgs_project",
   project_name = "my_clade",
   tree_file = "my_tree.nwk",
   geography_file = "my_geography.csv",
@@ -191,7 +191,7 @@ dry <- run_workflow(
 
 ## 6. Integrate Several Clades
 
-This is what `iBiogeobears` adds over running BioGeoBEARS directly.
+This is what `BioGeoSyn` adds over running BioGeoBEARS directly.
 
 1. Analyse each clade separately **with BSM enabled**.
 2. Download each clade's result bundle from **3. Single clade** and rename it

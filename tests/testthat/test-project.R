@@ -1,5 +1,5 @@
 test_that("create_project creates standard directories", {
-  out <- tempfile("ibgb-project-")
+  out <- tempfile("bgs-project-")
   paths <- create_project(out)
   expect_true(dir.exists(paths$raw_biogeobears))
   expect_true(dir.exists(paths$tables))
@@ -7,7 +7,7 @@ test_that("create_project creates standard directories", {
 })
 
 test_that("create_example_project creates a runnable example", {
-  out <- tempfile("ibgb-example-project-")
+  out <- tempfile("bgs-example-project-")
   paths <- create_example_project(out)
 
   expect_true(file.exists(paths$config))
@@ -25,7 +25,7 @@ test_that("create_example_project creates a runnable example", {
 })
 
 test_that("create_example_project protects non-empty directories", {
-  out <- tempfile("ibgb-example-project-")
+  out <- tempfile("bgs-example-project-")
   dir.create(out)
   writeLines("keep", file.path(out, "existing.txt"))
 
@@ -33,8 +33,8 @@ test_that("create_example_project protects non-empty directories", {
 })
 
 test_that("create_analysis_project copies inputs and writes valid config", {
-  source <- create_example_project(tempfile("ibgb-analysis-source-"))
-  target <- tempfile("ibgb-analysis-project-")
+  source <- create_example_project(tempfile("bgs-analysis-source-"))
+  target <- tempfile("bgs-analysis-project-")
 
   project <- create_analysis_project(
     path = target,
@@ -59,11 +59,11 @@ test_that("create_analysis_project copies inputs and writes valid config", {
 })
 
 test_that("create_analysis_project rejects unsafe or incomplete requests", {
-  source <- create_example_project(tempfile("ibgb-analysis-invalid-source-"))
+  source <- create_example_project(tempfile("bgs-analysis-invalid-source-"))
 
   expect_error(
     create_analysis_project(
-      tempfile("ibgb-analysis-invalid-"),
+      tempfile("bgs-analysis-invalid-"),
       "***",
       source$tree_file,
       source$geography_file,
@@ -73,7 +73,7 @@ test_that("create_analysis_project rejects unsafe or incomplete requests", {
   )
   expect_error(
     create_analysis_project(
-      tempfile("ibgb-analysis-invalid-"),
+      tempfile("bgs-analysis-invalid-"),
       "study",
       "missing-tree.nwk",
       source$geography_file,
@@ -83,7 +83,7 @@ test_that("create_analysis_project rejects unsafe or incomplete requests", {
   )
   expect_error(
     create_analysis_project(
-      tempfile("ibgb-analysis-invalid-"),
+      tempfile("bgs-analysis-invalid-"),
       "study",
       source$tree_file,
       source$geography_file,
@@ -95,12 +95,12 @@ test_that("create_analysis_project rejects unsafe or incomplete requests", {
 })
 
 test_that("installed package exposes templates, example data, and public API", {
-  expect_true(file.exists(system.file("templates", "analysis.yml", package = "iBiogeobears")))
-  expect_true(file.exists(system.file("example_data", "tree.nwk", package = "iBiogeobears")))
-  expect_true(file.exists(system.file("example_data", "geography.csv", package = "iBiogeobears")))
-  expect_true(file.exists(system.file("example_data", "regions.csv", package = "iBiogeobears")))
+  expect_true(file.exists(system.file("templates", "analysis.yml", package = "BioGeoSyn")))
+  expect_true(file.exists(system.file("example_data", "tree.nwk", package = "BioGeoSyn")))
+  expect_true(file.exists(system.file("example_data", "geography.csv", package = "BioGeoSyn")))
+  expect_true(file.exists(system.file("example_data", "regions.csv", package = "BioGeoSyn")))
 
-  exported <- getNamespaceExports("iBiogeobears")
+  exported <- getNamespaceExports("BioGeoSyn")
   expect_true(all(c(
     "bundle_diagnostics",
     "bundle_results",
@@ -117,11 +117,11 @@ test_that("installed package exposes templates, example data, and public API", {
     "run_models"
   ) %in% exported))
 
-  out <- tempfile("ibgb-installed-assets-")
+  out <- tempfile("bgs-installed-assets-")
   project <- create_example_project(out)
   result <- run_workflow(project$config, dry_run = TRUE, require_biogeobears = FALSE)
 
-  expect_s3_class(result, "iBGB_workflow_result")
+  expect_s3_class(result, "bgs_workflow_result")
   expect_true(file.exists(file.path(result$project_paths$tables, "model_run_plan.csv")))
   expect_true(all(result$validation$ok))
 })

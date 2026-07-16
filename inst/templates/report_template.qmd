@@ -1,5 +1,5 @@
 ---
-title: "iBiogeobears Analysis Report"
+title: "BioGeoSyn Analysis Report"
 format:
   html:
     toc: true
@@ -129,7 +129,7 @@ j_caution_label <- function() {
 ## Analysis Summary
 
 This report summarizes a single-clade BioGeoBEARS workflow managed by
-`iBiogeobears`. Raw BioGeoBEARS outputs are stored separately from derived
+`BioGeoSyn`. Raw BioGeoBEARS outputs are stored separately from derived
 tables, figures, and reports.
 
 ```{r}
@@ -652,7 +652,7 @@ if (!is.null(node_state_sensitivity) && nrow(node_state_sensitivity) > 0L) {
 
 ## Methodological Cautions
 
-`iBiogeobears` keeps the following cautions visible by default:
+`BioGeoSyn` keeps the following cautions visible by default:
 
 - report all fitted models, not only the minimum-AIC model;
 - compare `+J` and non-`+J` model families explicitly;
@@ -682,7 +682,7 @@ In R, run:
 citation("BioGeoBEARS")
 ```
 
-`iBiogeobears` does not bundle BioGeoBEARS. It checks for an external
+`BioGeoSyn` does not bundle BioGeoBEARS. It checks for an external
 BioGeoBEARS installation and records package versions and session information in
 the workflow output directory.
 

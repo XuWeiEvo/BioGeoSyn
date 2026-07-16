@@ -1,4 +1,4 @@
-#' Run an iBiogeobears workflow
+#' Run a BioGeoSyn workflow
 #'
 #' @param config Path to YAML configuration file.
 #' @param output_dir Optional output directory overriding the config.
@@ -14,7 +14,7 @@
 #' @param retry_failed_only Optional logical override. Execute only models
 #'   marked failed in the previous model status table while reusing valid
 #'   completed results.
-#' @return An object of class `iBGB_workflow_result`.
+#' @return An object of class `bgs_workflow_result`.
 #' @export
 run_workflow <- function(
     config,
@@ -95,7 +95,7 @@ run_workflow <- function(
     retry_failed_only = isTRUE(cfg$analysis$retry_failed_only),
     validation_failed = any(!validation$ok)
   )
-  class(result) <- c("iBGB_workflow_result", "list")
+  class(result) <- c("bgs_workflow_result", "list")
   result
 }
 

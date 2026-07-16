@@ -13,7 +13,7 @@ body <- commonmark::markdown_html(markdown)
 title <- if (length(lines) > 0L) {
   sub("^#\\s*", "", lines[[1L]])
 } else {
-  "iBiogeobears user tutorial"
+  "BioGeoSyn user tutorial"
 }
 
 html_escape <- function(x) {

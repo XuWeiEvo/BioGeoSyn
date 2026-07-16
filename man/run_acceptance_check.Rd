@@ -2,10 +2,10 @@
 % Please edit documentation in R/acceptance.R
 \name{run_acceptance_check}
 \alias{run_acceptance_check}
-\title{Run an end-to-end iBiogeobears acceptance check}
+\title{Run an end-to-end BioGeoSyn acceptance check}
 \usage{
 run_acceptance_check(
-  path = tempfile("iBiogeobears-acceptance-"),
+  path = tempfile("BioGeoSyn-acceptance-"),
   mode = c("quick", "full"),
   render_html = identical(match.arg(mode), "full")
 )
@@ -20,7 +20,7 @@ real six-model execution.}
 \code{TRUE} in full mode and \code{FALSE} in quick mode.}
 }
 \value{
-An object of class \code{iBGB_acceptance_result} containing the check
+An object of class \code{bgs_acceptance_result} containing the check
 table, artifact paths, workflow result, and overall pass status.
 }
 \description{

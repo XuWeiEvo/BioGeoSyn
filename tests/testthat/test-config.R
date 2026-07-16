@@ -1,5 +1,5 @@
 test_that("read_config fills defaults", {
-  config <- system.file("templates", "analysis.yml", package = "iBiogeobears")
+  config <- system.file("templates", "analysis.yml", package = "BioGeoSyn")
   cfg <- read_config(config)
   expect_equal(cfg$project$name, "example_clade")
   expect_true("DEC+J" %in% cfg$models$run)
@@ -18,7 +18,7 @@ test_that("read_config fills defaults", {
 })
 
 test_that("validate_inputs returns checks", {
-  config <- system.file("templates", "analysis.yml", package = "iBiogeobears")
+  config <- system.file("templates", "analysis.yml", package = "BioGeoSyn")
   cfg <- read_config(config)
   checks <- validate_inputs(cfg)
   expect_true(all(c("check", "ok", "detail") %in% names(checks)))
@@ -62,9 +62,9 @@ test_that("format_validation_results explains how to repair failures", {
 })
 
 test_that("validate_inputs catches common configuration errors", {
-  config <- system.file("templates", "analysis.yml", package = "iBiogeobears")
+  config <- system.file("templates", "analysis.yml", package = "BioGeoSyn")
   cfg <- read_config(config)
-  temp_dir <- tempfile("ibgb-validation-")
+  temp_dir <- tempfile("bgs-validation-")
   dir.create(temp_dir)
 
   bad_geography <- file.path(temp_dir, "bad_geography.csv")
@@ -77,9 +77,9 @@ test_that("validate_inputs catches common configuration errors", {
     "sp5,0,0,1"
   ), bad_geography)
 
-  cfg$inputs$tree_file <- system.file("example_data", "tree.nwk", package = "iBiogeobears")
+  cfg$inputs$tree_file <- system.file("example_data", "tree.nwk", package = "BioGeoSyn")
   cfg$inputs$geography_file <- bad_geography
-  cfg$inputs$regions_file <- system.file("example_data", "regions.csv", package = "iBiogeobears")
+  cfg$inputs$regions_file <- system.file("example_data", "regions.csv", package = "BioGeoSyn")
   cfg$models$run <- c("DEC", "DEC")
   cfg$advanced$constraints <- list(dists_file = file.path(temp_dir, "missing_distances.txt"))
 

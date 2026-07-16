@@ -2,7 +2,7 @@
 #'
 #' Writes a small `.bat` file that starts the installed Shiny interface without
 #' requiring the user to open RStudio or type `launch_app()`. The launcher still
-#' requires R, `iBiogeobears`, Shiny, and BioGeoBEARS to be installed on the
+#' requires R, `BioGeoSyn`, Shiny, and BioGeoBEARS to be installed on the
 #' user's machine for real analyses.
 #'
 #' @param path Output path for the launcher. When `NULL`, the launcher is
@@ -17,7 +17,7 @@ create_windows_launcher <- function(path = NULL, overwrite = FALSE) {
   }
   path <- path.expand(path)
   if (dir.exists(path)) {
-    path <- file.path(path, "start-iBiogeobears.bat")
+    path <- file.path(path, "start-BioGeoSyn.bat")
   }
   if (!grepl("\\.(bat|cmd)$", path, ignore.case = TRUE)) {
     stop("Launcher path must end in .bat or .cmd.", call. = FALSE)
@@ -39,20 +39,20 @@ default_windows_launcher_path <- function() {
   user_profile <- Sys.getenv("USERPROFILE", unset = "")
   desktop <- if (nzchar(user_profile)) file.path(user_profile, "Desktop") else ""
   if (.Platform$OS.type == "windows" && nzchar(desktop) && dir.exists(desktop)) {
-    return(file.path(desktop, "start-iBiogeobears.bat"))
+    return(file.path(desktop, "start-BioGeoSyn.bat"))
   }
-  file.path(getwd(), "start-iBiogeobears.bat")
+  file.path(getwd(), "start-BioGeoSyn.bat")
 }
 
 windows_launcher_template_path <- function() {
   template <- system.file(
     "launcher",
-    "start-iBiogeobears.bat",
-    package = "iBiogeobears",
+    "start-BioGeoSyn.bat",
+    package = "BioGeoSyn",
     mustWork = FALSE
   )
   if (!nzchar(template) || !file.exists(template)) {
-    template <- file.path("inst", "launcher", "start-iBiogeobears.bat")
+    template <- file.path("inst", "launcher", "start-BioGeoSyn.bat")
   }
   if (!file.exists(template)) {
     stop("Windows launcher template was not found.", call. = FALSE)

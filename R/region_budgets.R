@@ -147,12 +147,12 @@ plot_region_process_budget <- function(region_budgets) {
   )
 
   ggplot2::ggplot(long, ggplot2::aes(x = region, y = count, fill = direction)) +
-    ggplot2::geom_col(width = 0.7, colour = ibgb_palette()$outline, linewidth = 0.25) +
-    ggplot2::geom_hline(yintercept = 0, colour = ibgb_palette()$muted, linewidth = 0.4) +
+    ggplot2::geom_col(width = 0.7, colour = bgs_palette()$outline, linewidth = 0.25) +
+    ggplot2::geom_hline(yintercept = 0, colour = bgs_palette()$muted, linewidth = 0.4) +
     ggplot2::geom_point(
       data = region_budgets,
       ggplot2::aes(x = region, y = net_dispersal_flux),
-      inherit.aes = FALSE, size = 2, colour = ibgb_palette()$ink
+      inherit.aes = FALSE, size = 2, colour = bgs_palette()$ink
     ) +
     ggplot2::coord_flip() +
     ggplot2::facet_wrap(stats::as.formula("~ model")) +
@@ -167,7 +167,7 @@ plot_region_process_budget <- function(region_budgets) {
       title = "Regional dispersal budget",
       subtitle = "Net dispersal flux (point) marks net sources (< 0) and net sinks (> 0)"
     ) +
-    theme_ibgb() +
+    theme_bgs() +
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
 }
 

@@ -1,6 +1,6 @@
 #' Summarize input data for the analysis overview
 #'
-#' Produce a compact, RASP-style overview of an iBiogeobears input dataset: how
+#' Produce a compact, RASP-style overview of a BioGeoSyn input dataset: how
 #' many tips the tree has, how many areas and species the geography defines, how
 #' many species occupy each region, and how species range sizes are distributed.
 #' This backs the data-overview step of the Shiny wizard, but it is usable on its
@@ -8,7 +8,7 @@
 #'
 #' @param config A configuration list from [read_config()].
 #' @param base_dir Directory used to resolve relative input paths.
-#' @return A list of class `iBGB_input_summary` with elements `tree`,
+#' @return A list of class `bgs_input_summary` with elements `tree`,
 #'   `geography`, `region_occupancy`, `range_size_distribution`, `taxon_match`,
 #'   and `overview` (a tidy item/value table for display). An element is `NULL`
 #'   when the input file it needs is missing or unreadable.
@@ -50,7 +50,7 @@ summarize_input_data <- function(config, base_dir = dirname(config$.config_file 
       taxon_match = taxon_match,
       overview = overview
     ),
-    class = "iBGB_input_summary"
+    class = "bgs_input_summary"
   )
 }
 
@@ -235,8 +235,8 @@ format_overview_number <- function(x) {
 }
 
 #' @export
-print.iBGB_input_summary <- function(x, ...) {
-  cat("iBiogeobears input data overview\n")
+print.bgs_input_summary <- function(x, ...) {
+  cat("BioGeoSyn input data overview\n")
   if (!is.null(x$overview) && nrow(x$overview) > 0L) {
     for (i in seq_len(nrow(x$overview))) {
       cat(sprintf("  %-30s %s\n", x$overview$item[i], x$overview$value[i]))

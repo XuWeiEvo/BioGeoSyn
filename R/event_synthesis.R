@@ -1,7 +1,7 @@
 #' Biogeographic process taxonomy
 #'
 #' Canonical mapping from BioGeoBEARS event codes to interpretable
-#' biogeographic process categories used throughout the iBiogeobears event
+#' biogeographic process categories used throughout the BioGeoSyn event
 #' statistics, synthesis tables, and figures. Cladogenetic processes are
 #' speciation modes realized at nodes; anagenetic processes are range changes
 #' realized along branches. This mapping is the reference used to translate raw
@@ -188,7 +188,7 @@ plot_biogeographic_process_synthesis <- function(process_summary) {
     ) +
     ggplot2::coord_flip() +
     ggplot2::facet_wrap(stats::as.formula("~ model")) +
-    ggplot2::scale_fill_manual(values = ibgb_palette()$process) +
+    ggplot2::scale_fill_manual(values = bgs_palette()$process) +
     ggplot2::labs(
       x = NULL,
       y = "Mean count per stochastic map",
@@ -196,7 +196,7 @@ plot_biogeographic_process_synthesis <- function(process_summary) {
       title = "Biogeographic process synthesis",
       subtitle = "Formal BioGeoBEARS stochastic mapping, grouped by process type"
     ) +
-    theme_ibgb() +
+    theme_bgs() +
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
 }
 

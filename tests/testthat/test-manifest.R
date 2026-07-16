@@ -1,5 +1,5 @@
 test_that("create_workflow_manifest lists workflow output files", {
-  out <- tempfile("ibgb-manifest-")
+  out <- tempfile("bgs-manifest-")
   paths <- create_project(out)
   writeLines("a,b\n1,2", file.path(paths$tables, "example.csv"))
   writeLines("log", file.path(paths$logs, "example.log"))
@@ -17,7 +17,7 @@ test_that("create_workflow_manifest lists workflow output files", {
 })
 
 test_that("bundle_results creates a zip archive", {
-  out <- tempfile("ibgb-bundle-")
+  out <- tempfile("bgs-bundle-")
   paths <- create_project(out)
   writeLines("a,b\n1,2", file.path(paths$tables, "example.csv"))
   writeLines("raw", file.path(paths$raw_biogeobears, "raw.txt"))
@@ -32,7 +32,7 @@ test_that("bundle_results creates a zip archive", {
 })
 
 test_that("bundle_results can omit raw BioGeoBEARS files", {
-  out <- tempfile("ibgb-bundle-no-raw-")
+  out <- tempfile("bgs-bundle-no-raw-")
   paths <- create_project(out)
   writeLines("a,b\n1,2", file.path(paths$tables, "example.csv"))
   writeLines("raw", file.path(paths$raw_biogeobears, "raw.txt"))
@@ -46,7 +46,7 @@ test_that("bundle_results can omit raw BioGeoBEARS files", {
 })
 
 test_that("bundle_diagnostics creates a lightweight diagnostic archive", {
-  out <- tempfile("ibgb-diagnostics-")
+  out <- tempfile("bgs-diagnostics-")
   paths <- create_project(out)
   model_log <- file.path(paths$raw_biogeobears, "DEC", "DEC.log")
   dir.create(dirname(model_log), recursive = TRUE, showWarnings = FALSE)

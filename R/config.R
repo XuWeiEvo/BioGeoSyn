@@ -1,11 +1,11 @@
-#' Read an iBiogeobears YAML configuration file
+#' Read a BioGeoSyn YAML configuration file
 #'
 #' @param config Path to a YAML configuration file.
 #' @return A normalized configuration list with defaults filled in.
 #' @export
 read_config <- function(config) {
   if (!requireNamespace("yaml", quietly = TRUE)) {
-    stop("The yaml package is required to read iBiogeobears config files.", call. = FALSE)
+    stop("The yaml package is required to read BioGeoSyn config files.", call. = FALSE)
   }
   if (!file.exists(config)) {
     stop("Config file does not exist: ", config, call. = FALSE)
@@ -27,7 +27,7 @@ fill_config_defaults <- function(cfg) {
   cfg$methodology <- cfg$methodology %||% list()
   cfg$advanced <- cfg$advanced %||% list()
 
-  cfg$project$name <- cfg$project$name %||% "iBiogeobears_project"
+  cfg$project$name <- cfg$project$name %||% "BioGeoSyn_project"
   cfg$project$output_dir <- cfg$project$output_dir %||% file.path("results", cfg$project$name)
   cfg$inputs$max_range_size <- cfg$inputs$max_range_size %||% 3L
   cfg$models$run <- cfg$models$run %||% valid_models()

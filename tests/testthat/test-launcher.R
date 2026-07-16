@@ -4,14 +4,14 @@ test_that("Windows launcher template is packaged and self-contained", {
   expect_true(file.exists(template))
   contents <- readLines(template, warn = FALSE)
   expect_true(any(grepl("Rscript.exe", contents, fixed = TRUE)))
-  expect_true(any(grepl("iBiogeobears::launch_app", contents, fixed = TRUE)))
+  expect_true(any(grepl("BioGeoSyn::launch_app", contents, fixed = TRUE)))
   expect_true(any(grepl("requireNamespace('shiny'", contents, fixed = TRUE)))
 })
 
 test_that("create_windows_launcher writes a double-click launcher", {
-  out <- tempfile("ibgb-launcher-")
+  out <- tempfile("bgs-launcher-")
   dir.create(out)
-  path <- file.path(out, "start-iBiogeobears.bat")
+  path <- file.path(out, "start-BioGeoSyn.bat")
 
   launcher <- create_windows_launcher(path)
 
@@ -24,11 +24,11 @@ test_that("create_windows_launcher writes a double-click launcher", {
 })
 
 test_that("create_windows_launcher accepts a target directory", {
-  out <- tempfile("ibgb-launcher-dir-")
+  out <- tempfile("bgs-launcher-dir-")
   dir.create(out)
 
   launcher <- create_windows_launcher(out)
 
-  expect_equal(basename(launcher), "start-iBiogeobears.bat")
+  expect_equal(basename(launcher), "start-BioGeoSyn.bat")
   expect_true(file.exists(launcher))
 })

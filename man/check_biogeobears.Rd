@@ -14,7 +14,7 @@ A list with availability, version, package path, citation, and helper
 text.
 }
 \description{
-BioGeoBEARS is intentionally not bundled with iBiogeobears. This function
+BioGeoBEARS is intentionally not bundled with BioGeoSyn. This function
 checks whether it is available and provides installation and citation helper
 messages.
 }

@@ -1,10 +1,10 @@
 test_that("run_workflow returns structured dry-run outputs", {
-  config <- system.file("templates", "analysis.yml", package = "iBiogeobears")
-  out <- tempfile("ibgb-workflow-dry-")
+  config <- system.file("templates", "analysis.yml", package = "BioGeoSyn")
+  out <- tempfile("bgs-workflow-dry-")
 
   result <- run_workflow(config, output_dir = out, dry_run = TRUE, require_biogeobears = FALSE)
 
-  expect_s3_class(result, "iBGB_workflow_result")
+  expect_s3_class(result, "bgs_workflow_result")
   expect_true(all(c("model_plan", "model_run_status") %in% names(result)))
   expect_true(is.null(result$model_comparison))
   expect_false(is.null(result$workflow_manifest))
@@ -16,8 +16,8 @@ test_that("run_workflow returns structured dry-run outputs", {
 })
 
 test_that("run_workflow accepts resume and retry overrides in dry runs", {
-  config <- system.file("templates", "analysis.yml", package = "iBiogeobears")
-  out <- tempfile("ibgb-workflow-resume-options-")
+  config <- system.file("templates", "analysis.yml", package = "BioGeoSyn")
+  out <- tempfile("bgs-workflow-resume-options-")
 
   result <- run_workflow(
     config,
@@ -34,9 +34,9 @@ test_that("run_workflow accepts resume and retry overrides in dry runs", {
 })
 
 test_that("run_workflow blocks execution when validation fails", {
-  config <- system.file("templates", "analysis.yml", package = "iBiogeobears")
+  config <- system.file("templates", "analysis.yml", package = "BioGeoSyn")
   cfg <- read_config(config)
-  temp_dir <- tempfile("ibgb-workflow-invalid-")
+  temp_dir <- tempfile("bgs-workflow-invalid-")
   dir.create(temp_dir)
   out <- file.path(temp_dir, "results")
 
@@ -51,9 +51,9 @@ test_that("run_workflow blocks execution when validation fails", {
   ), bad_geography)
 
   cfg$project$output_dir <- out
-  cfg$inputs$tree_file <- system.file("example_data", "tree.nwk", package = "iBiogeobears")
+  cfg$inputs$tree_file <- system.file("example_data", "tree.nwk", package = "BioGeoSyn")
   cfg$inputs$geography_file <- bad_geography
-  cfg$inputs$regions_file <- system.file("example_data", "regions.csv", package = "iBiogeobears")
+  cfg$inputs$regions_file <- system.file("example_data", "regions.csv", package = "BioGeoSyn")
   cfg$.config_file <- NULL
 
   invalid_config <- file.path(temp_dir, "analysis.yml")
@@ -77,14 +77,14 @@ test_that("run_workflow exposes model comparison when BioGeoBEARS is available",
   testthat::skip_if_not_installed("BioGeoBEARS")
   testthat::skip_if_not_installed("ape")
 
-  config <- system.file("templates", "analysis.yml", package = "iBiogeobears")
-  out <- tempfile("ibgb-workflow-dec-")
+  config <- system.file("templates", "analysis.yml", package = "BioGeoSyn")
+  out <- tempfile("bgs-workflow-dec-")
   cfg <- read_config(config)
   cfg$models$run <- "DEC"
   cfg$project$output_dir <- out
-  cfg$inputs$tree_file <- system.file("example_data", "tree.nwk", package = "iBiogeobears")
-  cfg$inputs$geography_file <- system.file("example_data", "geography.csv", package = "iBiogeobears")
-  cfg$inputs$regions_file <- system.file("example_data", "regions.csv", package = "iBiogeobears")
+  cfg$inputs$tree_file <- system.file("example_data", "tree.nwk", package = "BioGeoSyn")
+  cfg$inputs$geography_file <- system.file("example_data", "geography.csv", package = "BioGeoSyn")
+  cfg$inputs$regions_file <- system.file("example_data", "regions.csv", package = "BioGeoSyn")
   cfg$.config_file <- NULL
   dec_config <- tempfile(fileext = ".yml")
   yaml::write_yaml(cfg, dec_config)

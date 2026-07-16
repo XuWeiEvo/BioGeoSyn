@@ -2,7 +2,7 @@
 % Please edit documentation in R/project.R
 \name{create_example_project}
 \alias{create_example_project}
-\title{Create a runnable example iBiogeobears project}
+\title{Create a runnable example BioGeoSyn project}
 \usage{
 create_example_project(path, overwrite = FALSE)
 }
@@ -16,5 +16,5 @@ files.}
 A list with paths to the example project files.
 }
 \description{
-Create a runnable example iBiogeobears project
+Create a runnable example BioGeoSyn project
 }

@@ -1,4 +1,4 @@
 library(testthat)
-library(iBiogeobears)
+library(BioGeoSyn)
 
-test_check("iBiogeobears")
+test_check("BioGeoSyn")

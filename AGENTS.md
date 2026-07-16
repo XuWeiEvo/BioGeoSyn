@@ -1,11 +1,11 @@
-# iBioGeoBEARS Development Context
+# BioGeoSyn Development Context
 
-This project is the beginning of `iBiogeobears`, a reproducible R workflow,
+This project is the beginning of `BioGeoSyn`, a reproducible R workflow,
 synthesis, visualization, and reporting package for BioGeoBEARS.
 
 ## Product Direction
 
-`iBiogeobears` is not only a plotting package. It should become a higher-level
+`BioGeoSyn` is not only a plotting package. It should become a higher-level
 workflow layer that can:
 
 - accept a user tree, geographic range matrix, region definitions, and YAML
@@ -28,9 +28,9 @@ backend, not inside Shiny server code.
 
 ## Package Name
 
-Package name: `iBiogeobears`
+Package name: `BioGeoSyn`
 
-Desktop project folder requested by the user: `iBioGeoBEARS`
+Desktop project folder requested by the user: `BioGeoSyn`
 
 ## Core MVP Scope
 
@@ -85,7 +85,7 @@ reports.
 
 ## Licensing and Citation
 
-BioGeoBEARS is GPL (>= 2), authored by Nicholas J. Matzke. `iBiogeobears`
+BioGeoBEARS is GPL (>= 2), authored by Nicholas J. Matzke. `BioGeoSyn`
 should remain GPL compatible:
 
 ```text
@@ -169,7 +169,7 @@ The current scaffold includes:
 - `R/report.R`
 - `R/shiny_app.R`
 - `tests/testthat/`
-- `man/iBiogeobears-api.Rd`
+- `man/BioGeoSyn-api.Rd`
 
 Verification already performed:
 

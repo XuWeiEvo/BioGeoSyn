@@ -1,4 +1,4 @@
-Package: iBiogeobears
+Package: BioGeoSyn
 Type: Package
 Title: Reproducible BioGeoBEARS Workflows, Synthesis, Visualization, and Reporting
 Version: 1.1.0
@@ -43,5 +43,5 @@ Enhances:
 SystemRequirements: BioGeoBEARS R package installed separately for analysis
     execution; GLPK and libxml2 system libraries for igraph on Linux.
 Config/testthat/edition: 3
-URL: https://github.com/XuWeiEvo/iBioGeoBEARS
-BugReports: https://github.com/XuWeiEvo/iBioGeoBEARS/issues
+URL: https://github.com/XuWeiEvo/BioGeoSyn
+BugReports: https://github.com/XuWeiEvo/BioGeoSyn/issues

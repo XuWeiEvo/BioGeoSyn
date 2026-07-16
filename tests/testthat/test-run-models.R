@@ -11,7 +11,7 @@ test_that("run_models returns a dry-run plan", {
 })
 
 test_that("model run signatures change when model inputs change", {
-  root <- tempfile("ibgb-signature-")
+  root <- tempfile("bgs-signature-")
   dir.create(root)
   tree <- file.path(root, "tree.nwk")
   geog <- file.path(root, "geography.data")
@@ -37,7 +37,7 @@ test_that("model run signatures change when model inputs change", {
 })
 
 test_that("completed model metadata is reused only for a matching signature", {
-  raw_dir <- tempfile("ibgb-reusable-model-")
+  raw_dir <- tempfile("bgs-reusable-model-")
   dir.create(raw_dir)
   model <- "DEC"
   signature <- "matching-signature"
@@ -129,7 +129,7 @@ test_that("state and node metadata tables have stable schemas", {
   expect_equal(states$area_count, c(0L, 1L, 1L, 2L))
   expect_true(states$is_null_range[1L])
 
-  nodes <- make_node_lookup(system.file("example_data", "tree.nwk", package = "iBiogeobears"))
+  nodes <- make_node_lookup(system.file("example_data", "tree.nwk", package = "BioGeoSyn"))
   expect_true(all(c(
     "node_index",
     "node_type",
@@ -145,20 +145,20 @@ test_that("run_models executes a DEC smoke run when BioGeoBEARS is available", {
   testthat::skip_if_not_installed("BioGeoBEARS")
   testthat::skip_if_not_installed("ape")
 
-  out <- tempfile("ibgb-dec-smoke-")
+  out <- tempfile("bgs-dec-smoke-")
   cfg <- list(
     project = list(name = "dec_smoke", output_dir = out),
     inputs = list(
-      tree_file = system.file("example_data", "tree.nwk", package = "iBiogeobears"),
-      geography_file = system.file("example_data", "geography.csv", package = "iBiogeobears"),
-      regions_file = system.file("example_data", "regions.csv", package = "iBiogeobears"),
+      tree_file = system.file("example_data", "tree.nwk", package = "BioGeoSyn"),
+      geography_file = system.file("example_data", "geography.csv", package = "BioGeoSyn"),
+      regions_file = system.file("example_data", "regions.csv", package = "BioGeoSyn"),
       max_range_size = 3L
     ),
     models = list(run = "DEC"),
     analysis = list(run_stochastic_mapping = FALSE),
     methodology = list(),
     advanced = list(),
-    .config_file = system.file("templates", "analysis.yml", package = "iBiogeobears")
+    .config_file = system.file("templates", "analysis.yml", package = "BioGeoSyn")
   )
   paths <- create_project(out)
 
@@ -193,13 +193,13 @@ test_that("run_models executes a one-map BSM smoke run when BioGeoBEARS is avail
   testthat::skip_if_not_installed("BioGeoBEARS")
   testthat::skip_if_not_installed("ape")
 
-  out <- tempfile("ibgb-bsm-smoke-")
+  out <- tempfile("bgs-bsm-smoke-")
   cfg <- list(
     project = list(name = "bsm_smoke", output_dir = out),
     inputs = list(
-      tree_file = system.file("example_data", "tree.nwk", package = "iBiogeobears"),
-      geography_file = system.file("example_data", "geography.csv", package = "iBiogeobears"),
-      regions_file = system.file("example_data", "regions.csv", package = "iBiogeobears"),
+      tree_file = system.file("example_data", "tree.nwk", package = "BioGeoSyn"),
+      geography_file = system.file("example_data", "geography.csv", package = "BioGeoSyn"),
+      regions_file = system.file("example_data", "regions.csv", package = "BioGeoSyn"),
       max_range_size = 3L
     ),
     models = list(run = "DEC"),
@@ -213,7 +213,7 @@ test_that("run_models executes a one-map BSM smoke run when BioGeoBEARS is avail
     ),
     methodology = list(),
     advanced = list(),
-    .config_file = system.file("templates", "analysis.yml", package = "iBiogeobears")
+    .config_file = system.file("templates", "analysis.yml", package = "BioGeoSyn")
   )
   paths <- create_project(out)
 

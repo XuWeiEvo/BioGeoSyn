@@ -1,6 +1,6 @@
 #' Check for an external BioGeoBEARS installation
 #'
-#' BioGeoBEARS is intentionally not bundled with iBiogeobears. This function
+#' BioGeoBEARS is intentionally not bundled with BioGeoSyn. This function
 #' checks whether it is available and provides installation and citation helper
 #' messages.
 #'
@@ -13,9 +13,9 @@ check_biogeobears <- function(required = TRUE) {
 
   install_help <- paste(
     "BioGeoBEARS is required for running analyses but is not bundled with",
-    "iBiogeobears. Inspect the installation plan with",
-    "iBiogeobears::biogeobears_install_plan(), then explicitly install with",
-    "iBiogeobears::install_biogeobears(execute = TRUE)."
+    "BioGeoSyn. Inspect the installation plan with",
+    "BioGeoSyn::biogeobears_install_plan(), then explicitly install with",
+    "BioGeoSyn::install_biogeobears(execute = TRUE)."
   )
 
   if (!available) {
@@ -45,7 +45,7 @@ check_biogeobears <- function(required = TRUE) {
   )
 }
 
-#' Check whether iBiogeobears is ready for common user workflows
+#' Check whether BioGeoSyn is ready for common user workflows
 #'
 #' Summarizes the local R, package, BioGeoBEARS, Shiny, and report-rendering
 #' environment in one user-facing table. Missing optional PDF support does not

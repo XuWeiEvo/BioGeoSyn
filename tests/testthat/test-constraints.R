@@ -1,9 +1,9 @@
 constraint_template <- function(name) {
-  system.file("example_data", "constraints", name, package = "iBiogeobears")
+  system.file("example_data", "constraints", name, package = "BioGeoSyn")
 }
 
 example_input <- function(name) {
-  system.file("example_data", name, package = "iBiogeobears")
+  system.file("example_data", name, package = "BioGeoSyn")
 }
 
 constraint_config <- function(constraints, output_dir, models = list("DEC")) {

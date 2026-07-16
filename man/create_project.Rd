@@ -2,7 +2,7 @@
 % Please edit documentation in R/project.R
 \name{create_project}
 \alias{create_project}
-\title{Create a reproducible iBiogeobears project directory}
+\title{Create a reproducible BioGeoSyn project directory}
 \usage{
 create_project(output_dir, overwrite = FALSE)
 }
@@ -16,5 +16,5 @@ overwritten.}
 A list of project paths.
 }
 \description{
-Create a reproducible iBiogeobears project directory
+Create a reproducible BioGeoSyn project directory
 }

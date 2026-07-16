@@ -120,7 +120,7 @@ test_that("BSM plot helpers return ggplots", {
 })
 
 test_that("generate_figures writes node-state sensitivity figures", {
-  out <- tempfile("ibgb-figures-")
+  out <- tempfile("bgs-figures-")
   paths <- create_project(out)
   comparison <- data.frame(
     model = c("DEC", "DEC+J"),

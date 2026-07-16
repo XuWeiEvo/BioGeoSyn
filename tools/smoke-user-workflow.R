@@ -6,12 +6,12 @@ missing <- required[!vapply(required, requireNamespace, logical(1), quietly = TR
 if (length(missing) > 0L) {
   stop("Missing required smoke-test package(s): ", paste(missing, collapse = ", "), call. = FALSE)
 }
-lib <- tempfile("ibgb-user-workflow-lib-")
+lib <- tempfile("bgs-user-workflow-lib-")
 dir.create(lib, recursive = TRUE, showWarnings = FALSE)
 install.packages(repo, lib = lib, repos = NULL, type = "source")
 .libPaths(c(lib, .libPaths()))
 
-library(iBiogeobears)
+library(BioGeoSyn)
 
 assert <- function(ok, message) {
   if (!isTRUE(ok)) {
@@ -27,12 +27,12 @@ read_csv <- function(path) {
   utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
 }
 
-apply_wizard <- getFromNamespace("apply_shiny_wizard_overrides", "iBiogeobears")
-apply_overrides <- getFromNamespace("apply_shiny_config_overrides", "iBiogeobears")
-write_gui_config <- getFromNamespace("write_shiny_workflow_config", "iBiogeobears")
-constraint_template <- getFromNamespace("constraint_template_path", "iBiogeobears")
+apply_wizard <- getFromNamespace("apply_shiny_wizard_overrides", "BioGeoSyn")
+apply_overrides <- getFromNamespace("apply_shiny_config_overrides", "BioGeoSyn")
+write_gui_config <- getFromNamespace("write_shiny_workflow_config", "BioGeoSyn")
+constraint_template <- getFromNamespace("constraint_template_path", "BioGeoSyn")
 
-root <- tempfile("ibgb-user-workflow-smoke-")
+root <- tempfile("bgs-user-workflow-smoke-")
 example <- create_example_project(root)
 
 base_cfg <- read_config(example$config)
@@ -71,7 +71,7 @@ result <- run_workflow(
   require_biogeobears = FALSE
 )
 
-assert(inherits(result, "iBGB_workflow_result"), "run_workflow() did not return an iBGB_workflow_result.")
+assert(inherits(result, "bgs_workflow_result"), "run_workflow() did not return an bgs_workflow_result.")
 assert(isTRUE(result$dry_run), "Smoke workflow should run in dry-run mode.")
 assert(all(result$validation$ok), "Input validation failed in the smoke workflow.")
 assert(identical(result$config$models$run, c("DEC", "DEC+J")), "Workflow did not use edited model selection.")

@@ -1,4 +1,4 @@
-# iBiogeobears Release Checklist
+# BioGeoSyn Release Checklist
 
 Use this checklist before publishing the next alpha release.
 
@@ -24,7 +24,7 @@ source("tools/smoke-user-workflow.R")
 ```
 
 ```r
-library(iBiogeobears)
+library(BioGeoSyn)
 open_user_guide(browse = FALSE)
 ```
 
@@ -49,13 +49,13 @@ lengths inside `.git/refs/codex/` can break `R CMD build .`:
 
 ```powershell
 $src = (Resolve-Path -LiteralPath '.').Path
-$tmp = Join-Path $env:TEMP ('ibgb-build-src-' + [guid]::NewGuid().ToString())
+$tmp = Join-Path $env:TEMP ('bgs-build-src-' + [guid]::NewGuid().ToString())
 New-Item -ItemType Directory -Path $tmp | Out-Null
 Get-ChildItem -LiteralPath $src -Force |
-  Where-Object { $_.Name -notin @('.git','iBiogeobears.Rcheck','iBiogeobears_*.tar.gz','iBioGeoBEARS-scaffold.zip') } |
+  Where-Object { $_.Name -notin @('.git','BioGeoSyn.Rcheck','BioGeoSyn_*.tar.gz','BioGeoSyn-scaffold.zip') } |
   Copy-Item -Destination $tmp -Recurse -Force
 & 'C:\Program Files\R\R-4.3.1\bin\R.exe' CMD build $tmp
-& 'C:\Program Files\R\R-4.3.1\bin\R.exe' CMD check --no-manual iBiogeobears_*.tar.gz
+& 'C:\Program Files\R\R-4.3.1\bin\R.exe' CMD check --no-manual BioGeoSyn_*.tar.gz
 ```
 
 Expected result:
@@ -79,9 +79,9 @@ The CI workflow intentionally does not install or execute BioGeoBEARS.
 On a machine with BioGeoBEARS installed, run a real bundled example:
 
 ```r
-library(iBiogeobears)
+library(BioGeoSyn)
 
-example <- create_example_project(tempfile("ibgb-release-real-"))
+example <- create_example_project(tempfile("bgs-release-real-"))
 result <- run_workflow(example$config, dry_run = FALSE)
 render_report(result, format = "source")
 bundle_results(result, overwrite = TRUE)
@@ -129,7 +129,7 @@ not intended as a stable production release.
 - Confirm the release page installation command works:
 
 ```r
-remotes::install_github("XuWeiEvo/iBioGeoBEARS@vX.Y.Z-alpha")
+remotes::install_github("XuWeiEvo/BioGeoSyn@vX.Y.Z-alpha")
 ```
 
 - Return `DESCRIPTION` to the next development version if needed.

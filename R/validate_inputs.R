@@ -1,4 +1,4 @@
-#' Validate an iBiogeobears configuration
+#' Validate a BioGeoSyn configuration
 #'
 #' @param config A configuration list returned by [read_config()].
 #' @param base_dir Directory used to resolve relative input paths.

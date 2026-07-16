@@ -2,7 +2,7 @@
 % Please edit documentation in R/workflow.R
 \name{run_workflow}
 \alias{run_workflow}
-\title{Run an iBiogeobears workflow}
+\title{Run a BioGeoSyn workflow}
 \usage{
 run_workflow(
   config,
@@ -37,8 +37,8 @@ marked failed in the previous model status table while reusing valid
 completed results.}
 }
 \value{
-An object of class \code{iBGB_workflow_result}.
+An object of class \code{bgs_workflow_result}.
 }
 \description{
-Run an iBiogeobears workflow
+Run a BioGeoSyn workflow
 }

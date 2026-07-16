@@ -1,15 +1,15 @@
-citHeader("To cite iBiogeobears, please cite both this package and BioGeoBEARS.")
+citHeader("To cite BioGeoSyn, please cite both this package and BioGeoBEARS.")
 
 bibentry(
   bibtype = "Manual",
-  title = "iBiogeobears: Reproducible BioGeoBEARS Workflows, Synthesis, Visualization, and Reporting",
+  title = "BioGeoSyn: Reproducible BioGeoBEARS Workflows, Synthesis, Visualization, and Reporting",
   author = person("Wei", "Xu"),
   year = "2026",
   note = paste("R package version", meta$Version),
-  url = "https://github.com/XuWeiEvo/iBioGeoBEARS",
+  url = "https://github.com/XuWeiEvo/BioGeoSyn",
   textVersion = paste0(
-    "Xu W. (2026). iBiogeobears: Reproducible BioGeoBEARS Workflows, ",
+    "Xu W. (2026). BioGeoSyn: Reproducible BioGeoBEARS Workflows, ",
     "Synthesis, Visualization, and Reporting. R package version ",
-    meta$Version, ". https://github.com/XuWeiEvo/iBioGeoBEARS"
+    meta$Version, ". https://github.com/XuWeiEvo/BioGeoSyn"
   )
 )

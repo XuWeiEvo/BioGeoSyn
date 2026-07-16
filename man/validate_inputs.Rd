@@ -2,7 +2,7 @@
 % Please edit documentation in R/validate_inputs.R
 \name{validate_inputs}
 \alias{validate_inputs}
-\title{Validate an iBiogeobears configuration}
+\title{Validate a BioGeoSyn configuration}
 \usage{
 validate_inputs(config, base_dir = dirname(config$.config_file \%||\% "."))
 }
@@ -15,5 +15,5 @@ validate_inputs(config, base_dir = dirname(config$.config_file \%||\% "."))
 A data frame of validation checks.
 }
 \description{
-Validate an iBiogeobears configuration
+Validate a BioGeoSyn configuration
 }

@@ -152,8 +152,8 @@ plot_process_rates_through_time <- function(process_rates) {
     ggplot2::geom_line(linewidth = 0.8) +
     ggplot2::geom_point(size = 1.4) +
     ggplot2::scale_x_reverse() +
-    scale_colour_ibgb() +
-    scale_fill_ibgb() +
+    scale_colour_bgs() +
+    scale_fill_bgs() +
     facets +
     ggplot2::labs(
       x = "Time before present",
@@ -162,7 +162,7 @@ plot_process_rates_through_time <- function(process_rates) {
       title = "Biogeographic process rates through time",
       subtitle = "Mean BSM event counts per time bin, with standard-deviation ribbons"
     ) +
-    theme_ibgb() +
+    theme_bgs() +
     ggplot2::guides(fill = "none")
 }
 
@@ -401,7 +401,7 @@ plot_region_process_rates_through_time <- function(region_process_rates, process
     ggplot2::geom_line(linewidth = 0.8) +
     ggplot2::geom_point(size = 1.4) +
     ggplot2::scale_x_reverse() +
-    scale_colour_ibgb() +
+    scale_colour_bgs() +
     facets +
     ggplot2::labs(
       x = "Time before present",
@@ -410,7 +410,7 @@ plot_region_process_rates_through_time <- function(region_process_rates, process
       title = "Region-resolved process rates through time",
       subtitle = "One panel per process; each region shows the timing of events it gained, lost, or was colonized by"
     ) +
-    theme_ibgb()
+    theme_bgs()
 }
 
 empty_region_process_rates_table <- function() {

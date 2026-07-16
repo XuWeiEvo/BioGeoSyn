@@ -1,4 +1,4 @@
-# iBiogeobears 1.1.0
+# BioGeoSyn 1.1.0
 
 Adds the biogeographic process synthesis: the interpretive layer that turns
 raw BioGeoBEARS stochastic mapping into named biogeographic processes, intended
@@ -19,7 +19,7 @@ as the analytical centerpiece for reporting and publication.
 - Surfaced the process synthesis as the headline of the report's stochastic
   mapping section and documented the new table and figure.
 
-# iBiogeobears 1.0.0
+# BioGeoSyn 1.0.0
 
 First beta release (beta 1.0): a publishable, feature-complete reproducible
 workflow, GUI, and reporting layer for single-clade BioGeoBEARS analyses.
@@ -43,7 +43,7 @@ workflow, GUI, and reporting layer for single-clade BioGeoBEARS analyses.
   `inst/CITATION` to use `bibentry()` with an auto-synced package version.
 - Achieved a clean `R CMD check --no-manual` with no errors, warnings, or notes.
 
-# iBiogeobears 0.2.1
+# BioGeoSyn 0.2.1
 
 Third alpha release focused on ordinary-user stability and release readiness.
 
@@ -107,7 +107,7 @@ Third alpha release focused on ordinary-user stability and release readiness.
 - Added failed-model-only retry mode, archived retry logs, and explicit
   `run_action` status values for executed, reused, and skipped models.
 
-# iBiogeobears 0.2.0
+# BioGeoSyn 0.2.0
 
 Second alpha release of the single-clade BioGeoBEARS workflow MVP.
 
@@ -198,7 +198,7 @@ Second alpha release of the single-clade BioGeoBEARS workflow MVP.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.
 
-# iBiogeobears 0.1.0
+# BioGeoSyn 0.1.0
 
 Initial alpha release of the single-clade BioGeoBEARS workflow MVP.
 

@@ -32,12 +32,12 @@ make_input_summary_fixture <- function(dir) {
 }
 
 test_that("summarize_input_data reports tree, geography, and region occupancy", {
-  dir <- tempfile("ibgb-input-")
+  dir <- tempfile("bgs-input-")
   config <- make_input_summary_fixture(dir)
 
   summary <- summarize_input_data(config, base_dir = dir)
 
-  expect_s3_class(summary, "iBGB_input_summary")
+  expect_s3_class(summary, "bgs_input_summary")
   expect_equal(summary$tree$n_tips, 5L)
   expect_true(summary$tree$has_branch_lengths)
 
@@ -66,7 +66,7 @@ test_that("summarize_input_data reports tree, geography, and region occupancy", 
 })
 
 test_that("summarize_input_data range-size distribution sums to species count", {
-  dir <- tempfile("ibgb-input-")
+  dir <- tempfile("bgs-input-")
   config <- make_input_summary_fixture(dir)
 
   summary <- summarize_input_data(config, base_dir = dir)
@@ -79,7 +79,7 @@ test_that("summarize_input_data range-size distribution sums to species count", 
 })
 
 test_that("summarize_input_data flags tree/geography name mismatches", {
-  dir <- tempfile("ibgb-input-")
+  dir <- tempfile("bgs-input-")
   config <- make_input_summary_fixture(dir)
 
   summary <- summarize_input_data(config, base_dir = dir)
@@ -95,7 +95,7 @@ test_that("summarize_input_data flags tree/geography name mismatches", {
 
 test_that("summarize_input_data degrades gracefully when files are missing", {
   summary <- summarize_input_data(list(inputs = list()))
-  expect_s3_class(summary, "iBGB_input_summary")
+  expect_s3_class(summary, "bgs_input_summary")
   expect_null(summary$tree)
   expect_null(summary$geography)
   expect_null(summary$region_occupancy)
@@ -103,8 +103,8 @@ test_that("summarize_input_data degrades gracefully when files are missing", {
   expect_equal(nrow(summary$overview), 0L)
 })
 
-test_that("print.iBGB_input_summary shows the overview and region table", {
-  dir <- tempfile("ibgb-input-")
+test_that("print.bgs_input_summary shows the overview and region table", {
+  dir <- tempfile("bgs-input-")
   config <- make_input_summary_fixture(dir)
   summary <- summarize_input_data(config, base_dir = dir)
 
@@ -115,7 +115,7 @@ test_that("print.iBGB_input_summary shows the overview and region table", {
 })
 
 test_that("shiny overview display helpers turn a summary into 2-column tables", {
-  dir <- tempfile("ibgb-input-")
+  dir <- tempfile("bgs-input-")
   config <- make_input_summary_fixture(dir)
   summary <- summarize_input_data(config, base_dir = dir)
 

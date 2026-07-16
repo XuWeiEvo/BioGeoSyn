@@ -52,7 +52,7 @@ write_clade_region_rates <- function(dir, clade, regions, mean_counts) {
 }
 
 test_that("combine_process_rates_across_clades tags and merges clades", {
-  root <- tempfile("ibgb-crossclade-")
+  root <- tempfile("bgs-crossclade-")
   f1 <- write_clade_rates(root, "Anolis", c(1, 2, 3))
   f2 <- write_clade_rates(root, "Phelsuma", c(3, 2, 1))
 
@@ -74,7 +74,7 @@ test_that("combine_process_rates_across_clades returns an empty table for no val
 })
 
 test_that("duplicate clade labels are disambiguated", {
-  root <- tempfile("ibgb-crossclade-dup-")
+  root <- tempfile("bgs-crossclade-dup-")
   # Same clade folder name reused would collide; force identical labels.
   f1 <- write_clade_rates(root, "same", c(1, 2))
   f2 <- write_clade_rates(tempfile("other-"), "same", c(3, 4))
@@ -83,7 +83,7 @@ test_that("duplicate clade labels are disambiguated", {
 })
 
 test_that("plot_process_rates_across_clades returns a ggplot and carries the CI", {
-  root <- tempfile("ibgb-crossclade-plot-")
+  root <- tempfile("bgs-crossclade-plot-")
   f1 <- write_clade_rates(root, "Anolis", c(1, 2, 3))
   f2 <- write_clade_rates(root, "Phelsuma", c(3, 2, 1))
   combined <- combine_process_rates_across_clades(c(f1, f2))
@@ -98,7 +98,7 @@ test_that("plot_process_rates_across_clades returns a ggplot and carries the CI"
 })
 
 test_that("combine_region_process_rates_across_clades tags clades and keeps regions", {
-  root <- tempfile("ibgb-crossclade-region-")
+  root <- tempfile("bgs-crossclade-region-")
   f1 <- write_clade_region_rates(root, "Anolis", c("A", "B"), c(1, 2, 3))
   f2 <- write_clade_region_rates(root, "Phelsuma", c("A", "B"), c(3, 2, 1))
 
@@ -116,7 +116,7 @@ test_that("combine_region_process_rates_across_clades tags clades and keeps regi
 })
 
 test_that("plot_region_process_rates_across_clades returns a ggplot", {
-  root <- tempfile("ibgb-crossclade-region-plot-")
+  root <- tempfile("bgs-crossclade-region-plot-")
   f1 <- write_clade_region_rates(root, "Anolis", c("A", "B"), c(1, 2, 3))
   f2 <- write_clade_region_rates(root, "Phelsuma", c("A", "B"), c(3, 2, 1))
   combined <- combine_region_process_rates_across_clades(c(f1, f2))
@@ -129,7 +129,7 @@ test_that("plot_region_process_rates_across_clades returns a ggplot", {
 })
 
 test_that("write_cross_clade_bundle zips the combined table with its figure", {
-  root <- tempfile("ibgb-crossclade-bundle-")
+  root <- tempfile("bgs-crossclade-bundle-")
   f1 <- write_clade_rates(root, "Anolis", c(1, 2, 3))
   f2 <- write_clade_rates(root, "Phelsuma", c(3, 2, 1))
   combined <- combine_process_rates_across_clades(c(f1, f2))
@@ -148,7 +148,7 @@ test_that("write_cross_clade_bundle zips the combined table with its figure", {
 })
 
 test_that("render_cross_clade_report writes a self-contained HTML with figures", {
-  root <- tempfile("ibgb-xclade-report-")
+  root <- tempfile("bgs-xclade-report-")
   f1 <- write_clade_rates(root, "Anolis", c(1, 2, 3))
   f2 <- write_clade_rates(root, "Phelsuma", c(3, 2, 1))
   overall <- combine_process_rates_across_clades(c(f1, f2))
@@ -172,7 +172,7 @@ test_that("render_cross_clade_report writes a self-contained HTML with figures",
 })
 
 test_that("keep_first_model drops extra models so cross-clade curves are single", {
-  root <- tempfile("ibgb-multimodel-")
+  root <- tempfile("bgs-multimodel-")
   tables <- file.path(root, "Anolis", "tables")
   dir.create(tables, recursive = TRUE, showWarnings = FALSE)
   two_model <- rbind(

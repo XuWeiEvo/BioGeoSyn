@@ -13,12 +13,12 @@ open_user_guide <- function(browse = interactive()) {
   guide <- system.file(
     "docs",
     "ordinary-user-quick-start.md",
-    package = "iBiogeobears",
+    package = "BioGeoSyn",
     mustWork = FALSE
   )
   if (!nzchar(guide) || !file.exists(guide)) {
     stop(
-      "The iBiogeobears ordinary-user guide was not found in the installed package.",
+      "The BioGeoSyn ordinary-user guide was not found in the installed package.",
       call. = FALSE
     )
   }

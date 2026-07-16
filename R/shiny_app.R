@@ -1,4 +1,4 @@
-#' Launch the iBiogeobears Shiny application
+#' Launch the BioGeoSyn Shiny application
 #'
 #' @param config Optional path to an `analysis.yml` file. When omitted, a
 #'   complete temporary example project is prepared and loaded automatically.
@@ -9,11 +9,11 @@
 #' @export
 launch_app <- function(config = NULL, output_dir = NULL, launch.browser = TRUE, ...) {
   check_shiny_available()
-  app <- create_iBGB_shiny_app(config = config, output_dir = output_dir)
+  app <- create_bgs_shiny_app(config = config, output_dir = output_dir)
   shiny::runApp(app, launch.browser = launch.browser, ...)
 }
 
-create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
+create_bgs_shiny_app <- function(config = NULL, output_dir = NULL) {
   check_shiny_available()
 
   startup <- prepare_shiny_startup(config, output_dir)
@@ -21,22 +21,22 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
   default_output <- startup$output_dir
 
   shiny::shinyApp(
-    ui = iBGB_app_ui(default_config, default_output, startup$example_project_dir),
-    server = iBGB_shiny_server
+    ui = bgs_app_ui(default_config, default_output, startup$example_project_dir),
+    server = bgs_shiny_server
   )
 }
 
 shiny_control_section <- function(title, ...) {
   shiny::tags$div(
-    class = "ibgb-control-section",
-    shiny::tags$div(class = "ibgb-control-title", title),
+    class = "bgs-control-section",
+    shiny::tags$div(class = "bgs-control-title", title),
     ...
   )
 }
 
 shiny_collapsible_section <- function(title, ..., open = FALSE) {
   args <- c(
-    list(class = "ibgb-collapsible"),
+    list(class = "bgs-collapsible"),
     if (isTRUE(open)) list(open = "open") else list(),
     list(shiny::tags$summary(title)),
     list(...)
@@ -45,13 +45,13 @@ shiny_collapsible_section <- function(title, ..., open = FALSE) {
 }
 
 shiny_action_grid <- function(...) {
-  shiny::tags$div(class = "ibgb-action-grid", ...)
+  shiny::tags$div(class = "bgs-action-grid", ...)
 }
 
 shiny_home_guidance_body <- function() {
   shiny::tagList(
     shiny::uiOutput("home_next_action"),
-    shiny::tags$div(class = "ibgb-key-files-title", "Guided workflow"),
+    shiny::tags$div(class = "bgs-key-files-title", "Guided workflow"),
     shiny::tableOutput("guided_workflow_table"),
     shiny_collapsible_section(
       "Details",
@@ -64,16 +64,16 @@ shiny_primary_results_body <- function() {
   shiny::tagList(
     shiny::uiOutput("run_summary_cards"),
     shiny::tags$div(
-      class = "ibgb-primary-result",
+      class = "bgs-primary-result",
       shiny::tags$h4("1. Ancestral range reconstruction"),
       shiny::tags$p("Start from the reconstruction under the best-fitting model, then read it alongside the model comparison and the +J caution."),
-      shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_node_best"))
+      shiny::div(class = "bgs-preview", shiny::imageOutput("primary_figure_node_best"))
     ),
     shiny::tags$div(
-      class = "ibgb-primary-result",
+      class = "bgs-primary-result",
       shiny::tags$h4("2. Model comparison"),
       shiny::tableOutput("primary_model_comparison_table"),
-      shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_model_comparison"))
+      shiny::div(class = "bgs-preview", shiny::imageOutput("primary_figure_model_comparison"))
     )
   )
 }
@@ -112,7 +112,7 @@ shiny_wizard_constraint_inputs <- function() {
   fields <- shiny_constraint_fields()
   shiny::tagList(lapply(seq_len(nrow(fields)), function(i) {
     shiny::tags$div(
-      class = "ibgb-upload-row",
+      class = "bgs-upload-row",
       shiny::fileInput(
         inputId = paste0("wizard_constraint_", fields$field[[i]]),
         label = fields$label[[i]],
@@ -129,7 +129,7 @@ constraint_template_path <- function(field) {
   if (length(idx) != 1L || is.na(idx)) {
     stop("Unknown constraint template: ", paste(field, collapse = ", "), call. = FALSE)
   }
-  path <- system.file("example_data", "constraints", fields$template[[idx]], package = "iBiogeobears")
+  path <- system.file("example_data", "constraints", fields$template[[idx]], package = "BioGeoSyn")
   if (!file.exists(path)) {
     stop("Installed constraint template could not be found: ", fields$template[[idx]], call. = FALSE)
   }
@@ -143,7 +143,7 @@ shiny_figure_panel <- function(title, output_id) {
   )
 }
 
-iBGB_shiny_server <- function(input, output, session) {
+bgs_shiny_server <- function(input, output, session) {
   state <- shiny::reactiveValues(
         result = NULL,
         validation = NULL,
@@ -372,7 +372,7 @@ iBGB_shiny_server <- function(input, output, session) {
       })
 
       output$status <- shiny::renderUI({
-        shiny::tags$div(class = paste("ibgb-status", state$status_type), state$message)
+        shiny::tags$div(class = paste("bgs-status", state$status_type), state$message)
       })
 
       output$summary_table <- shiny::renderTable({
@@ -438,17 +438,17 @@ iBGB_shiny_server <- function(input, output, session) {
           n_areas, mr, format(n_states, big.mark = ",")
         )
         if (n_states > 500) {
-          shiny::tags$div(class = "ibgb-status error", paste0(
+          shiny::tags$div(class = "bgs-status error", paste0(
             msg, " The state space is large, so model fitting will be markedly slower",
             " (each likelihood evaluation scales with the square of the state count). Consider raising the CPU-core count, fitting fewer models,",
             " or lowering max_range where the data allow."
           ))
         } else if (n_states > 150) {
-          shiny::tags$div(class = "ibgb-status info", paste0(
+          shiny::tags$div(class = "bgs-status info", paste0(
             msg, " The state space is on the large side; fitting several models on one core will be slow. Raising the CPU-core count helps."
           ))
         } else {
-          shiny::tags$div(class = "ibgb-home-note", msg)
+          shiny::tags$div(class = "bgs-home-note", msg)
         }
       })
 
@@ -602,9 +602,9 @@ iBGB_shiny_server <- function(input, output, session) {
       output$cross_clade_status <- shiny::renderUI({
         b <- clade_bundles()
         if (is.null(b)) {
-          return(shiny::tags$div(class = "ibgb-home-note", "No result bundles uploaded yet. For each clade, upload the result bundle (.zip) downloaded from \"3. Single clade\"."))
+          return(shiny::tags$div(class = "bgs-home-note", "No result bundles uploaded yet. For each clade, upload the result bundle (.zip) downloaded from \"3. Single clade\"."))
         }
-        shiny::tags$div(class = "ibgb-status info", paste0("Integrated ", length(b$paths), " clades."))
+        shiny::tags$div(class = "bgs-status info", paste0("Integrated ", length(b$paths), " clades."))
       })
 
       cc_image <- function(react, plot_fun, width, height) {
@@ -1059,7 +1059,7 @@ input_template_path <- function(kind) {
   if (length(kind) != 1L || is.na(kind) || !kind %in% names(files)) {
     stop("Unknown input template: ", paste(kind, collapse = ", "), call. = FALSE)
   }
-  path <- system.file("example_data", files[[kind]], package = "iBiogeobears")
+  path <- system.file("example_data", files[[kind]], package = "BioGeoSyn")
   if (!file.exists(path)) {
     stop("Installed input template could not be found: ", files[[kind]], call. = FALSE)
   }
@@ -1067,7 +1067,7 @@ input_template_path <- function(kind) {
 }
 
 default_project_parent <- function() {
-  as_path(file.path(path.expand("~"), "iBiogeobears-projects"))
+  as_path(file.path(path.expand("~"), "BioGeoSyn-projects"))
 }
 
 shiny_upload_path <- function(upload, label) {
@@ -1094,7 +1094,7 @@ prepare_shiny_startup <- function(config = NULL, output_dir = NULL) {
     ))
   }
 
-  example <- create_example_project(tempfile("iBiogeobears-welcome-"))
+  example <- create_example_project(tempfile("BioGeoSyn-welcome-"))
   list(
     config = example$config,
     output_dir = output_dir %||% example$output_dir,
@@ -1317,7 +1317,7 @@ load_existing_workflow_result <- function(output_dir, refresh_manifest = TRUE) {
     force = FALSE,
     validation_failed = if (nrow(validation) > 0L && "ok" %in% names(validation)) any(!validation$ok) else FALSE
   )
-  class(result) <- c("iBGB_workflow_result", "list")
+  class(result) <- c("bgs_workflow_result", "list")
   result
 }
 
@@ -1691,7 +1691,7 @@ shiny_validation_progress <- function(validation) {
 
 shiny_home_next_action <- function(workflow) {
   if (is.null(workflow) || nrow(workflow) == 0L) {
-    return(shiny::tags$div(class = "ibgb-next-action", "Choose a data source."))
+    return(shiny::tags$div(class = "bgs-next-action", "Choose a data source."))
   }
   status <- workflow[["Status"]] %||% workflow[["Status"]]
   actionable <- workflow[status %in% c("Action needed", "Needs attention", "Waiting", "Partly complete", "Action needed", "Needs attention", "Waiting", "Partial"), , drop = FALSE]
@@ -1699,10 +1699,10 @@ shiny_home_next_action <- function(workflow) {
   next_step <- (next_row[["Step"]] %||% next_row[["Step"]])[[1L]]
   next_text <- (next_row[["Next step"]] %||% next_row[["Next action"]])[[1L]]
   shiny::tags$div(
-    class = "ibgb-next-action",
-    shiny::tags$div(class = "ibgb-next-action-title", "Next step"),
-    shiny::tags$div(class = "ibgb-next-action-step", next_step),
-    shiny::tags$div(class = "ibgb-next-action-detail", next_text)
+    class = "bgs-next-action",
+    shiny::tags$div(class = "bgs-next-action-title", "Next step"),
+    shiny::tags$div(class = "bgs-next-action-step", next_step),
+    shiny::tags$div(class = "bgs-next-action-detail", next_text)
   )
 }
 
@@ -1822,7 +1822,7 @@ choose_output_directory <- function(default = NULL) {
     default <- getwd()
   }
   if (.Platform$OS.type == "windows" && exists("choose.dir", envir = asNamespace("utils"), inherits = FALSE)) {
-    selected <- utils::choose.dir(default = default, caption = "Choose iBiogeobears result directory")
+    selected <- utils::choose.dir(default = default, caption = "Choose BioGeoSyn result directory")
     return(shiny_text_or_blank(selected))
   }
   stop(
@@ -1922,7 +1922,7 @@ shiny_about_table <- function(state, bgb_check = check_biogeobears(required = FA
       "BioGeoBEARS citation log"
     ),
     value = c(
-      "iBiogeobears",
+      "BioGeoSyn",
       shiny_package_version_label(),
       "GPL (>= 2)",
       if (isTRUE(bgb_check$available)) "yes" else "no",
@@ -1957,9 +1957,9 @@ shiny_text_or_not_available <- function(x) {
 
 shiny_package_version_label <- function() {
   tryCatch(
-    as.character(utils::packageVersion("iBiogeobears")),
+    as.character(utils::packageVersion("BioGeoSyn")),
     error = function(e) {
-      desc <- tryCatch(utils::packageDescription("iBiogeobears", fields = "Version"), error = function(e) NA_character_)
+      desc <- tryCatch(utils::packageDescription("BioGeoSyn", fields = "Version"), error = function(e) NA_character_)
       if (!is.na(desc) && nzchar(desc)) {
         desc
       } else {
@@ -1986,7 +1986,7 @@ shiny_biogeobears_citation_text <- function(bgb_check = check_biogeobears(requir
     return(citation)
   }
   paste(
-    "BioGeoBEARS is not bundled with iBiogeobears.",
+    "BioGeoBEARS is not bundled with BioGeoSyn.",
     "Install BioGeoBEARS separately for real model execution.",
     "When BioGeoBEARS is installed, run citation(\"BioGeoBEARS\") and cite it directly.",
     bgb_check$install_help %||% "",
@@ -2041,14 +2041,14 @@ shiny_run_summary_cards <- function(state) {
   featured <- featured[order(featured$item), , drop = FALSE]
 
   shiny::tags$div(
-    class = "ibgb-run-summary-grid",
+    class = "bgs-run-summary-grid",
     lapply(seq_len(nrow(featured)), function(i) {
       item <- as.character(featured$item[[i]])
       value <- as.character(featured$value[[i]])
       shiny::tags$div(
-        class = paste("ibgb-run-summary-card", shiny_run_summary_card_class(item, value)),
-        shiny::tags$div(class = "ibgb-run-summary-label", item),
-        shiny::tags$div(class = "ibgb-run-summary-value", value)
+        class = paste("bgs-run-summary-card", shiny_run_summary_card_class(item, value)),
+        shiny::tags$div(class = "bgs-run-summary-label", item),
+        shiny::tags$div(class = "bgs-run-summary-value", value)
       )
     })
   )
@@ -3450,7 +3450,7 @@ write_shiny_workflow_config <- function(config, source_config) {
   }
   cfg <- absolutize_shiny_config_paths(config, base_dir = dirname(source_config))
   cfg$.config_file <- NULL
-  path <- tempfile("ibgb-shiny-analysis-", fileext = ".yml")
+  path <- tempfile("bgs-shiny-analysis-", fileext = ".yml")
   yaml::write_yaml(cfg, path)
   as_path(path)
 }
@@ -3502,137 +3502,144 @@ table_head <- function(x, n = 20L) {
   utils::head(x, n)
 }
 
-iBGB_head_styles <- function() {
+bgs_head_styles <- function() {
   shiny::tags$head(
     shiny::tags$style(shiny::HTML(
       # Design tokens. The accent and text colours are the package's Okabe-Ito
-      # figure palette (see ibgb_palette()), so the interface and the figures it
+      # figure palette (see bgs_palette()), so the interface and the figures it
       # produces read as one visual system.
       ":root{",
-      "--ibgb-accent:#0072b2;--ibgb-accent-strong:#005c90;--ibgb-accent-weak:#eaf3f9;",
-      "--ibgb-orange:#d55e00;--ibgb-good:#2e7d32;--ibgb-danger:#b00020;",
-      "--ibgb-ink:#1f2937;--ibgb-muted:#6b7280;--ibgb-faint:#8b95a5;",
-      "--ibgb-line:#e4e9f0;--ibgb-line-strong:#cfd8e3;",
-      "--ibgb-surface:#fff;--ibgb-canvas:#f6f8fb;",
-      "--ibgb-r:10px;--ibgb-r-sm:6px;",
-      "--ibgb-shadow:0 1px 2px rgba(16,24,40,.04),0 2px 6px rgba(16,24,40,.05);",
-      "--ibgb-shadow-lift:0 2px 4px rgba(16,24,40,.05),0 10px 24px rgba(16,24,40,.09);",
-      "--ibgb-ring:0 0 0 3px rgba(0,114,178,.18);} ",
+      "--bgs-accent:#0072b2;--bgs-accent-strong:#005c90;--bgs-accent-weak:#eaf3f9;",
+      "--bgs-orange:#d55e00;--bgs-good:#2e7d32;--bgs-danger:#b00020;",
+      "--bgs-ink:#1f2937;--bgs-muted:#6b7280;--bgs-faint:#8b95a5;",
+      "--bgs-line:#e4e9f0;--bgs-line-strong:#cfd8e3;",
+      "--bgs-surface:#fff;--bgs-canvas:#f6f8fb;",
+      "--bgs-r:10px;--bgs-r-sm:6px;",
+      "--bgs-shadow:0 1px 2px rgba(16,24,40,.04),0 2px 6px rgba(16,24,40,.05);",
+      "--bgs-shadow-lift:0 2px 4px rgba(16,24,40,.05),0 10px 24px rgba(16,24,40,.09);",
+      "--bgs-ring:0 0 0 3px rgba(0,114,178,.18);} ",
 
-      "body{background:var(--ibgb-canvas);color:var(--ibgb-ink);font-size:14.5px;line-height:1.62;",
+      "body{background:var(--bgs-canvas);color:var(--bgs-ink);font-size:14.5px;line-height:1.62;",
       "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,'PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans CJK SC',sans-serif;",
       "-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale} ",
       ".container-fluid{max-width:1180px;padding-bottom:40px} ",
-      "h1,h2,h3,h4,h5{color:var(--ibgb-ink);font-weight:650;letter-spacing:-.011em} ",
-      "h2.ibgb-app-title,.container-fluid>h2:first-child{font-size:26px;margin:22px 0 4px 0} ",
-      "a{color:var(--ibgb-accent)} a:hover,a:focus{color:var(--ibgb-accent-strong)} ",
-      ".well{border-radius:var(--ibgb-r);border-color:var(--ibgb-line);background:var(--ibgb-surface);box-shadow:var(--ibgb-shadow)} ",
+      "h1,h2,h3,h4,h5{color:var(--bgs-ink);font-weight:650;letter-spacing:-.011em} ",
+      "h2.bgs-app-title,.container-fluid>h2:first-child{font-size:26px;margin:22px 0 4px 0} ",
+      "a{color:var(--bgs-accent)} a:hover,a:focus{color:var(--bgs-accent-strong)} ",
+      ".well{border-radius:var(--bgs-r);border-color:var(--bgs-line);background:var(--bgs-surface);box-shadow:var(--bgs-shadow)} ",
 
       # Buttons: one solid accent, quiet secondary, clear focus ring.
-      ".btn,a.btn{border-radius:var(--ibgb-r-sm);background:var(--ibgb-accent);border:1px solid var(--ibgb-accent);",
-      "color:#fff;font-weight:600;padding:7px 14px;box-shadow:var(--ibgb-shadow);",
+      ".btn,a.btn{border-radius:var(--bgs-r-sm);background:var(--bgs-accent);border:1px solid var(--bgs-accent);",
+      "color:#fff;font-weight:600;padding:7px 14px;box-shadow:var(--bgs-shadow);",
       "transition:background .15s ease,border-color .15s ease,box-shadow .15s ease,transform .05s ease} ",
-      ".btn:hover,a.btn:hover{background:var(--ibgb-accent-strong);border-color:var(--ibgb-accent-strong);color:#fff} ",
-      ".btn:focus-visible,a.btn:focus-visible{outline:none;box-shadow:var(--ibgb-ring)} ",
+      ".btn:hover,a.btn:hover{background:var(--bgs-accent-strong);border-color:var(--bgs-accent-strong);color:#fff} ",
+      ".btn:focus-visible,a.btn:focus-visible{outline:none;box-shadow:var(--bgs-ring)} ",
       ".btn:active,a.btn:active{transform:translateY(1px);box-shadow:none} ",
       ".btn[disabled],.btn.disabled{opacity:.5;box-shadow:none} ",
-      ".btn-default:not(.action-button){background:var(--ibgb-surface);border-color:var(--ibgb-line-strong);color:var(--ibgb-ink)} ",
-      ".btn-default:not(.action-button):hover{background:#f2f5f9;border-color:var(--ibgb-faint);color:var(--ibgb-ink)} ",
+      ".btn-default:not(.action-button){background:var(--bgs-surface);border-color:var(--bgs-line-strong);color:var(--bgs-ink)} ",
+      ".btn-default:not(.action-button):hover{background:#f2f5f9;border-color:var(--bgs-faint);color:var(--bgs-ink)} ",
 
       # Form controls.
-      "label,.control-label{font-weight:600;color:var(--ibgb-ink);margin-bottom:5px} ",
-      ".form-control{border-radius:var(--ibgb-r-sm);border-color:var(--ibgb-line-strong);color:var(--ibgb-ink);",
+      "label,.control-label{font-weight:600;color:var(--bgs-ink);margin-bottom:5px} ",
+      ".form-control{border-radius:var(--bgs-r-sm);border-color:var(--bgs-line-strong);color:var(--bgs-ink);",
       "box-shadow:none;transition:border-color .15s ease,box-shadow .15s ease} ",
-      ".form-control:focus{border-color:var(--ibgb-accent);box-shadow:var(--ibgb-ring)} ",
+      ".form-control:focus{border-color:var(--bgs-accent);box-shadow:var(--bgs-ring)} ",
       ".shiny-input-container{margin-bottom:12px} ",
       ".checkbox label,.radio label{font-weight:500} ",
       ".form-group.shiny-input-container>.shiny-options-group{padding-top:2px} ",
 
-      ".ibgb-status{font-weight:600;margin:8px 0} ",
-      ".ibgb-status.info{color:var(--ibgb-accent-strong)} .ibgb-status.error{color:var(--ibgb-danger)} ",
-      ".ibgb-control-section{border-top:1px solid var(--ibgb-line);margin-top:14px;padding-top:12px} ",
-      ".ibgb-control-section:first-child{border-top:0;margin-top:0;padding-top:0} ",
-      ".ibgb-control-title{font-weight:650;margin-bottom:8px;letter-spacing:-.008em} ",
-      ".ibgb-action-grid{display:grid;grid-template-columns:1fr;gap:7px} ",
-      ".ibgb-action-grid .btn{width:100%;text-align:left} ",
-      ".ibgb-downloads{margin:0} .ibgb-downloads .btn{width:100%;text-align:left;margin-bottom:7px} ",
+      ".bgs-status{font-weight:600;margin:8px 0} ",
+      ".bgs-status.info{color:var(--bgs-accent-strong)} .bgs-status.error{color:var(--bgs-danger)} ",
+      ".bgs-control-section{border-top:1px solid var(--bgs-line);margin-top:14px;padding-top:12px} ",
+      ".bgs-control-section:first-child{border-top:0;margin-top:0;padding-top:0} ",
+      ".bgs-control-title{font-weight:650;margin-bottom:8px;letter-spacing:-.008em} ",
+      ".bgs-action-grid{display:grid;grid-template-columns:1fr;gap:7px} ",
+      ".bgs-action-grid .btn{width:100%;text-align:left} ",
+      ".bgs-downloads{margin:0} .bgs-downloads .btn{width:100%;text-align:left;margin-bottom:7px} ",
 
-      ".ibgb-run-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:0 0 12px 0} ",
-      ".ibgb-run-summary-card{border:1px solid var(--ibgb-line);border-left:4px solid var(--ibgb-faint);",
-      "border-radius:var(--ibgb-r-sm);padding:11px 12px;background:var(--ibgb-surface);box-shadow:var(--ibgb-shadow)} ",
-      ".ibgb-run-summary-card.info{border-left-color:var(--ibgb-accent)} .ibgb-run-summary-card.warning{border-left-color:var(--ibgb-orange)} ",
-      ".ibgb-run-summary-card.good{border-left-color:var(--ibgb-good)} .ibgb-run-summary-card.muted{border-left-color:var(--ibgb-faint)} ",
-      ".ibgb-run-summary-label{font-size:11.5px;font-weight:650;color:var(--ibgb-muted);margin-bottom:4px;",
+      ".bgs-run-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:0 0 12px 0} ",
+      ".bgs-run-summary-card{border:1px solid var(--bgs-line);border-left:4px solid var(--bgs-faint);",
+      "border-radius:var(--bgs-r-sm);padding:11px 12px;background:var(--bgs-surface);box-shadow:var(--bgs-shadow)} ",
+      ".bgs-run-summary-card.info{border-left-color:var(--bgs-accent)} .bgs-run-summary-card.warning{border-left-color:var(--bgs-orange)} ",
+      ".bgs-run-summary-card.good{border-left-color:var(--bgs-good)} .bgs-run-summary-card.muted{border-left-color:var(--bgs-faint)} ",
+      ".bgs-run-summary-label{font-size:11.5px;font-weight:650;color:var(--bgs-muted);margin-bottom:4px;",
       "text-transform:uppercase;letter-spacing:.04em} ",
-      ".ibgb-run-summary-value{font-size:15px;font-weight:650;color:var(--ibgb-ink);overflow-wrap:anywhere} ",
+      ".bgs-run-summary-value{font-size:15px;font-weight:650;color:var(--bgs-ink);overflow-wrap:anywhere} ",
 
-      ".ibgb-key-files-title{font-weight:650;margin:16px 0 7px 0;font-size:13px;color:var(--ibgb-muted);",
+      ".bgs-key-files-title{font-weight:650;margin:16px 0 7px 0;font-size:13px;color:var(--bgs-muted);",
       "text-transform:uppercase;letter-spacing:.05em} ",
-      ".ibgb-home-note{background:#f3f6fa;border:1px solid var(--ibgb-line);border-radius:var(--ibgb-r-sm);",
-      "padding:10px 13px;margin:8px 0 14px 0;color:var(--ibgb-muted);font-size:13.5px} ",
-      ".ibgb-next-action{border:1px solid #cfe3f1;border-left:4px solid var(--ibgb-accent);background:var(--ibgb-accent-weak);",
-      "border-radius:var(--ibgb-r-sm);padding:12px 14px;margin:8px 0 16px 0} ",
-      ".ibgb-next-action-title{font-size:11.5px;font-weight:650;color:var(--ibgb-accent-strong);margin-bottom:4px;",
+      ".bgs-home-note{background:#f3f6fa;border:1px solid var(--bgs-line);border-radius:var(--bgs-r-sm);",
+      "padding:10px 13px;margin:8px 0 14px 0;color:var(--bgs-muted);font-size:13.5px} ",
+      ".bgs-next-action{border:1px solid #cfe3f1;border-left:4px solid var(--bgs-accent);background:var(--bgs-accent-weak);",
+      "border-radius:var(--bgs-r-sm);padding:12px 14px;margin:8px 0 16px 0} ",
+      ".bgs-next-action-title{font-size:11.5px;font-weight:650;color:var(--bgs-accent-strong);margin-bottom:4px;",
       "text-transform:uppercase;letter-spacing:.05em} ",
-      ".ibgb-next-action-step{font-size:15px;font-weight:650;color:var(--ibgb-ink);margin-bottom:3px} ",
-      ".ibgb-next-action-detail{color:#3b4657} ",
+      ".bgs-next-action-step{font-size:15px;font-weight:650;color:var(--bgs-ink);margin-bottom:3px} ",
+      ".bgs-next-action-detail{color:#3b4657} ",
 
-      ".ibgb-collapsible{border-top:1px solid var(--ibgb-line);margin-top:12px;padding-top:10px} ",
-      ".ibgb-collapsible>summary{font-weight:650;cursor:pointer;margin-bottom:8px;list-style:none;",
-      "color:var(--ibgb-ink);border-radius:var(--ibgb-r-sm);padding:2px 2px} ",
-      ".ibgb-collapsible>summary:hover{color:var(--ibgb-accent-strong)} ",
-      ".ibgb-collapsible>summary:focus-visible{outline:none;box-shadow:var(--ibgb-ring)} ",
-      ".ibgb-collapsible>summary::-webkit-details-marker{display:none} ",
-      ".ibgb-collapsible>summary::before{content:'\\25b6';color:var(--ibgb-accent);font-size:10px;margin-right:8px;",
+      ".bgs-collapsible{border-top:1px solid var(--bgs-line);margin-top:12px;padding-top:10px} ",
+      ".bgs-collapsible>summary{font-weight:650;cursor:pointer;margin-bottom:8px;list-style:none;",
+      "color:var(--bgs-ink);border-radius:var(--bgs-r-sm);padding:2px 2px} ",
+      ".bgs-collapsible>summary:hover{color:var(--bgs-accent-strong)} ",
+      ".bgs-collapsible>summary:focus-visible{outline:none;box-shadow:var(--bgs-ring)} ",
+      ".bgs-collapsible>summary::-webkit-details-marker{display:none} ",
+      ".bgs-collapsible>summary::before{content:'\\25b6';color:var(--bgs-accent);font-size:10px;margin-right:8px;",
       "display:inline-block;transition:transform .18s ease} ",
-      ".ibgb-collapsible[open]>summary::before{transform:rotate(90deg)} ",
+      ".bgs-collapsible[open]>summary::before{transform:rotate(90deg)} ",
 
-      ".ibgb-primary-result{border-top:1px solid var(--ibgb-line);margin-top:18px;padding-top:16px} ",
-      ".ibgb-primary-result:first-child{border-top:0;margin-top:0;padding-top:0} ",
-      ".ibgb-preview img{max-width:100%;height:auto;border:1px solid var(--ibgb-line);border-radius:var(--ibgb-r-sm);",
-      "display:block;background:var(--ibgb-surface)} ",
-      ".ibgb-preview .shiny-image-output{height:auto !important;min-height:0} ",
-      ".ibgb-figure-dashboard{display:grid;grid-template-columns:1fr;gap:18px} ",
-      ".ibgb-figure-dashboard h4{margin:6px 0 8px 0;font-size:15px} ",
-      ".ibgb-figure-dashboard img{max-width:100%;height:auto;border:1px solid var(--ibgb-line);",
-      "border-radius:var(--ibgb-r-sm);display:block;background:var(--ibgb-surface)} ",
-      ".ibgb-figure-dashboard .shiny-image-output{height:auto !important;min-height:0} ",
+      ".bgs-primary-result{border-top:1px solid var(--bgs-line);margin-top:18px;padding-top:16px} ",
+      ".bgs-primary-result:first-child{border-top:0;margin-top:0;padding-top:0} ",
+      ".bgs-preview img{max-width:100%;height:auto;border:1px solid var(--bgs-line);border-radius:var(--bgs-r-sm);",
+      "display:block;background:var(--bgs-surface)} ",
+      ".bgs-preview .shiny-image-output{height:auto !important;min-height:0} ",
+      ".bgs-figure-dashboard{display:grid;grid-template-columns:1fr;gap:18px} ",
+      ".bgs-figure-dashboard h4{margin:6px 0 8px 0;font-size:15px} ",
+      ".bgs-figure-dashboard img{max-width:100%;height:auto;border:1px solid var(--bgs-line);",
+      "border-radius:var(--bgs-r-sm);display:block;background:var(--bgs-surface)} ",
+      ".bgs-figure-dashboard .shiny-image-output{height:auto !important;min-height:0} ",
 
       "#wizard_nav{margin-top:10px} ",
-      "#wizard_nav.nav-tabs{border-bottom:1px solid var(--ibgb-line-strong)} ",
-      "#wizard_nav.nav-tabs>li>a{font-weight:600;color:var(--ibgb-muted);border:0;margin-right:2px;",
-      "padding:9px 14px;border-radius:var(--ibgb-r-sm) var(--ibgb-r-sm) 0 0;background:transparent;transition:color .15s ease,background .15s ease} ",
-      "#wizard_nav.nav-tabs>li>a:hover{color:var(--ibgb-ink);background:rgba(0,114,178,.06)} ",
+      "#wizard_nav.nav-tabs{border-bottom:1px solid var(--bgs-line-strong)} ",
+      "#wizard_nav.nav-tabs>li>a{font-weight:600;color:var(--bgs-muted);border:0;margin-right:2px;",
+      "padding:9px 14px;border-radius:var(--bgs-r-sm) var(--bgs-r-sm) 0 0;background:transparent;transition:color .15s ease,background .15s ease} ",
+      "#wizard_nav.nav-tabs>li>a:hover{color:var(--bgs-ink);background:rgba(0,114,178,.06)} ",
       "#wizard_nav.nav-tabs>li.active>a,#wizard_nav.nav-tabs>li.active>a:hover,#wizard_nav.nav-tabs>li.active>a:focus{",
-      "color:var(--ibgb-accent-strong);border:0;box-shadow:inset 0 -2.5px 0 var(--ibgb-accent);background:transparent} ",
-      ".ibgb-step-intro{color:var(--ibgb-muted);margin:14px 0 16px 0;font-size:14px} ",
+      "color:var(--bgs-accent-strong);border:0;box-shadow:inset 0 -2.5px 0 var(--bgs-accent);background:transparent} ",
+      ".bgs-step-intro{color:var(--bgs-muted);margin:14px 0 16px 0;font-size:14px} ",
       ".tab-content>.tab-pane{padding:14px 2px 2px 2px} ",
 
-      ".ibgb-two-col{display:grid;grid-template-columns:1fr 1fr;gap:22px} ",
-      "@media (max-width:900px){.ibgb-two-col{grid-template-columns:1fr}} ",
-      ".ibgb-choice-card{border:1px solid var(--ibgb-line);border-radius:var(--ibgb-r);padding:16px 18px;",
-      "background:var(--ibgb-surface);box-shadow:var(--ibgb-shadow);margin-bottom:14px;",
+      ".bgs-two-col{display:grid;grid-template-columns:1fr 1fr;gap:22px} ",
+      "@media (max-width:900px){.bgs-two-col{grid-template-columns:1fr}} ",
+      ".bgs-choice-card{border:1px solid var(--bgs-line);border-radius:var(--bgs-r);padding:16px 18px;",
+      "background:var(--bgs-surface);box-shadow:var(--bgs-shadow);margin-bottom:14px;",
       "transition:box-shadow .18s ease,border-color .18s ease} ",
-      ".ibgb-choice-card:hover{box-shadow:var(--ibgb-shadow-lift);border-color:var(--ibgb-line-strong)} ",
-      ".ibgb-output-row{display:flex;gap:8px;align-items:flex-end} ",
-      ".ibgb-output-row .form-group{flex:1;margin-bottom:0} ",
-      ".ibgb-output-row .btn{white-space:nowrap;padding:6px 12px} ",
-      ".ibgb-upload-row{display:flex;gap:10px;align-items:flex-start} ",
-      ".ibgb-upload-row>.form-group{flex:1;margin-bottom:8px} ",
-      ".ibgb-upload-row>.btn{white-space:nowrap;margin-top:25px} ",
+      ".bgs-choice-card:hover{box-shadow:var(--bgs-shadow-lift);border-color:var(--bgs-line-strong)} ",
+      ".bgs-output-row{display:flex;gap:8px;align-items:flex-end} ",
+      ".bgs-output-row .form-group{flex:1;margin-bottom:0} ",
+      ".bgs-output-row .btn{white-space:nowrap;padding:6px 12px} ",
+      ".bgs-upload-row{display:flex;gap:10px;align-items:flex-start} ",
+      ".bgs-upload-row>.form-group{flex:1;margin-bottom:8px} ",
+      ".bgs-upload-row>.btn{white-space:nowrap;margin-top:25px} ",
 
       # Tables: quiet rules, uppercase headers, right-aligned numbers.
-      ".table{background:var(--ibgb-surface);border-radius:var(--ibgb-r-sm);overflow:hidden;font-size:13.5px} ",
-      ".table>thead>tr>th{border-bottom:1px solid var(--ibgb-line-strong);background:#f3f6fa;color:var(--ibgb-muted);",
+      ".table{background:var(--bgs-surface);border-radius:var(--bgs-r-sm);overflow:hidden;font-size:13.5px} ",
+      ".table>thead>tr>th{border-bottom:1px solid var(--bgs-line-strong);background:#f3f6fa;color:var(--bgs-muted);",
       "font-size:11.5px;font-weight:650;text-transform:uppercase;letter-spacing:.04em;padding:9px 10px;vertical-align:middle} ",
-      ".table>tbody>tr>td{border-top:1px solid var(--ibgb-line);padding:8px 10px;vertical-align:middle} ",
+      ".table>tbody>tr>td{border-top:1px solid var(--bgs-line);padding:8px 10px;vertical-align:middle} ",
       ".table-striped>tbody>tr:nth-of-type(odd){background:#fafbfd} ",
-      ".table-hover>tbody>tr:hover{background:var(--ibgb-accent-weak)} ",
-      ".table-bordered,.table-bordered>thead>tr>th,.table-bordered>tbody>tr>td{border-color:var(--ibgb-line)} ",
+      ".table-hover>tbody>tr:hover{background:var(--bgs-accent-weak)} ",
+      ".table-bordered,.table-bordered>thead>tr>th,.table-bordered>tbody>tr>td{border-color:var(--bgs-line)} ",
+
+      ".bgs-developer .bgs-developer-name{font-size:16px;font-weight:650;color:var(--bgs-ink)} ",
+      ".bgs-developer-role{color:var(--bgs-ink);margin-top:2px} ",
+      ".bgs-developer-affil{color:var(--bgs-muted);margin-top:1px} ",
+      ".bgs-developer-links{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:10px;",
+      "padding-top:10px;border-top:1px solid var(--bgs-line)} ",
+      ".bgs-developer-links a{font-weight:600;font-size:13.5px} ",
 
       "pre,code,samp,kbd{font-family:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace;font-size:12.5px} ",
-      "pre{background:#f6f8fb;border:1px solid var(--ibgb-line);border-radius:var(--ibgb-r-sm);color:#374151} ",
-      ".shiny-notification{border-radius:var(--ibgb-r-sm);box-shadow:var(--ibgb-shadow-lift)} ",
+      "pre{background:#f6f8fb;border:1px solid var(--bgs-line);border-radius:var(--bgs-r-sm);color:#374151} ",
+      ".shiny-notification{border-radius:var(--bgs-r-sm);box-shadow:var(--bgs-shadow-lift)} ",
       "::selection{background:rgba(0,114,178,.18)}"
     ))
   )
@@ -3644,17 +3651,17 @@ wizard_env_section <- function() {
     shiny_action_grid(
       shiny::actionButton("refresh_setup", "Re-check environment")
     ),
-    shiny::tags$div(class = "ibgb-key-files-title", "Installation status"),
+    shiny::tags$div(class = "bgs-key-files-title", "Installation status"),
     shiny::tableOutput("installation_table"),
-    shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS installation plan"),
+    shiny::tags$div(class = "bgs-key-files-title", "BioGeoBEARS installation plan"),
     shiny::tableOutput("biogeobears_install_plan_table")
   )
 }
 
-iBGB_app_ui <- function(default_config, default_output, example_project_dir) {
+bgs_app_ui <- function(default_config, default_output, example_project_dir) {
   shiny::fluidPage(
-    iBGB_head_styles(),
-    shiny::titlePanel("iBiogeobears"),
+    bgs_head_styles(),
+    shiny::titlePanel("BioGeoSyn"),
     shiny::uiOutput("status"),
     wizard_env_section(),
     shiny::tabsetPanel(
@@ -3681,11 +3688,11 @@ wizard_step_data <- function(default_config, default_output, example_project_dir
   shiny::tabPanel(
     "1 \u00b7 Data",
     shiny::tags$div(
-      class = "ibgb-choice-card",
-      shiny::tags$div(class = "ibgb-control-title", "Use your own data"),
+      class = "bgs-choice-card",
+      shiny::tags$div(class = "bgs-control-title", "Use your own data"),
       shiny::textInput("wizard_project_name", "Project name", value = "my_clade"),
       shiny::tags$div(
-        class = "ibgb-upload-row",
+        class = "bgs-upload-row",
         shiny::fileInput(
           "wizard_tree",
           "Tree file",
@@ -3694,23 +3701,23 @@ wizard_step_data <- function(default_config, default_output, example_project_dir
         shiny::downloadButton("download_tree_template", "Template")
       ),
       shiny::tags$div(
-        class = "ibgb-upload-row",
+        class = "bgs-upload-row",
         shiny::fileInput("wizard_geography", "Geography matrix CSV", accept = ".csv"),
         shiny::downloadButton("download_geography_template", "Template")
       ),
       shiny::tags$div(
-        class = "ibgb-upload-row",
+        class = "bgs-upload-row",
         shiny::fileInput("wizard_regions", "Regions CSV", accept = ".csv"),
         shiny::downloadButton("download_regions_template", "Template")
       ),
       shiny::tags$div(
-        class = "ibgb-home-note",
+        class = "bgs-home-note",
         "No data yet? Use the \"Template\" button beside each upload \u2014 they are the built-in example data (a few species, a few areas). Edit them into your own data and upload."
       ),
       shiny_collapsible_section(
         "Advanced constraints (optional; for time-stratified and similar analyses)",
         shiny::tags$p(
-          class = "ibgb-home-note",
+          class = "bgs-home-note",
           "These files drive time stratification, dispersal multipliers, area adjacency and similar advanced analyses. Most analyses do not need them \u2014 leave blank. The \"Template\" button beside each upload downloads the expected format."
         ),
         shiny_wizard_constraint_inputs()
@@ -3729,41 +3736,41 @@ wizard_step_data <- function(default_config, default_output, example_project_dir
         value = shiny_default_num_cores(), min = 1L, step = 1L
       ),
       shiny::tags$div(
-        class = "ibgb-home-note",
+        class = "bgs-home-note",
         "Extra cores speed up model fitting only. Do not exceed the machine's core count. The gain is largest for big state spaces (many areas, large max_range)."
       ),
-      shiny::tags$div(class = "ibgb-key-files-title", "Where results are saved"),
+      shiny::tags$div(class = "bgs-key-files-title", "Where results are saved"),
       shiny::tags$div(
-        class = "ibgb-output-row",
+        class = "bgs-output-row",
         shiny::textInput("output_dir", "Save all results to", value = default_output),
         shiny::actionButton("choose_output_dir", "Browse")
       ),
       shiny::tags$div(
-        class = "ibgb-home-note",
+        class = "bgs-home-note",
         "The run writes tables, figures, reports and logs into this directory. After uploading, an overview appears below \u2014 check it, then go to the Analysis tab to run."
       )
     ),
     shiny::tags$div(
-      class = "ibgb-choice-card",
-      shiny::tags$div(class = "ibgb-control-title", "Data overview"),
+      class = "bgs-choice-card",
+      shiny::tags$div(class = "bgs-control-title", "Data overview"),
       shiny::tags$p(
-        class = "ibgb-home-note",
+        class = "bgs-home-note",
         "After uploading, an overview appears here (as in RASP): how many tips the tree has, how many species occupy each area, and how range sizes are distributed. Click \"Check inputs\" for the consistency checks."
       ),
       shiny_action_grid(shiny::actionButton("validate", "Check inputs")),
       shiny::tableOutput("data_overview_table"),
       shiny::tags$div(
-        class = "ibgb-two-col",
+        class = "bgs-two-col",
         shiny::tags$div(
-          shiny::tags$div(class = "ibgb-key-files-title", "Species per area"),
+          shiny::tags$div(class = "bgs-key-files-title", "Species per area"),
           shiny::tableOutput("region_occupancy_table")
         ),
         shiny::tags$div(
-          shiny::tags$div(class = "ibgb-key-files-title", "Range-size distribution"),
+          shiny::tags$div(class = "bgs-key-files-title", "Range-size distribution"),
           shiny::tableOutput("range_size_table")
         )
       ),
-      shiny::tags$div(class = "ibgb-key-files-title", "Input validation"),
+      shiny::tags$div(class = "bgs-key-files-title", "Input validation"),
       shiny::tableOutput("validation_table")
     ),
     shiny::tags$div(
@@ -3780,7 +3787,7 @@ wizard_step_analysis <- function() {
       "Run",
       shiny_action_grid(shiny::actionButton("run", "Start the analysis")),
       shiny::tags$div(
-        class = "ibgb-home-note",
+        class = "bgs-home-note",
         "When the run finishes, open the \"3. Single clade\" tab for the results; build and download the report from there if you need one."
       )
     ),
@@ -3788,7 +3795,7 @@ wizard_step_analysis <- function() {
     shiny_collapsible_section(
       "BSM stochastic mapping",
       shiny::tags$div(
-        class = "ibgb-home-note",
+        class = "bgs-home-note",
         "Only with this checked does the run produce event statistics, the process synthesis and rates through time (including process_rates_through_time.csv and region_process_rates_through_time.csv, which the cross-clade synthesis needs). Unchecked, the run fits models and estimates ancestral ranges only."
       ),
       shiny::checkboxInput("run_stochastic_mapping", "Run BSM stochastic mapping", value = FALSE),
@@ -3816,18 +3823,18 @@ wizard_step_results <- function() {
     shiny_control_section(
       "Export",
       shiny::tags$div(
-        class = "ibgb-downloads",
+        class = "bgs-downloads",
         shiny::downloadButton("download_bundle", "Download result bundle (all result files)")
       ),
       shiny::tags$div(
-        class = "ibgb-home-note",
+        class = "bgs-home-note",
         "The bundle contains every result file for this clade (tables, figures, logs). Event statistics and the illustrated report live in \"4. Multi-clade synthesis\", where they are produced for the integrated results."
       )
     ),
     shiny_collapsible_section(
       "What each result file is (read alongside the downloaded bundle)",
       shiny::tags$p(
-        class = "ibgb-home-note",
+        class = "bgs-home-note",
         "The result bundle contains the files below. This table says what each one holds; the full tables and high-resolution figures are all in the bundle, so there is no need to expand them here."
       ),
       shiny::tableOutput("output_file_legend_table")
@@ -3838,7 +3845,7 @@ wizard_step_results <- function() {
 # Bundle a cross-clade combined table together with its integrated figure
 # (publication PNG + PDF) into a single downloadable zip archive.
 write_cross_clade_bundle <- function(file, combined, plot, stem, width, height) {
-  tmp <- tempfile("ibgb-xclade-")
+  tmp <- tempfile("bgs-xclade-")
   dir.create(tmp)
   on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
   csv <- file.path(tmp, paste0(stem, ".csv"))
@@ -3856,15 +3863,15 @@ write_cross_clade_bundle <- function(file, combined, plot, stem, width, height) 
 }
 
 wizard_step_cross_clade <- function() {
-  preview <- function(id, height = "460px") shiny::div(class = "ibgb-preview", shiny::imageOutput(id, height = height))
-  card <- function(title, ...) shiny::tags$div(class = "ibgb-choice-card", shiny::tags$div(class = "ibgb-control-title", title), ...)
+  preview <- function(id, height = "460px") shiny::div(class = "bgs-preview", shiny::imageOutput(id, height = height))
+  card <- function(title, ...) shiny::tags$div(class = "bgs-choice-card", shiny::tags$div(class = "bgs-control-title", title), ...)
   shiny::tabPanel(
     "4. Multi-clade synthesis",
     shiny::tags$div(
-      class = "ibgb-next-action",
-      shiny::tags$div(class = "ibgb-next-action-title", "Bring several clades together"),
+      class = "bgs-next-action",
+      shiny::tags$div(class = "bgs-next-action-title", "Bring several clades together"),
       shiny::tags$div(
-        class = "ibgb-next-action-detail",
+        class = "bgs-next-action-detail",
         "Download each clade's result bundle from \"3. Single clade\" first (.zip; BSM must have been enabled and run). Upload all of them below in one go and this page reads them and builds the full integrated results and report. Renaming each bundle to its clade name (e.g. Muridae.zip) is recommended."
       )
     ),
@@ -3881,14 +3888,14 @@ wizard_step_cross_clade <- function() {
     card("7 \u00b7 Immigration / emigration per area", preview("cc_budget_plot", "440px")),
     card("8 \u00b7 Event statistics", shiny::tableOutput("cc_esum_table")),
     shiny::tags$div(
-      class = "ibgb-choice-card",
-      shiny::tags$div(class = "ibgb-control-title", "Export and report"),
+      class = "bgs-choice-card",
+      shiny::tags$div(class = "bgs-control-title", "Export and report"),
       shiny::tags$div(
-        class = "ibgb-home-note",
+        class = "bgs-home-note",
         "Download every integrated result (CSVs and figures), or build a shareable HTML report containing all of the panels above. Build the report first, then download it."
       ),
       shiny::tags$div(
-        class = "ibgb-downloads",
+        class = "bgs-downloads",
         shiny::downloadButton("download_cross_clade", "Download all integrated results (CSV + figures)"),
         shiny::actionButton("render_xclade_report", "Build report"),
         shiny::downloadButton("download_xclade_report", "Download report")
@@ -3899,11 +3906,31 @@ wizard_step_cross_clade <- function() {
 }
 
 wizard_step_help <- function() {
+  link <- function(label, href) {
+    shiny::tags$a(href = href, target = "_blank", rel = "noopener noreferrer", label)
+  }
   shiny::tabPanel(
     "About and citation",
-    shiny::tags$div(class = "ibgb-key-files-title", "Software status"),
+    shiny::tags$div(class = "bgs-key-files-title", "Software status"),
     shiny::tableOutput("about_table"),
-    shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS citation"),
+    shiny::tags$div(class = "bgs-key-files-title", "Developer"),
+    shiny::tags$div(
+      class = "bgs-choice-card bgs-developer",
+      shiny::tags$div(class = "bgs-developer-name", "Wei Xu"),
+      shiny::tags$div(class = "bgs-developer-role", "Ph.D., Postdoctoral researcher"),
+      shiny::tags$div(
+        class = "bgs-developer-affil",
+        "School of Zoology, Tel Aviv University, Israel"
+      ),
+      shiny::tags$div(
+        class = "bgs-developer-links",
+        link("xuwei.evo@gmail.com", "mailto:xuwei.evo@gmail.com"),
+        link("Google Scholar", "https://scholar.google.com/citations?user=YOxNTyAAAAAJ&hl=en"),
+        link("ResearchGate", "https://www.researchgate.net/profile/Wei-Xu-312"),
+        link("GitHub", "https://github.com/XuWeiEvo/BioGeoSyn")
+      )
+    ),
+    shiny::tags$div(class = "bgs-key-files-title", "BioGeoBEARS citation"),
     shiny::verbatimTextOutput("citation_text")
   )
 }

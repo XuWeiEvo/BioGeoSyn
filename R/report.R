@@ -6,7 +6,7 @@
 #' @return Path to the report source or rendered output.
 #' @export
 render_report <- function(result, template = NULL, format = "html") {
-  template <- template %||% system.file("templates", "report_template.qmd", package = "iBiogeobears")
+  template <- template %||% system.file("templates", "report_template.qmd", package = "BioGeoSyn")
   if (!file.exists(template)) {
     stop("Report template not found: ", template, call. = FALSE)
   }

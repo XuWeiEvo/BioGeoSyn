@@ -1,5 +1,5 @@
 args <- commandArgs(trailingOnly = TRUE)
-repo <- if (length(args) >= 1L && nzchar(args[[1L]])) args[[1L]] else "XuWeiEvo/iBioGeoBEARS"
+repo <- if (length(args) >= 1L && nzchar(args[[1L]])) args[[1L]] else "XuWeiEvo/BioGeoSyn"
 
 assert <- function(ok, message) {
   if (!isTRUE(ok)) {
@@ -11,7 +11,7 @@ assert_file <- function(path, label) {
   assert(file.exists(path), paste(label, "was not created:", path))
 }
 
-lib <- tempfile("ibgb-clean-github-lib-")
+lib <- tempfile("bgs-clean-github-lib-")
 dir.create(lib, recursive = TRUE, showWarnings = FALSE)
 .libPaths(c(lib, .libPaths()))
 
@@ -27,9 +27,9 @@ remotes::install_github(
   build_vignettes = FALSE
 )
 
-library(iBiogeobears, lib.loc = lib)
+library(BioGeoSyn, lib.loc = lib)
 
-installed_path <- normalizePath(find.package("iBiogeobears", lib.loc = lib), winslash = "/", mustWork = TRUE)
+installed_path <- normalizePath(find.package("BioGeoSyn", lib.loc = lib), winslash = "/", mustWork = TRUE)
 assert(startsWith(installed_path, normalizePath(lib, winslash = "/", mustWork = TRUE)), "Package was not loaded from the clean temporary library.")
 
 guide <- open_user_guide(browse = FALSE)
@@ -41,12 +41,12 @@ required <- checks$component[checks$required == "yes" & checks$component != "Bio
 required_ready <- checks$status[match(required, checks$component)] == "Ready"
 assert(all(required_ready), paste("Required non-BioGeoBEARS checks are not ready:", paste(required[!required_ready], collapse = ", ")))
 
-example_root <- tempfile("ibgb-clean-github-example-")
+example_root <- tempfile("bgs-clean-github-example-")
 project <- create_example_project(example_root)
 assert_file(project$config, "example analysis.yml")
 
 dry <- run_workflow(project$config, dry_run = TRUE, require_biogeobears = FALSE)
-assert(inherits(dry, "iBGB_workflow_result"), "run_workflow() did not return an iBGB_workflow_result.")
+assert(inherits(dry, "bgs_workflow_result"), "run_workflow() did not return an bgs_workflow_result.")
 assert(isTRUE(dry$dry_run), "The clean-install workflow should run in dry-run mode.")
 assert(all(dry$validation$ok), "The clean-install example did not validate.")
 assert_file(file.path(dry$project_paths$tables, "input_validation.csv"), "input validation table")
@@ -61,7 +61,7 @@ assert_file(bundle, "result bundle")
 assert_file(diagnostics, "diagnostic bundle")
 
 if (requireNamespace("shiny", quietly = TRUE)) {
-  app <- getFromNamespace("create_iBGB_shiny_app", "iBiogeobears")()
+  app <- getFromNamespace("create_bgs_shiny_app", "BioGeoSyn")()
   assert(inherits(app, "shiny.appobj"), "Installed Shiny app did not build.")
 } else {
   message("Shiny is not installed; launch_app() was not built in this smoke test.")

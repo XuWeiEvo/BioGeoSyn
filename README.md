@@ -1,8 +1,8 @@
-# iBiogeobears
+# BioGeoSyn
 
-[![R-CMD-check](https://github.com/XuWeiEvo/iBioGeoBEARS/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/XuWeiEvo/iBioGeoBEARS/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/XuWeiEvo/BioGeoSyn/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/XuWeiEvo/BioGeoSyn/actions/workflows/R-CMD-check.yaml)
 
-`iBiogeobears` wraps [BioGeoBEARS](http://phylo.wikidot.com/biogeobears) in a
+`BioGeoSyn` wraps [BioGeoBEARS](http://phylo.wikidot.com/biogeobears) in a
 reproducible, step-by-step GUI with standardized output tables, publication
 figures, and — its main novelty — **cross-clade integration of biogeographic
 event statistics** (range expansion, in-situ/sympatric speciation, vicariance,
@@ -13,7 +13,7 @@ switching). Beta.
 
 ```r
 install.packages("remotes")
-remotes::install_github("XuWeiEvo/iBioGeoBEARS")
+remotes::install_github("XuWeiEvo/BioGeoSyn")
 ```
 
 BioGeoBEARS is not bundled and must be installed separately (Quarto is only
@@ -31,7 +31,7 @@ BioGeoBEARS and can install it for you.
 
 ```r
 install.packages("shiny")   # once
-library(iBiogeobears)
+library(BioGeoSyn)
 launch_app()
 ```
 
@@ -66,8 +66,8 @@ and fitting fewer models are the two effective levers.
 ## Quick start (script)
 
 ```r
-library(iBiogeobears)
-project <- create_example_project(tempfile("ibgb-example-"))
+library(BioGeoSyn)
+project <- create_example_project(tempfile("bgs-example-"))
 
 # Validate and plan without running BioGeoBEARS:
 run_workflow(project$config, dry_run = TRUE, require_biogeobears = FALSE)

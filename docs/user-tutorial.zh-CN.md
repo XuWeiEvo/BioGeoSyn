@@ -1,11 +1,11 @@
-# iBiogeobears 中文用户测试教程
+# BioGeoSyn 中文用户测试教程
 
 版本：面向 `0.2.1-alpha` 之后的普通用户测试  
 适用对象：会打开 R 或 RStudio、但不一定熟悉 R 包开发或 BioGeoBEARS 细节的用户
 
 这份教程的目标是让测试用户完成四件事：
 
-1. 安装 `iBiogeobears` 和必要依赖。
+1. 安装 `BioGeoSyn` 和必要依赖。
 2. 打开 Shiny 图形界面。
 3. 用内置示例数据跑通一次分析。
 4. 用自己的 tree、geography、regions 文件创建项目，并知道怎么看结果、怎么反馈错误。
@@ -15,8 +15,8 @@
 请先安装 R 和 RStudio，然后按下面教程操作：
 
 ```text
-iBiogeobears 中文用户测试教程：
-https://github.com/XuWeiEvo/iBioGeoBEARS/blob/main/docs/user-tutorial.zh-CN.md
+BioGeoSyn 中文用户测试教程：
+https://github.com/XuWeiEvo/BioGeoSyn/blob/main/docs/user-tutorial.zh-CN.md
 ```
 
 推荐先运行内置示例，不要一开始就用自己的数据。示例能跑通，说明软件安装和本机环境基本正常。
@@ -34,7 +34,7 @@ https://github.com/XuWeiEvo/iBioGeoBEARS/blob/main/docs/user-tutorial.zh-CN.md
 - R，建议 4.3 或更新版本。
 - RStudio，推荐但不是必须。
 - 能访问 GitHub 和 CRAN 的网络。
-- 一个容易找到的英文路径，例如 `C:/iBiogeobears_test` 或桌面上的测试文件夹。
+- 一个容易找到的英文路径，例如 `C:/BioGeoSyn_test` 或桌面上的测试文件夹。
 
 真实 BioGeoBEARS 分析还需要：
 
@@ -43,19 +43,19 @@ https://github.com/XuWeiEvo/iBioGeoBEARS/blob/main/docs/user-tutorial.zh-CN.md
 - HTML 报告建议安装 Quarto。
 - PDF 报告还需要 TinyTeX、MiKTeX 或 TeX Live；测试阶段可以先只用 HTML 报告。
 
-## 三、安装 iBiogeobears
+## 三、安装 BioGeoSyn
 
 打开 R 或 RStudio，运行：
 
 ```r
 install.packages("remotes")
-remotes::install_github("XuWeiEvo/iBioGeoBEARS")
+remotes::install_github("XuWeiEvo/BioGeoSyn")
 ```
 
 加载软件：
 
 ```r
-library(iBiogeobears)
+library(BioGeoSyn)
 ```
 
 检查本机环境：
@@ -74,7 +74,7 @@ open_user_guide(language = "zh-CN")
 
 ## 四、安装 BioGeoBEARS
 
-`iBiogeobears` 不自带 BioGeoBEARS。真实运行 DEC、DEC+J、DIVALIKE、DIVALIKE+J、BAYAREALIKE、BAYAREALIKE+J 前，必须另外安装 BioGeoBEARS。
+`BioGeoSyn` 不自带 BioGeoBEARS。真实运行 DEC、DEC+J、DIVALIKE、DIVALIKE+J、BAYAREALIKE、BAYAREALIKE+J 前，必须另外安装 BioGeoBEARS。
 
 先查看安装计划：
 
@@ -108,7 +108,7 @@ install.packages("shiny")
 启动图形界面：
 
 ```r
-library(iBiogeobears)
+library(BioGeoSyn)
 launch_app()
 ```
 
@@ -118,10 +118,10 @@ launch_app()
 create_windows_launcher()
 ```
 
-以后直接双击桌面上的 `start-iBiogeobears.bat`，不用再打开 RStudio 输入
+以后直接双击桌面上的 `start-BioGeoSyn.bat`，不用再打开 RStudio 输入
 `launch_app()`。
 
-浏览器会打开 `iBiogeobears` 页面。第一次打开时，软件会自动准备一个临时示例项目。
+浏览器会打开 `BioGeoSyn` 页面。第一次打开时，软件会自动准备一个临时示例项目。
 
 界面左侧是操作区，右侧是结果区。新版界面默认比较简单，普通用户优先看中文入口：
 
@@ -149,7 +149,7 @@ create_windows_launcher()
 2. 运行：
 
 ```r
-library(iBiogeobears)
+library(BioGeoSyn)
 launch_app()
 ```
 
@@ -174,9 +174,9 @@ Dry run 不会真正运行 BioGeoBEARS，只检查项目、输入文件和输出
 如果不想用图形界面，也可以在 R 里直接运行：
 
 ```r
-library(iBiogeobears)
+library(BioGeoSyn)
 
-project <- create_example_project("ibgb_example")
+project <- create_example_project("bgs_example")
 
 dry <- run_workflow(
   project$config,
@@ -261,7 +261,7 @@ C,Region C,#7570b3
 1. 打开 Shiny：
 
 ```r
-library(iBiogeobears)
+library(BioGeoSyn)
 launch_app()
 ```
 
@@ -290,10 +290,10 @@ launch_app()
 如果用户更习惯 R 命令，也可以这样做：
 
 ```r
-library(iBiogeobears)
+library(BioGeoSyn)
 
 project <- create_analysis_project(
-  path = "my_ibgb_project",
+  path = "my_bgs_project",
   project_name = "my_clade",
   tree_file = "my_tree.nwk",
   geography_file = "my_geography.csv",
@@ -454,7 +454,7 @@ check_biogeobears(required = FALSE)
 
 ```r
 install.packages("shiny")
-library(iBiogeobears)
+library(BioGeoSyn)
 launch_app()
 ```
 
@@ -525,7 +525,7 @@ result <- run_workflow(
 ```text
 操作系统：
 R 版本：
-iBiogeobears 安装方式：
+BioGeoSyn 安装方式：
 是否能打开 Shiny：
 是否能跑通内置示例 dry run：
 是否能跑通内置示例真实分析：

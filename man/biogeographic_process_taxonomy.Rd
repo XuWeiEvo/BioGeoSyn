@@ -14,7 +14,7 @@ A data frame with one row per process and the columns
 }
 \description{
 Canonical mapping from BioGeoBEARS event codes to interpretable
-biogeographic process categories used throughout the iBiogeobears event
+biogeographic process categories used throughout the BioGeoSyn event
 statistics, synthesis tables, and figures. Cladogenetic processes are
 speciation modes realized at nodes; anagenetic processes are range changes
 realized along branches. This mapping is the reference used to translate raw

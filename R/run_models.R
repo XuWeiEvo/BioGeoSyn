@@ -1,6 +1,6 @@
 #' Run selected BioGeoBEARS models
 #'
-#' Builds BioGeoBEARS run objects from an iBiogeobears configuration and,
+#' Builds BioGeoBEARS run objects from a BioGeoSyn configuration and,
 #' when requested, executes the selected models. BioGeoBEARS is not bundled
 #' with this package and is checked only at runtime.
 #'
@@ -677,7 +677,7 @@ file_md5 <- function(path) {
 }
 
 serialized_object_md5 <- function(object) {
-  path <- tempfile("ibgb-signature-", fileext = ".rds")
+  path <- tempfile("bgs-signature-", fileext = ".rds")
   on.exit(unlink(path), add = TRUE)
   saveRDS(object, path, version = 2)
   file_md5(path)

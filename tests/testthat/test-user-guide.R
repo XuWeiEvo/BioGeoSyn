@@ -38,5 +38,5 @@ test_that("the guide and the interface are English only", {
   # The Chinese guide was retired when the interface went English-only, so
   # open_user_guide() no longer takes a language.
   expect_false("language" %in% names(formals(open_user_guide)))
-  expect_length(list.files(system.file("docs", package = "iBiogeobears"), pattern = "zh"), 0L)
+  expect_length(list.files(system.file("docs", package = "BioGeoSyn"), pattern = "zh"), 0L)
 })

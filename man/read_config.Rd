@@ -2,7 +2,7 @@
 % Please edit documentation in R/config.R
 \name{read_config}
 \alias{read_config}
-\title{Read an iBiogeobears YAML configuration file}
+\title{Read a BioGeoSyn YAML configuration file}
 \usage{
 read_config(config)
 }
@@ -13,5 +13,5 @@ read_config(config)
 A normalized configuration list with defaults filled in.
 }
 \description{
-Read an iBiogeobears YAML configuration file
+Read a BioGeoSyn YAML configuration file
 }

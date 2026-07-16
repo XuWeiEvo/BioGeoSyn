@@ -14,22 +14,22 @@ pkgload::load_all(repo, quiet = TRUE)
 # A minimal app that loads the bundled example project. The data step's hidden
 # config handle defaults to this config, so validation and the (dry) run work
 # without simulating file uploads.
-app_dir <- tempfile("ibgb-shiny-browser-app-")
+app_dir <- tempfile("bgs-shiny-browser-app-")
 dir.create(app_dir, recursive = TRUE)
 repo_literal <- encodeString(repo, quote = "'")
 writeLines(
   c(
     paste0("pkgload::load_all(", repo_literal, ", quiet = TRUE)"),
-    "example <- create_example_project(file.path(tempdir(), 'ibgb-shiny-browser-example'))",
-    "out <- file.path(tempdir(), 'ibgb-shiny-browser-out')",
-    "create_iBGB_shiny_app(config = example$config, output_dir = out)"
+    "example <- create_example_project(file.path(tempdir(), 'bgs-shiny-browser-example'))",
+    "out <- file.path(tempdir(), 'bgs-shiny-browser-out')",
+    "create_bgs_shiny_app(config = example$config, output_dir = out)"
   ),
   file.path(app_dir, "app.R")
 )
 
 app <- shinytest2::AppDriver$new(
   app_dir = app_dir,
-  name = "ibgb-shiny-browser-smoke",
+  name = "bgs-shiny-browser-smoke",
   load_timeout = 30000,
   timeout = 30000,
   height = 900,

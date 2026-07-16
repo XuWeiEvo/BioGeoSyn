@@ -2,7 +2,7 @@
 % Please edit documentation in R/checks.R
 \name{check_installation}
 \alias{check_installation}
-\title{Check whether iBiogeobears is ready for common user workflows}
+\title{Check whether BioGeoSyn is ready for common user workflows}
 \usage{
 check_installation(include_pdf = TRUE)
 }

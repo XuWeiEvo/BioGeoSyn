@@ -1,4 +1,4 @@
-# iBiogeobears 0.2.1 alpha
+# BioGeoSyn 0.2.1 alpha
 
 Third alpha release of the single-clade BioGeoBEARS workflow MVP.
 
@@ -30,7 +30,7 @@ full acceptance gate for real BioGeoBEARS execution.
 
 ## BioGeoBEARS Dependency
 
-BioGeoBEARS is not bundled with `iBiogeobears`. Users must install BioGeoBEARS
+BioGeoBEARS is not bundled with `BioGeoSyn`. Users must install BioGeoBEARS
 separately for real model execution.
 
 Run this in R to inspect local availability:
@@ -50,13 +50,13 @@ citation("BioGeoBEARS")
 
 ```r
 install.packages("remotes")
-remotes::install_github("XuWeiEvo/iBioGeoBEARS@v0.2.1-alpha")
+remotes::install_github("XuWeiEvo/BioGeoSyn@v0.2.1-alpha")
 ```
 
 For the ordinary-user path:
 
 ```r
-library(iBiogeobears)
+library(BioGeoSyn)
 open_user_guide()
 launch_app()
 ```

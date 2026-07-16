@@ -1,4 +1,4 @@
-#' Create a reproducible iBiogeobears project directory
+#' Create a reproducible BioGeoSyn project directory
 #'
 #' @param output_dir Directory where workflow outputs should be written.
 #' @param overwrite Logical. If `FALSE`, existing files are not removed or
@@ -28,7 +28,7 @@ create_project <- function(output_dir, overwrite = FALSE) {
   dirs
 }
 
-#' Create a runnable example iBiogeobears project
+#' Create a runnable example BioGeoSyn project
 #'
 #' @param path Directory to create.
 #' @param overwrite Logical. If `FALSE`, stop when `path` already contains
@@ -47,8 +47,8 @@ create_example_project <- function(path, overwrite = FALSE) {
   data_dir <- file.path(root, "data")
   dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
 
-  template <- system.file("templates", "analysis.yml", package = "iBiogeobears")
-  example_dir <- system.file("example_data", package = "iBiogeobears")
+  template <- system.file("templates", "analysis.yml", package = "BioGeoSyn")
+  example_dir <- system.file("example_data", package = "BioGeoSyn")
   if (!file.exists(template) || !dir.exists(example_dir)) {
     stop("Installed example template or data files could not be found.", call. = FALSE)
   }
@@ -81,7 +81,7 @@ create_example_project <- function(path, overwrite = FALSE) {
   )
 }
 
-#' Create an iBiogeobears analysis project from user input files
+#' Create a BioGeoSyn analysis project from user input files
 #'
 #' Copies a tree, geography matrix, and region table into a portable project,
 #' writes `analysis.yml`, and immediately validates the generated project.
@@ -141,7 +141,7 @@ create_analysis_project <- function(
     }
   }
 
-  template <- system.file("templates", "analysis.yml", package = "iBiogeobears")
+  template <- system.file("templates", "analysis.yml", package = "BioGeoSyn")
   if (!file.exists(template)) {
     stop("Installed analysis template could not be found.", call. = FALSE)
   }

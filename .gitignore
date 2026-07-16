@@ -1,6 +1,6 @@
 *.Rcheck/
 *.tar.gz
-iBioGeoBEARS-scaffold.zip
+BioGeoSyn-scaffold.zip
 .RData
 .Rhistory
 .Rproj.user/

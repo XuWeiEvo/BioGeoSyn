@@ -15,13 +15,13 @@ summarize_input_data(
 \item{base_dir}{Directory used to resolve relative input paths.}
 }
 \value{
-A list of class \code{iBGB_input_summary} with elements \code{tree},
+A list of class \code{bgs_input_summary} with elements \code{tree},
 \code{geography}, \code{region_occupancy}, \code{range_size_distribution}, \code{taxon_match},
 and \code{overview} (a tidy item/value table for display). An element is \code{NULL}
 when the input file it needs is missing or unreadable.
 }
 \description{
-Produce a compact, RASP-style overview of an iBiogeobears input dataset: how
+Produce a compact, RASP-style overview of a BioGeoSyn input dataset: how
 many tips the tree has, how many areas and species the geography defines, how
 many species occupy each region, and how species range sizes are distributed.
 This backs the data-overview step of the Shiny wizard, but it is usable on its

@@ -19,7 +19,7 @@ test_that("install_biogeobears is non-mutating by default", {
 })
 
 test_that("installation path and CRAN repository helpers are safe", {
-  lib <- tempfile("ibgb-user-library-")
+  lib <- tempfile("bgs-user-library-")
 
   expect_equal(resolve_install_library(lib), as_path(lib))
   expect_true(dir.exists(lib))

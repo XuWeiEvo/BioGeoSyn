@@ -1,5 +1,5 @@
 test_that("render_report writes report source when quarto is unavailable", {
-  out <- tempfile("ibgb-report-source-")
+  out <- tempfile("bgs-report-source-")
   paths <- create_project(out)
   result <- list(project_paths = paths)
 

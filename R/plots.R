@@ -13,9 +13,9 @@ plot_event_through_time <- function(event_table) {
   ggplot2::ggplot(event_table, ggplot2::aes(x = event_time, colour = event_type)) +
     ggplot2::stat_ecdf(linewidth = 0.9) +
     ggplot2::scale_x_reverse() +
-    scale_colour_ibgb() +
+    scale_colour_bgs() +
     ggplot2::labs(x = "Time before present", y = "Cumulative proportion of events", colour = "Event type") +
-    theme_ibgb()
+    theme_bgs()
 }
 
 #' Plot a region-to-region dispersal network
@@ -77,17 +77,17 @@ plot_event_summary <- function(event_summary) {
   plot_data$event_label <- stats::reorder(plot_data$event_label, plot_data$event_count)
 
   ggplot2::ggplot(plot_data, ggplot2::aes(x = event_label, y = event_count, fill = event_label)) +
-    ggplot2::geom_col(width = 0.72, colour = ibgb_palette()$outline, linewidth = 0.25, show.legend = FALSE) +
+    ggplot2::geom_col(width = 0.72, colour = bgs_palette()$outline, linewidth = 0.25, show.legend = FALSE) +
     ggplot2::coord_flip() +
     ggplot2::facet_wrap(stats::as.formula("~ model")) +
-    scale_fill_ibgb() +
+    scale_fill_bgs() +
     ggplot2::labs(
       x = NULL,
       y = "Branch count",
       title = "Range-change event summary",
       subtitle = "Derived from highest-probability ancestral states; not stochastic mapping counts"
     ) +
-    theme_ibgb() +
+    theme_bgs() +
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
 }
 
@@ -112,23 +112,23 @@ plot_bsm_event_summary <- function(bsm_event_summary) {
   plot_data$sd_count <- suppressWarnings(as.numeric(plot_data$sd_count %||% NA_real_))
 
   ggplot2::ggplot(plot_data, ggplot2::aes(x = event_label, y = mean_count, fill = event_label)) +
-    ggplot2::geom_col(width = 0.72, colour = ibgb_palette()$outline, linewidth = 0.25, show.legend = FALSE) +
+    ggplot2::geom_col(width = 0.72, colour = bgs_palette()$outline, linewidth = 0.25, show.legend = FALSE) +
     ggplot2::geom_errorbar(
       ggplot2::aes(ymin = pmax(0, mean_count - sd_count), ymax = mean_count + sd_count),
       width = 0.18,
-      colour = ibgb_palette()$ink,
+      colour = bgs_palette()$ink,
       na.rm = TRUE
     ) +
     ggplot2::coord_flip() +
     ggplot2::facet_wrap(stats::as.formula("~ model")) +
-    scale_fill_ibgb() +
+    scale_fill_bgs() +
     ggplot2::labs(
       x = NULL,
       y = "Mean count per stochastic map",
       title = "BSM event-count summary",
       subtitle = "Formal BioGeoBEARS stochastic mapping counts"
     ) +
-    theme_ibgb() +
+    theme_bgs() +
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
 }
 
@@ -147,14 +147,14 @@ plot_bsm_event_times <- function(bsm_events) {
     ggplot2::stat_ecdf(linewidth = 0.9) +
     ggplot2::scale_x_reverse() +
     ggplot2::facet_wrap(stats::as.formula("~ model")) +
-    scale_colour_ibgb() +
+    scale_colour_bgs() +
     ggplot2::labs(
       x = "Time before present",
       y = "Cumulative proportion of sampled events",
       colour = "Event",
       title = "BSM event timing"
     ) +
-    theme_ibgb()
+    theme_bgs()
 }
 
 plot_bsm_dispersal_routes <- function(bsm_dispersal_routes, route_type = "all_dispersal") {
@@ -171,16 +171,16 @@ plot_bsm_dispersal_routes <- function(bsm_dispersal_routes, route_type = "all_di
 
   ggplot2::ggplot(plot_data, ggplot2::aes(x = target_region, y = source_region, fill = mean_count)) +
     ggplot2::geom_tile(colour = "white", linewidth = 0.7) +
-    ggplot2::geom_text(ggplot2::aes(label = round(mean_count, 2)), size = 3, colour = ibgb_palette()$ink) +
+    ggplot2::geom_text(ggplot2::aes(label = round(mean_count, 2)), size = 3, colour = bgs_palette()$ink) +
     ggplot2::facet_wrap(stats::as.formula("~ model")) +
-    scale_fill_ibgb_seq(name = "Mean count") +
+    scale_fill_bgs_seq(name = "Mean count") +
     ggplot2::labs(
       x = "Target region",
       y = "Source region",
       title = "BSM dispersal directions",
       subtitle = route_type
     ) +
-    theme_ibgb() +
+    theme_bgs() +
     ggplot2::theme(panel.grid = ggplot2::element_blank())
 }
 
@@ -226,15 +226,15 @@ plot_bsm_dispersal_network <- function(bsm_dispersal_routes, route_type = "all_d
       start_cap = ggraph::circle(6, "mm"), end_cap = ggraph::circle(6, "mm")
     ) +
     ggraph::geom_node_point(ggplot2::aes(colour = name), size = 9, show.legend = FALSE) +
-    ggraph::geom_node_text(ggplot2::aes(label = name), repel = TRUE, size = 3.3, colour = ibgb_palette()$ink) +
+    ggraph::geom_node_text(ggplot2::aes(label = name), repel = TRUE, size = 3.3, colour = bgs_palette()$ink) +
     ggraph::scale_edge_width(range = c(0.4, 3.2), name = "Mean count") +
-    scale_colour_ibgb() +
+    scale_colour_bgs() +
     ggplot2::labs(title = "BSM dispersal network", subtitle = route_type) +
     ggplot2::coord_fixed(clip = "off") +
     ggplot2::theme_void(base_size = 12) +
     ggplot2::theme(
-      plot.title = ggplot2::element_text(face = "bold", size = ggplot2::rel(1.15), colour = ibgb_palette()$ink),
-      plot.subtitle = ggplot2::element_text(size = ggplot2::rel(0.9), colour = ibgb_palette()$muted, margin = ggplot2::margin(b = 8)),
+      plot.title = ggplot2::element_text(face = "bold", size = ggplot2::rel(1.15), colour = bgs_palette()$ink),
+      plot.subtitle = ggplot2::element_text(size = ggplot2::rel(0.9), colour = bgs_palette()$muted, margin = ggplot2::margin(b = 8)),
       legend.position = "bottom",
       plot.margin = ggplot2::margin(10, 18, 10, 18)
     )
@@ -257,12 +257,12 @@ plot_model_comparison <- function(comparison) {
     comparison,
     ggplot2::aes(x = stats::reorder(model, delta_aicc), y = delta_aicc, fill = plus_j)
   ) +
-    ggplot2::geom_col(width = 0.72, colour = ibgb_palette()$outline, linewidth = 0.25) +
-    ggplot2::geom_hline(yintercept = 2, linetype = "dashed", colour = ibgb_palette()$muted, linewidth = 0.4) +
+    ggplot2::geom_col(width = 0.72, colour = bgs_palette()$outline, linewidth = 0.25) +
+    ggplot2::geom_hline(yintercept = 2, linetype = "dashed", colour = bgs_palette()$muted, linewidth = 0.4) +
     ggplot2::coord_flip() +
     ggplot2::scale_fill_manual(values = c("+J" = "#D55E00", "no +J" = "#0072B2")) +
     ggplot2::labs(x = NULL, y = expression(Delta * "AICc"), fill = "Model type") +
-    theme_ibgb() +
+    theme_bgs() +
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
 }
 
@@ -289,13 +289,13 @@ plot_root_state_probabilities <- function(root_state_probabilities, top_n = 8L) 
   plot_data$state <- stats::reorder(plot_data$state, plot_data$probability)
 
   ggplot2::ggplot(plot_data, ggplot2::aes(x = state, y = probability, fill = model)) +
-    ggplot2::geom_col(width = 0.72, colour = ibgb_palette()$outline, linewidth = 0.2, show.legend = FALSE) +
+    ggplot2::geom_col(width = 0.72, colour = bgs_palette()$outline, linewidth = 0.2, show.legend = FALSE) +
     ggplot2::coord_flip() +
     ggplot2::facet_wrap(stats::as.formula("~ model"), scales = "free_y") +
-    scale_fill_ibgb() +
+    scale_fill_bgs() +
     ggplot2::scale_y_continuous(limits = c(0, 1), expand = ggplot2::expansion(mult = c(0, 0.05))) +
     ggplot2::labs(x = "Root range state", y = "Probability") +
-    theme_ibgb() +
+    theme_bgs() +
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
 }
 
@@ -445,7 +445,7 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
       data = edge_segments,
       ggplot2::aes(x = x, y = y, xend = xend, yend = yend),
       linewidth = 0.55,
-      colour = ibgb_palette()$ink,
+      colour = bgs_palette()$ink,
       lineend = "round"
     )
 
@@ -461,7 +461,7 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
       ggplot2::geom_point(
         data = layout,
         ggplot2::aes(x = xp, y = y, fill = best_state_label),
-        shape = 21, size = max(2, 18 * radius), colour = ibgb_palette()$ink, stroke = 0.4
+        shape = 21, size = max(2, 18 * radius), colour = bgs_palette()$ink, stroke = 0.4
       )
   }
 
@@ -471,7 +471,7 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
         data = tip_rows,
         ggplot2::aes(x = xp, y = y, label = tip_display),
         hjust = 0, nudge_x = radius + 0.08, size = 3.2,
-        colour = ibgb_palette()$ink
+        colour = bgs_palette()$ink
       )
   }
 
@@ -482,7 +482,7 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
   age_breaks <- age_breaks[age_breaks >= 0 & age_breaks <= x_max + 1e-9]
 
   final_plot <- plot +
-    scale_fill_ibgb(breaks = legend_breaks) +
+    scale_fill_bgs(breaks = legend_breaks) +
     ggplot2::guides(fill = ggplot2::guide_legend(nrow = 2L)) +
     ggplot2::scale_x_continuous(
       breaks = (x_max - age_breaks) * x_scale,
@@ -497,19 +497,19 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
       y = NULL,
       fill = "Range"
     ) +
-    theme_ibgb() +
+    theme_bgs() +
     ggplot2::theme(
       panel.grid.major = ggplot2::element_blank(),
       panel.grid.minor = ggplot2::element_blank(),
       axis.text.y = ggplot2::element_blank(),
       axis.ticks.y = ggplot2::element_blank(),
-      axis.line.x = ggplot2::element_line(colour = ibgb_palette()$ink, linewidth = 0.5),
-      axis.ticks.x = ggplot2::element_line(colour = ibgb_palette()$ink, linewidth = 0.4),
+      axis.line.x = ggplot2::element_line(colour = bgs_palette()$ink, linewidth = 0.5),
+      axis.ticks.x = ggplot2::element_line(colour = bgs_palette()$ink, linewidth = 0.4),
       plot.margin = ggplot2::margin(8, 60, 8, 8)
     )
   # Preferred save dimensions (height scales with tip count); honoured by
   # save_plot_outputs() so the pies stay legible for large trees.
-  attr(final_plot, "ibgb_dims") <- attr_dims
+  attr(final_plot, "bgs_dims") <- attr_dims
   final_plot
 }
 
@@ -591,8 +591,8 @@ plot_node_state_sensitivity <- function(node_state_sensitivity, top_n = 20L, loc
   title <- paste0(unique(plot_data$non_j_model)[1L], " vs ", unique(plot_data$plus_j_model)[1L])
 
   ggplot2::ggplot(plot_data, ggplot2::aes(x = node_display, y = probability_difference_abs, fill = state_change)) +
-    ggplot2::geom_col(width = 0.72, colour = ibgb_palette()$outline, linewidth = 0.25) +
-    ggplot2::geom_text(ggplot2::aes(label = comparison), hjust = -0.08, size = 3, colour = ibgb_palette()$ink) +
+    ggplot2::geom_col(width = 0.72, colour = bgs_palette()$outline, linewidth = 0.25) +
+    ggplot2::geom_text(ggplot2::aes(label = comparison), hjust = -0.08, size = 3, colour = bgs_palette()$ink) +
     ggplot2::coord_flip(clip = "off") +
     ggplot2::scale_fill_manual(values = c("Best state changed" = "#D55E00", "Same best state" = "#0072B2")) +
     ggplot2::scale_y_continuous(limits = c(0, NA), expand = ggplot2::expansion(mult = c(0, 0.22))) +
@@ -603,7 +603,7 @@ plot_node_state_sensitivity <- function(node_state_sensitivity, top_n = 20L, loc
       y = "Absolute probability difference",
       fill = "Node sensitivity"
     ) +
-    theme_ibgb() +
+    theme_bgs() +
     ggplot2::theme(
       panel.grid.major.y = ggplot2::element_blank(),
       plot.margin = ggplot2::margin(5.5, 35, 5.5, 5.5)
@@ -714,7 +714,7 @@ generate_figures <- function(model_comparison, standardized_tables, project_path
 
 save_plot_outputs <- function(plot, name, figures_dir, formats) {
   formats <- unique(as.character(formats %||% "png"))
-  dimensions <- attr(plot, "ibgb_dims") %||% plot_output_dimensions(name)
+  dimensions <- attr(plot, "bgs_dims") %||% plot_output_dimensions(name)
   do.call(rbind, lapply(formats, function(format) {
     path <- file.path(figures_dir, paste0(name, ".", format))
     status <- "created"

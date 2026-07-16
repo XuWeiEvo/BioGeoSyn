@@ -1,9 +1,9 @@
 @echo off
 setlocal
-title iBiogeobears
+title BioGeoSyn
 
 echo.
-echo Starting iBiogeobears...
+echo Starting BioGeoSyn...
 echo.
 
 set "RSCRIPT="
@@ -45,16 +45,16 @@ echo.
 echo If a browser window does not open automatically, keep this window open and check the R output below.
 echo.
 
-set "IBGB_R_EXPR=options(shiny.launch.browser=TRUE); if (!requireNamespace('iBiogeobears', quietly=TRUE)) stop('iBiogeobears is not installed in this R library. Install it from GitHub first.', call.=FALSE); if (!requireNamespace('shiny', quietly=TRUE)) stop('The shiny package is not installed. Install shiny in R first.', call.=FALSE); iBiogeobears::launch_app(launch.browser=TRUE)"
+set "IBGB_R_EXPR=options(shiny.launch.browser=TRUE); if (!requireNamespace('BioGeoSyn', quietly=TRUE)) stop('BioGeoSyn is not installed in this R library. Install it from GitHub first.', call.=FALSE); if (!requireNamespace('shiny', quietly=TRUE)) stop('The shiny package is not installed. Install shiny in R first.', call.=FALSE); BioGeoSyn::launch_app(launch.browser=TRUE)"
 
 "%RSCRIPT%" -e "%IBGB_R_EXPR%"
 set "EXITCODE=%ERRORLEVEL%"
 
 echo.
 if not "%EXITCODE%"=="0" (
-  echo iBiogeobears failed to start. Review the error message above.
+  echo BioGeoSyn failed to start. Review the error message above.
 ) else (
-  echo iBiogeobears has stopped.
+  echo BioGeoSyn has stopped.
 )
 echo.
 pause

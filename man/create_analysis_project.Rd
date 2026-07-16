@@ -2,7 +2,7 @@
 % Please edit documentation in R/project.R
 \name{create_analysis_project}
 \alias{create_analysis_project}
-\title{Create an iBiogeobears analysis project from user input files}
+\title{Create a BioGeoSyn analysis project from user input files}
 \usage{
 create_analysis_project(
   path,

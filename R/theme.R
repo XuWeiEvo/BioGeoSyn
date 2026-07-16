@@ -1,10 +1,10 @@
-# Shared publication plotting style for iBiogeobears figures.
+# Shared publication plotting style for BioGeoSyn figures.
 #
 # Colours use the Okabe-Ito colourblind-safe palette. The categorical order is
 # fixed (never cycled); the two-colour process palette and the sequential
 # heatmap ramp are validated for CVD separation and lightness monotonicity.
 
-ibgb_palette <- function() {
+bgs_palette <- function() {
   list(
     process = c(
       "Cladogenetic (speciation mode)" = "#0072B2",
@@ -26,15 +26,15 @@ ibgb_palette <- function() {
 
 # Return n categorical colours in fixed order, extending by interpolation only
 # when a plot genuinely needs more than the seven base hues.
-ibgb_qual_colors <- function(n) {
-  base <- ibgb_palette()$qualitative
+bgs_qual_colors <- function(n) {
+  base <- bgs_palette()$qualitative
   if (n <= length(base)) {
     return(unname(base[seq_len(n)]))
   }
   grDevices::colorRampPalette(base)(n)
 }
 
-#' iBiogeobears ggplot theme
+#' BioGeoSyn ggplot theme
 #'
 #' A clean, publication-oriented ggplot2 theme used by the package figures.
 #'
@@ -42,8 +42,8 @@ ibgb_qual_colors <- function(n) {
 #' @param base_family Base font family; empty string uses the device default.
 #' @return A ggplot2 theme object.
 #' @export
-theme_ibgb <- function(base_size = 12, base_family = "") {
-  pal <- ibgb_palette()
+theme_bgs <- function(base_size = 12, base_family = "") {
+  pal <- bgs_palette()
   ggplot2::theme_minimal(base_size = base_size, base_family = base_family) +
     ggplot2::theme(
       plot.title = ggplot2::element_text(
@@ -77,16 +77,16 @@ theme_ibgb <- function(base_size = 12, base_family = "") {
 }
 
 # Discrete fill/colour scales using the fixed categorical palette.
-scale_fill_ibgb <- function(...) {
-  ggplot2::discrete_scale(aesthetics = "fill", palette = ibgb_qual_colors, ...)
+scale_fill_bgs <- function(...) {
+  ggplot2::discrete_scale(aesthetics = "fill", palette = bgs_qual_colors, ...)
 }
 
-scale_colour_ibgb <- function(...) {
-  ggplot2::discrete_scale(aesthetics = "colour", palette = ibgb_qual_colors, ...)
+scale_colour_bgs <- function(...) {
+  ggplot2::discrete_scale(aesthetics = "colour", palette = bgs_qual_colors, ...)
 }
 
 # Sequential single-hue fill for magnitude (e.g. heatmaps).
-scale_fill_ibgb_seq <- function(name = "Mean count", ...) {
-  pal <- ibgb_palette()
+scale_fill_bgs_seq <- function(name = "Mean count", ...) {
+  pal <- bgs_palette()
   ggplot2::scale_fill_gradient(low = pal$sequential_low, high = pal$sequential_high, name = name, ...)
 }

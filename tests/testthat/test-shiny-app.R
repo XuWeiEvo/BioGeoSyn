@@ -9,10 +9,10 @@ test_that("planned_model_table summarizes configured models", {
   expect_equal(plan$status, rep("planned", 3L))
 })
 
-test_that("create_iBGB_shiny_app builds a Shiny app when shiny is installed", {
+test_that("create_bgs_shiny_app builds a Shiny app when shiny is installed", {
   testthat::skip_if_not_installed("shiny")
 
-  app <- create_iBGB_shiny_app()
+  app <- create_bgs_shiny_app()
 
   expect_s3_class(app, "shiny.appobj")
 })
@@ -29,8 +29,8 @@ test_that("Shiny startup creates a valid ready-to-run example", {
 })
 
 test_that("Shiny startup preserves an explicit config and output", {
-  project <- create_example_project(tempfile("ibgb-explicit-startup-"))
-  output <- tempfile("ibgb-explicit-output-")
+  project <- create_example_project(tempfile("bgs-explicit-startup-"))
+  output <- tempfile("bgs-explicit-output-")
 
   startup <- prepare_shiny_startup(project$config, output)
 
@@ -113,9 +113,9 @@ test_that("Shiny first steps table gives ordinary-user next actions", {
   expect_match(steps$next_step[match("Workflow run", steps$step)], "dry workflow", fixed = TRUE)
 
   state$validation <- data.frame(check = "tree_file", ok = TRUE, stringsAsFactors = FALSE)
-  paths <- create_project(tempfile("ibgb-shiny-first-steps-"))
+  paths <- create_project(tempfile("bgs-shiny-first-steps-"))
   state$result <- list(project_paths = paths, dry_run = TRUE, validation_failed = FALSE)
-  class(state$result) <- c("iBGB_workflow_result", "list")
+  class(state$result) <- c("bgs_workflow_result", "list")
   state$model_table <- data.frame(model = "DEC", status = "planned", run_action = "planned", stringsAsFactors = FALSE)
 
   steps <- shiny_first_steps_table(state, config_path = config, output_dir = paths$root, dry_run = TRUE)
@@ -168,9 +168,9 @@ test_that("Shiny guided workflow table highlights the next ordinary-user action"
   expect_match(own_workflow[["Next step"]][match("Data source", own_workflow$Step)], "Upload the tree", fixed = TRUE)
 
   state$validation <- data.frame(check = "tree_file", ok = TRUE, stringsAsFactors = FALSE)
-  paths <- create_project(tempfile("ibgb-shiny-guided-workflow-"))
+  paths <- create_project(tempfile("bgs-shiny-guided-workflow-"))
   state$result <- list(project_paths = paths, dry_run = TRUE, validation_failed = FALSE)
-  class(state$result) <- c("iBGB_workflow_result", "list")
+  class(state$result) <- c("bgs_workflow_result", "list")
   state$model_table <- data.frame(model = "DEC", status = "planned", run_action = "planned", stringsAsFactors = FALSE)
 
   workflow <- shiny_guided_workflow_table(
@@ -222,7 +222,7 @@ test_that("Shiny project wizard helpers resolve uploads, previews, and defaults"
   )
 
   expect_equal(shiny_upload_path(upload, "Geography CSV"), uploaded)
-  expect_true(grepl("iBiogeobears-projects$", default_project_parent()))
+  expect_true(grepl("BioGeoSyn-projects$", default_project_parent()))
   expect_error(shiny_upload_path(NULL, "Tree file"), "Tree file is required")
 
   tree <- tempfile(fileext = ".nwk")
@@ -285,9 +285,9 @@ test_that("Shiny sidebar helper builds grouped controls", {
 
   html <- as.character(section)
 
-  expect_match(html, "ibgb-control-section", fixed = TRUE)
-  expect_match(html, "ibgb-control-title", fixed = TRUE)
-  expect_match(html, "ibgb-action-grid", fixed = TRUE)
+  expect_match(html, "bgs-control-section", fixed = TRUE)
+  expect_match(html, "bgs-control-title", fixed = TRUE)
+  expect_match(html, "bgs-action-grid", fixed = TRUE)
   expect_match(html, "Workflow", fixed = TRUE)
 })
 
@@ -305,7 +305,7 @@ test_that("Wizard data step is a single own-data card with merged output locatio
   expect_match(panel_html, "wizard_tree", fixed = TRUE)
   expect_match(panel_html, "wizard_geography", fixed = TRUE)
   expect_match(panel_html, "download_geography_template", fixed = TRUE)
-  expect_match(panel_html, "ibgb-upload-row", fixed = TRUE)
+  expect_match(panel_html, "bgs-upload-row", fixed = TRUE)
   # Advanced constraint uploads and their inline templates live on the data step.
   expect_match(panel_html, "Advanced constraints", fixed = TRUE)
   expect_match(panel_html, "wizard_constraint_times_file", fixed = TRUE)
@@ -315,7 +315,7 @@ test_that("Wizard data step is a single own-data card with merged output locatio
   expect_match(panel_html, "output_dir", fixed = TRUE)
   expect_match(panel_html, "choose_output_dir", fixed = TRUE)
   expect_match(panel_html, "config_path", fixed = TRUE)
-  expect_match(panel_html, "ibgb-output-row", fixed = TRUE)
+  expect_match(panel_html, "bgs-output-row", fixed = TRUE)
   expect_match(panel_html, "display:none", fixed = TRUE)
   # The RASP-style overview (formerly a separate tab) is merged into this step.
   expect_match(panel_html, "overview", fixed = TRUE)
@@ -397,7 +397,7 @@ test_that("Results step is single-clade, slims exports, and shows a file legend"
 
   ui <- as.character(wizard_step_results())
   expect_match(ui, "Single clade", fixed = TRUE)
-  expect_false(grepl("ibgb-step-intro", ui, fixed = TRUE))
+  expect_false(grepl("bgs-step-intro", ui, fixed = TRUE))
   # Only the result bundle is downloaded here; the report moved to the
   # cross-clade tab (it targets the integrated multi-clade results).
   expect_match(ui, "download_bundle", fixed = TRUE)
@@ -513,7 +513,7 @@ test_that("Shiny cross-clade server combines uploaded result bundles", {
   za <- make_bundle_zip("CladeA")
   zb <- make_bundle_zip("CladeB")
 
-  shiny::testServer(iBGB_shiny_server, {
+  shiny::testServer(bgs_shiny_server, {
     session$setInputs(cross_clade_bundles = data.frame(
       name = c("CladeA.zip", "CladeB.zip"),
       datapath = c(za, zb),
@@ -529,20 +529,20 @@ test_that("Shiny cross-clade server combines uploaded result bundles", {
 test_that("Preview image containers size to their content, not a fixed height", {
   testthat::skip_if_not_installed("shiny")
 
-  styles <- as.character(iBGB_head_styles()$children[[1]]$children[[1]])
-  expect_match(styles, ".ibgb-preview .shiny-image-output", fixed = TRUE)
+  styles <- as.character(bgs_head_styles()$children[[1]]$children[[1]])
+  expect_match(styles, ".bgs-preview .shiny-image-output", fixed = TRUE)
   expect_match(styles, "height:auto !important", fixed = TRUE)
   # Buttons are highlighted with a filled accent so they read as clickable,
   # and upload rows lay the template download beside the file input.
-  expect_match(styles, "background:var(--ibgb-accent)", fixed = TRUE)
-  expect_match(styles, ".ibgb-upload-row{display:flex", fixed = TRUE)
+  expect_match(styles, "background:var(--bgs-accent)", fixed = TRUE)
+  expect_match(styles, ".bgs-upload-row{display:flex", fixed = TRUE)
   # The interface accent is the package's Okabe-Ito figure blue, so the app and
   # the figures it produces share one palette.
-  expect_match(styles, "--ibgb-accent:#0072b2", fixed = TRUE)
-  expect_match(styles, "--ibgb-ink:#1f2937", fixed = TRUE)
+  expect_match(styles, "--bgs-accent:#0072b2", fixed = TRUE)
+  expect_match(styles, "--bgs-ink:#1f2937", fixed = TRUE)
   # Collapsible/dropdown summaries get a highlighted arrow marker that rotates.
-  expect_match(styles, ".ibgb-collapsible>summary::before", fixed = TRUE)
-  expect_match(styles, ".ibgb-collapsible[open]>summary::before{transform:rotate(90deg)}", fixed = TRUE)
+  expect_match(styles, ".bgs-collapsible>summary::before", fixed = TRUE)
+  expect_match(styles, ".bgs-collapsible[open]>summary::before{transform:rotate(90deg)}", fixed = TRUE)
 })
 
 test_that("constraint_template_path resolves every constraint template", {
@@ -600,7 +600,7 @@ test_that("Single-clade results body keeps only single-clade-meaningful views", 
 test_that("Wizard shell renders all steps including elevated cross-clade", {
   testthat::skip_if_not_installed("shiny")
 
-  ui_html <- as.character(iBGB_app_ui("analysis.yml", "results/out", "example"))
+  ui_html <- as.character(bgs_app_ui("analysis.yml", "results/out", "example"))
 
   expect_match(ui_html, "wizard_nav", fixed = TRUE)
   expect_match(ui_html, "Multi-clade", fixed = TRUE)
@@ -653,7 +653,7 @@ test_that("resolve_shiny_config_path requires a config source", {
 })
 
 test_that("Wizard overrides apply and write a runnable YAML with absolute paths", {
-  project <- create_example_project(tempfile("ibgb-shiny-wizard-cfg-"))
+  project <- create_example_project(tempfile("bgs-shiny-wizard-cfg-"))
   cfg <- read_config(project$config)
   times <- constraint_template_path("times_file")
   upload <- function(path) {
@@ -729,7 +729,7 @@ test_that("Shiny message helpers record staged workflow progress", {
 })
 
 test_that("download file helpers resolve and copy report files", {
-  out <- tempfile("ibgb-shiny-download-")
+  out <- tempfile("bgs-shiny-download-")
   paths <- create_project(out)
   report <- file.path(paths$reports, "summary_report.html")
   writeLines("<html></html>", report)
@@ -758,7 +758,7 @@ test_that("download file helper reports missing files clearly", {
 })
 
 test_that("load_existing_workflow_result rebuilds Shiny state from output files", {
-  out <- tempfile("ibgb-shiny-load-results-")
+  out <- tempfile("bgs-shiny-load-results-")
   paths <- create_project(out)
   report <- file.path(paths$reports, "summary_report.html")
   model_plot <- file.path(paths$figures, "model_comparison.png")
@@ -780,7 +780,7 @@ test_that("load_existing_workflow_result rebuilds Shiny state from output files"
   state$result <- result
   state$manifest <- result$workflow_manifest
 
-  expect_s3_class(result, "iBGB_workflow_result")
+  expect_s3_class(result, "bgs_workflow_result")
   expect_equal(result$model_run_status$model, "DEC")
   expect_equal(result$model_comparison$model, "DEC")
   expect_equal(result$model_sensitivity_table$answer, "DEC")
@@ -793,7 +793,7 @@ test_that("load_existing_workflow_result rebuilds Shiny state from output files"
 })
 
 test_that("shiny_summary_table reports workflow status", {
-  out <- tempfile("ibgb-shiny-summary-")
+  out <- tempfile("bgs-shiny-summary-")
   paths <- create_project(out)
   report <- file.path(paths$reports, "summary_report.html")
   bundle <- tempfile(fileext = ".zip")
@@ -823,7 +823,7 @@ test_that("shiny_summary_table reports workflow status", {
 })
 
 test_that("shiny about and citation helpers expose software status", {
-  out <- tempfile("ibgb-shiny-about-")
+  out <- tempfile("bgs-shiny-about-")
   paths <- create_project(out)
   session_info <- file.path(paths$logs, "session_info.txt")
   citation_log <- file.path(paths$logs, "biogeobears_citation.txt")
@@ -861,7 +861,7 @@ test_that("shiny about and citation helpers expose software status", {
     install_help = "install BioGeoBEARS"
   ))
 
-  expect_equal(about$value[match("Package", about$item)], "iBiogeobears")
+  expect_equal(about$value[match("Package", about$item)], "BioGeoSyn")
   expect_equal(about$value[match("License", about$item)], "GPL (>= 2)")
   expect_equal(about$value[match("BioGeoBEARS available", about$item)], "yes")
   expect_equal(about$value[match("BioGeoBEARS version", about$item)], "1.1.2")
@@ -887,7 +887,7 @@ test_that("shiny_run_summary_table handles empty and fitted result states", {
   expect_equal(empty_summary$value[match("Best statistical model", empty_summary$item)], "not available")
   expect_equal(empty_summary$value[match("Output directory", empty_summary$item)], "not available")
 
-  out <- tempfile("ibgb-shiny-run-summary-")
+  out <- tempfile("bgs-shiny-run-summary-")
   paths <- create_project(out)
   report <- file.path(paths$reports, "summary_report.html")
   writeLines("<html></html>", report)
@@ -965,12 +965,12 @@ test_that("shiny_run_summary_cards renders readable status cards", {
 
   html <- as.character(shiny_run_summary_cards(state))
 
-  expect_match(html, "ibgb-run-summary-grid", fixed = TRUE)
+  expect_match(html, "bgs-run-summary-grid", fixed = TRUE)
   expect_match(html, "Best statistical model", fixed = TRUE)
   expect_match(html, "DEC\\+J \\(delta AICc 0\\)")
   expect_match(html, "yes; report sensitivity", fixed = TRUE)
   expect_match(html, "Failed models", fixed = TRUE)
-  expect_match(html, "ibgb-run-summary-card warning", fixed = TRUE)
+  expect_match(html, "bgs-run-summary-card warning", fixed = TRUE)
 })
 
 test_that("shiny_key_files_table lists common workflow outputs", {
@@ -986,7 +986,7 @@ test_that("shiny_key_files_table lists common workflow outputs", {
   expect_equal(empty_files$next_step[match("Result bundle", empty_files$file)], "Click Create bundle if missing.")
   expect_equal(empty_files$next_step[match("Diagnostic bundle", empty_files$file)], "Click Create diagnostic bundle.")
 
-  out <- tempfile("ibgb-shiny-key-files-")
+  out <- tempfile("bgs-shiny-key-files-")
   paths <- create_project(out)
   report <- file.path(paths$reports, "summary_report.html")
   bundle <- tempfile(fileext = ".zip")
@@ -1179,7 +1179,7 @@ test_that("Shiny result summaries make model fit, +J sensitivity, and warnings r
 })
 
 test_that("Shiny result helpers can read workflow CSV tables", {
-  out <- tempfile("ibgb-shiny-result-tables-")
+  out <- tempfile("bgs-shiny-result-tables-")
   paths <- create_project(out)
   utils::write.csv(
     data.frame(model = "DEC", AICc = 10, delta_aicc = 0, interpretation_note = "ok"),
@@ -1358,7 +1358,7 @@ test_that("Shiny result helpers can read workflow CSV tables", {
 })
 
 test_that("table preview helpers discover and read CSV outputs", {
-  out <- tempfile("ibgb-shiny-tables-")
+  out <- tempfile("bgs-shiny-tables-")
   paths <- create_project(out)
   table_path <- file.path(paths$tables, "model_comparison.csv")
   utils::write.csv(data.frame(model = "DEC", AICc = 10), table_path, row.names = FALSE)
@@ -1385,7 +1385,7 @@ test_that("table preview helpers discover and read CSV outputs", {
 })
 
 test_that("table status helpers report key CSV availability and next steps", {
-  out <- tempfile("ibgb-shiny-table-status-")
+  out <- tempfile("bgs-shiny-table-status-")
   paths <- create_project(out)
   utils::write.csv(data.frame(model = "DEC", AICc = 10), file.path(paths$tables, "model_comparison.csv"), row.names = FALSE)
   utils::write.csv(data.frame(model = "DEC", status = "completed"), file.path(paths$tables, "model_run_status.csv"), row.names = FALSE)
@@ -1418,7 +1418,7 @@ test_that("table status helpers report key CSV availability and next steps", {
 })
 
 test_that("table preview helpers return empty data when no tables exist", {
-  paths <- create_project(tempfile("ibgb-shiny-no-tables-"))
+  paths <- create_project(tempfile("bgs-shiny-no-tables-"))
   state <- new.env(parent = emptyenv())
   state$result <- list(project_paths = paths)
   state$manifest <- data.frame()
@@ -1430,7 +1430,7 @@ test_that("table preview helpers return empty data when no tables exist", {
 })
 
 test_that("figure preview helpers discover PNG outputs", {
-  out <- tempfile("ibgb-shiny-figures-")
+  out <- tempfile("bgs-shiny-figures-")
   paths <- create_project(out)
   png_path <- file.path(paths$figures, "model_comparison.png")
   writeBin(as.raw(c(0x89, 0x50, 0x4e, 0x47)), png_path)
@@ -1454,7 +1454,7 @@ test_that("figure preview helpers discover PNG outputs", {
 })
 
 test_that("figure dashboard helpers expose named workflow figures", {
-  out <- tempfile("ibgb-shiny-figure-dashboard-")
+  out <- tempfile("bgs-shiny-figure-dashboard-")
   paths <- create_project(out)
   png_path <- file.path(paths$figures, "model_comparison.png")
   writeBin(as.raw(c(0x89, 0x50, 0x4e, 0x47)), png_path)
@@ -1489,7 +1489,7 @@ test_that("figure dashboard helpers expose named workflow figures", {
 })
 
 test_that("figure dashboard reports failed figure generation with next steps", {
-  out <- tempfile("ibgb-shiny-figure-dashboard-failed-")
+  out <- tempfile("bgs-shiny-figure-dashboard-failed-")
   paths <- create_project(out)
 
   state <- new.env(parent = emptyenv())
@@ -1516,7 +1516,7 @@ test_that("figure dashboard reports failed figure generation with next steps", {
 })
 
 test_that("figure preview helpers return NULL when no figures exist", {
-  paths <- create_project(tempfile("ibgb-shiny-no-figures-"))
+  paths <- create_project(tempfile("bgs-shiny-no-figures-"))
   state <- new.env(parent = emptyenv())
   state$result <- list(project_paths = paths)
   state$manifest <- data.frame()
@@ -1529,9 +1529,9 @@ test_that("figure preview helpers return NULL when no figures exist", {
 test_that("Shiny server validates and dry-runs a workflow", {
   testthat::skip_if_not_installed("shiny")
 
-  project <- create_example_project(tempfile("ibgb-shiny-server-"))
+  project <- create_example_project(tempfile("bgs-shiny-server-"))
 
-  shiny::testServer(iBGB_shiny_server, {
+  shiny::testServer(bgs_shiny_server, {
     session$setInputs(
       config_path = project$config,
       output_dir = project$output_dir,
@@ -1552,7 +1552,7 @@ test_that("Shiny server validates and dry-runs a workflow", {
     expect_true(any(grepl("Validation: model plan ready", state$messages, fixed = TRUE)))
 
     session$setInputs(run = 1)
-    expect_s3_class(state$result, "iBGB_workflow_result")
+    expect_s3_class(state$result, "bgs_workflow_result")
     expect_true(isTRUE(state$result$dry_run))
     expect_true(file.exists(file.path(state$result$project_paths$tables, "workflow_manifest.csv")))
     expect_match(state$message, "Dry run completed", fixed = TRUE)
@@ -1568,8 +1568,8 @@ test_that("Shiny server validates and dry-runs a workflow", {
 test_that("Shiny wizard uploads drive validation and the workflow directly", {
   testthat::skip_if_not_installed("shiny")
 
-  source <- create_example_project(tempfile("ibgb-shiny-wizard-source-"))
-  output_dir <- tempfile("ibgb-shiny-wizard-output-")
+  source <- create_example_project(tempfile("bgs-shiny-wizard-source-"))
+  output_dir <- tempfile("bgs-shiny-wizard-output-")
   upload <- function(path, name, type) {
     data.frame(
       name = name,
@@ -1580,7 +1580,7 @@ test_that("Shiny wizard uploads drive validation and the workflow directly", {
     )
   }
 
-  shiny::testServer(iBGB_shiny_server, {
+  shiny::testServer(bgs_shiny_server, {
     session$setInputs(
       config_path = source$config,
       output_dir = output_dir,
@@ -1611,7 +1611,7 @@ test_that("Shiny wizard uploads drive validation and the workflow directly", {
     expect_equal(state$model_table$model, c("DEC", "DEC+J"))
 
     session$setInputs(run = 1)
-    expect_s3_class(state$result, "iBGB_workflow_result")
+    expect_s3_class(state$result, "bgs_workflow_result")
     expect_true(isTRUE(state$result$dry_run))
     expect_equal(state$result$config$project$name, "Bird clade")
     expect_equal(state$result$config$inputs$max_range_size, 2L)
@@ -1623,9 +1623,9 @@ test_that("Shiny server renders reports and bundles dry-run results", {
   testthat::skip_if_not_installed("shiny")
   testthat::skip_if(Sys.which("zip") == "", "zip utility is not available")
 
-  project <- create_example_project(tempfile("ibgb-shiny-render-"))
+  project <- create_example_project(tempfile("bgs-shiny-render-"))
 
-  shiny::testServer(iBGB_shiny_server, {
+  shiny::testServer(bgs_shiny_server, {
     session$setInputs(
       config_path = project$config,
       output_dir = project$output_dir,
@@ -1637,7 +1637,7 @@ test_that("Shiny server renders reports and bundles dry-run results", {
 
     session$setInputs(run = 1)
     state <- session$userData$state
-    expect_s3_class(state$result, "iBGB_workflow_result")
+    expect_s3_class(state$result, "bgs_workflow_result")
     expect_true(file.exists(file.path(state$result$project_paths$tables, "shiny_run_summary.csv")))
 
     # A real run auto-generates the report; here we exercise the source render

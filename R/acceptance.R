@@ -1,4 +1,4 @@
-#' Run an end-to-end iBiogeobears acceptance check
+#' Run an end-to-end BioGeoSyn acceptance check
 #'
 #' Creates a fresh bundled example project and records each user-facing
 #' workflow stage in a machine-readable acceptance table. Quick mode validates
@@ -11,11 +11,11 @@
 #'   real six-model execution.
 #' @param render_html Logical. Render and require an HTML report. Defaults to
 #'   `TRUE` in full mode and `FALSE` in quick mode.
-#' @return An object of class `iBGB_acceptance_result` containing the check
+#' @return An object of class `bgs_acceptance_result` containing the check
 #'   table, artifact paths, workflow result, and overall pass status.
 #' @export
 run_acceptance_check <- function(
-    path = tempfile("iBiogeobears-acceptance-"),
+    path = tempfile("BioGeoSyn-acceptance-"),
     mode = c("quick", "full"),
     render_html = identical(match.arg(mode), "full")) {
   mode <- match.arg(mode)
@@ -284,7 +284,7 @@ run_acceptance_check <- function(
     result_bundle = state$result_bundle %||% NULL,
     diagnostic_bundle = state$diagnostic_bundle %||% NULL
   )
-  class(result) <- c("iBGB_acceptance_result", "list")
+  class(result) <- c("bgs_acceptance_result", "list")
   result
 }
 
@@ -353,7 +353,7 @@ acceptance_assert <- function(ok, message) {
 
 acceptance_add_environment <- function(checks, mode) {
   package_version <- tryCatch(
-    as.character(utils::packageVersion("iBiogeobears")),
+    as.character(utils::packageVersion("BioGeoSyn")),
     error = function(e) NA_character_
   )
   data.frame(
@@ -370,7 +370,7 @@ acceptance_add_environment <- function(checks, mode) {
 }
 
 #' @export
-print.iBGB_acceptance_result <- function(x, ...) {
+print.bgs_acceptance_result <- function(x, ...) {
   print(x$checks[, c("check", "required", "status", "detail"), drop = FALSE], row.names = FALSE)
   cat(
     "\nOverall:", if (isTRUE(x$passed)) "PASSED" else "FAILED",
