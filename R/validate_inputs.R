@@ -114,7 +114,7 @@ validate_inputs <- function(config, base_dir = dirname(config$.config_file %||% 
     output_parent %||% "missing"
   )
 
-  constraint_checks <- validate_constraint_files(config$advanced$constraints, base_dir)
+  constraint_checks <- validate_constraint_files(config$advanced$constraints, base_dir, config)
   if (length(constraint_checks)) {
     checks <- c(checks, constraint_checks)
   }
@@ -184,7 +184,13 @@ validation_check_catalog <- function() {
       "output_parent_writable",
       "advanced_constraints_list",
       "advanced_constraint_fields_known",
-      "advanced_constraint_files_exist"
+      "advanced_constraint_files_exist",
+      "advanced_constraint_layout",
+      "advanced_constraint_areas_match_geography",
+      "advanced_constraint_times_readable",
+      "advanced_constraint_strata_cover_times",
+      "advanced_constraint_times_cover_root",
+      "advanced_constraint_times_avoid_nodes"
     ),
     label = c(
       "Tree file is available",
@@ -204,7 +210,13 @@ validation_check_catalog <- function() {
       "Output directory is writable",
       "Advanced constraints use a valid structure",
       "Advanced constraint names are recognized",
-      "Advanced constraint files are available"
+      "Advanced constraint files are available",
+      "Advanced constraint files use the BioGeoBEARS layout",
+      "Advanced constraint areas match the geography",
+      "Times file lists numeric time-bin bottoms",
+      "Each constraint has a block per time bin",
+      "Oldest time bin is older than the tree root",
+      "No tree node sits on a time-bin boundary"
     ),
     next_step = c(
       "Select an existing Newick tree file.",
@@ -224,7 +236,13 @@ validation_check_catalog <- function() {
       "Choose an output location where the current user can create files.",
       "Define advanced constraints as named YAML fields.",
       "Remove unknown advanced constraint fields or use a documented field name.",
-      "Correct or remove advanced constraint file paths that do not exist."
+      "Correct or remove advanced constraint file paths that do not exist.",
+      "Write each constraint block as an area-name header followed by rows of plain numbers, with no row labels.",
+      "Use the same area codes, in the geography's areas, in every constraint file.",
+      "List one numeric time-bin bottom per line in the times file.",
+      "Give every constraint file at least one block per time bin in the times file.",
+      "Add a time-bin bottom older than the tree root age.",
+      "Shift the time-bin bottoms so that no tree node falls exactly on a boundary."
     ),
     stringsAsFactors = FALSE
   )
@@ -273,7 +291,7 @@ nearest_existing_parent <- function(path) {
   }
 }
 
-validate_constraint_files <- function(constraints, base_dir) {
+validate_constraint_files <- function(constraints, base_dir, config = list()) {
   checks <- list()
   add_constraint_check <- function(name, ok, detail = "") {
     checks[[length(checks) + 1L]] <<- data.frame(
@@ -318,7 +336,190 @@ validate_constraint_files <- function(constraints, base_dir) {
     length(missing_files) == 0L,
     if (length(missing_files) == 0L) "all configured constraint files exist" else paste(missing_files, collapse = "; ")
   )
+  if (length(missing_files) > 0L) {
+    return(checks)
+  }
+
+  present <- function(field) {
+    value <- constraints[[field]]
+    if (is.null(value) || identical(value, "")) {
+      return(NULL)
+    }
+    resolve_config_path(value, base_dir)
+  }
+  matrix_fields <- c(
+    "dists_file", "distance_file", "dispersal_multipliers_file",
+    "areas_allowed_file", "areas_adjacency_file"
+  )
+
+  # Layout: BioGeoBEARS wants an area-name header then rows of plain numbers.
+  # Row labels ("A 1 1 1") make read_distances_fn() and friends abort mid-run.
+  layout_problems <- character()
+  parsed <- list()
+  for (field in intersect(names(constraints), c(matrix_fields, "area_of_areas_file"))) {
+    path <- present(field)
+    if (is.null(path)) next
+    blocks <- parse_constraint_blocks(path)
+    parsed[[field]] <- blocks
+    if (is.null(blocks)) {
+      layout_problems <- c(layout_problems, paste0(field, ": file is empty"))
+      next
+    }
+    n_areas <- length(blocks$areas)
+    expected_rows <- if (identical(field, "area_of_areas_file")) 1L else n_areas
+    for (i in seq_along(blocks$blocks)) {
+      rows <- blocks$blocks[[i]]
+      bad <- vapply(rows, function(r) {
+        length(r) != n_areas || any(is.na(suppressWarnings(as.numeric(r))))
+      }, logical(1))
+      if (any(bad)) {
+        layout_problems <- c(layout_problems, paste0(
+          field, ": block ", i, " has rows that are not ", n_areas,
+          " plain numbers (row labels are not allowed)"
+        ))
+      } else if (length(rows) != expected_rows) {
+        layout_problems <- c(layout_problems, paste0(
+          field, ": block ", i, " has ", length(rows), " rows, expected ", expected_rows
+        ))
+      }
+    }
+  }
+  if (length(parsed) > 0L) {
+    add_constraint_check(
+      "advanced_constraint_layout",
+      length(layout_problems) == 0L,
+      if (length(layout_problems) == 0L) "constraint files use the BioGeoBEARS layout" else paste(layout_problems, collapse = "; ")
+    )
+  }
+
+  # Every constraint must describe the same areas as the geography matrix.
+  geography_file <- resolve_config_path(config$inputs$geography_file, base_dir)
+  geo_areas <- NULL
+  if (!is.null(geography_file) && file.exists(geography_file)) {
+    geo_areas <- tryCatch(colnames(read_range_matrix(geography_file)$matrix), error = function(e) NULL)
+  }
+  if (!is.null(geo_areas) && length(parsed) > 0L) {
+    area_problems <- character()
+    for (field in names(parsed)) {
+      blocks <- parsed[[field]]
+      if (is.null(blocks)) next
+      if (!setequal(blocks$areas, geo_areas)) {
+        area_problems <- c(area_problems, paste0(
+          field, ": areas [", paste(blocks$areas, collapse = " "),
+          "] do not match the geography areas [", paste(geo_areas, collapse = " "), "]"
+        ))
+      }
+    }
+    add_constraint_check(
+      "advanced_constraint_areas_match_geography",
+      length(area_problems) == 0L,
+      if (length(area_problems) == 0L) "constraint areas match the geography" else paste(area_problems, collapse = "; ")
+    )
+  }
+
+  times_path <- present("times_file")
+  if (is.null(times_path)) {
+    return(checks)
+  }
+  times <- suppressWarnings(as.numeric(trimws(readLines(times_path, warn = FALSE))))
+  times <- times[!is.na(times)]
+  add_constraint_check(
+    "advanced_constraint_times_readable",
+    length(times) > 0L,
+    if (length(times) > 0L) paste(times, collapse = ", ") else "times file has no numeric time-bin bottoms"
+  )
+  if (length(times) == 0L) {
+    return(checks)
+  }
+
+  # One block per stratum: fewer blocks than times aborts the run (extra blocks
+  # are tolerated by BioGeoBEARS).
+  if (length(parsed) > 0L) {
+    strata_problems <- character()
+    for (field in names(parsed)) {
+      blocks <- parsed[[field]]
+      if (is.null(blocks)) next
+      if (length(blocks$blocks) < length(times)) {
+        strata_problems <- c(strata_problems, paste0(
+          field, ": ", length(blocks$blocks), " block(s) for ", length(times), " time bin(s)"
+        ))
+      }
+    }
+    add_constraint_check(
+      "advanced_constraint_strata_cover_times",
+      length(strata_problems) == 0L,
+      if (length(strata_problems) == 0L) "each constraint has a block per time bin" else paste(strata_problems, collapse = "; ")
+    )
+  }
+
+  # BioGeoBEARS requires the oldest time-bin bottom to sit above the root, and
+  # refuses to section a tree whose nodes land exactly on a bin boundary.
+  tree_file <- resolve_config_path(config$inputs$tree_file, base_dir)
+  tree <- if (!is.null(tree_file) && file.exists(tree_file)) {
+    tryCatch(ape::read.tree(tree_file), error = function(e) NULL)
+  } else {
+    NULL
+  }
+  if (!is.null(tree) && !is.null(tree$edge.length)) {
+    depths <- ape::node.depth.edgelength(tree)
+    root_age <- max(depths, na.rm = TRUE)
+    add_constraint_check(
+      "advanced_constraint_times_cover_root",
+      max(times) > root_age,
+      paste0("oldest time = ", max(times), "; tree root age = ", signif(root_age, 6))
+    )
+
+    internal <- seq(from = length(tree$tip.label) + 1L, length.out = tree$Nnode)
+    node_ages <- root_age - depths[internal]
+    on_boundary <- vapply(times, function(t) any(abs(node_ages - t) < 1e-6), logical(1))
+    add_constraint_check(
+      "advanced_constraint_times_avoid_nodes",
+      !any(on_boundary),
+      if (!any(on_boundary)) {
+        "no node sits on a time-bin boundary"
+      } else {
+        paste0("nodes sit exactly on time(s): ", paste(times[on_boundary], collapse = ", "))
+      }
+    )
+  }
   checks
+}
+
+#' Parse a BioGeoBEARS constraint file into per-stratum blocks
+#'
+#' Constraint files are one or more blocks of "area-name header followed by rows
+#' of plain numbers", one block per time bin, optionally terminated by `END`.
+#' A line identical to the header starts a new block.
+#'
+#' @param path Path to a constraint file.
+#' @return A list with `areas` (the header) and `blocks` (a list of blocks, each
+#'   a list of split data rows), or `NULL` when the file has no content.
+#' @noRd
+parse_constraint_blocks <- function(path) {
+  lines <- trimws(readLines(path, warn = FALSE))
+  lines <- lines[nzchar(lines) & toupper(lines) != "END"]
+  if (length(lines) == 0L) {
+    return(NULL)
+  }
+  split_fields <- function(x) strsplit(x, "[[:space:]]+")[[1L]]
+  header <- split_fields(lines[[1L]])
+  blocks <- list()
+  rows <- NULL
+  for (line in lines) {
+    fields <- split_fields(line)
+    if (identical(fields, header)) {
+      if (!is.null(rows)) {
+        blocks[[length(blocks) + 1L]] <- rows
+      }
+      rows <- list()
+    } else {
+      rows[[length(rows) + 1L]] <- fields
+    }
+  }
+  if (!is.null(rows)) {
+    blocks[[length(blocks) + 1L]] <- rows
+  }
+  list(areas = header, blocks = blocks)
 }
 
 resolve_config_path <- function(path, base_dir) {

@@ -402,7 +402,21 @@ build_biogeobears_run_object <- function(config, prepared_inputs, raw_dir) {
     run_object, config, raw_dir,
     constraint_files = prepared_inputs$constraint_files
   )
-  get_biogeobears_function("readfiles_BioGeoBEARS_run")(run_object)
+  run_object <- get_biogeobears_function("readfiles_BioGeoBEARS_run")(run_object)
+
+  # A times file makes this a time-stratified analysis. BioGeoBEARS then refuses
+  # to run until the tree has been cut into per-stratum sections
+  # ("FATAL ERROR: You have time slices, but you do not have
+  # 'inputs$tree_sections_list'"), so do that here rather than making the user
+  # discover it.
+  if (is_config_path_set(run_object$timesfn)) {
+    run_object <- get_biogeobears_function("section_the_tree")(
+      inputs = run_object,
+      make_master_table = TRUE,
+      plot_pieces = FALSE
+    )
+  }
+  run_object
 }
 
 configure_biogeobears_model <- function(run_object, model, no_j_seed = NULL) {

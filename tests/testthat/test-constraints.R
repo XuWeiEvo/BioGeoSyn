@@ -147,6 +147,88 @@ test_that("apply_constraint_files maps every config field to its run-object slot
   expect_equal(apply_constraint_files(list(), NULL, "."), list())
 })
 
+# --- validation of constraint-set consistency -------------------------------
+# Each rule below mirrors a failure mode confirmed against BioGeoBEARS itself.
+
+validate_constraints <- function(constraints) {
+  cfg <- constraint_config(constraints, tempfile("proj-"))
+  cfg$.config_file <- file.path(tempdir(), "config.yml")
+  v <- validate_inputs(cfg)
+  v[grepl("^advanced_constraint", v$check), , drop = FALSE]
+}
+
+write_blocks <- function(n_blocks, rows, areas = c("A", "B", "C")) {
+  path <- tempfile(fileext = ".txt")
+  block <- c(paste(areas, collapse = "\t"), rows)
+  writeLines(c(rep(c(block, ""), n_blocks), "END"), path)
+  path
+}
+
+square_rows <- function() c("1\t1\t1", "1\t1\t1", "1\t1\t1")
+
+test_that("valid constraints pass every consistency check", {
+  v <- validate_constraints(list(dists_file = constraint_template("distances.txt")))
+  expect_true(all(v$ok))
+})
+
+test_that("row labels in a constraint file are rejected", {
+  bad <- write_blocks(1L, c("A\t1\t1\t1", "B\t1\t1\t1", "C\t1\t1\t1"))
+  v <- validate_constraints(list(dispersal_multipliers_file = bad))
+  expect_false(v$ok[v$check == "advanced_constraint_layout"])
+  expect_match(v$detail[v$check == "advanced_constraint_layout"], "row labels", fixed = TRUE)
+})
+
+test_that("constraint areas must match the geography areas", {
+  wrong <- write_blocks(1L, square_rows(), areas = c("X", "Y", "Z"))
+  v <- validate_constraints(list(areas_allowed_file = wrong))
+  expect_false(v$ok[v$check == "advanced_constraint_areas_match_geography"])
+})
+
+test_that("fewer constraint blocks than time bins is rejected", {
+  # BioGeoBEARS aborts when a stratified file has no block for a time bin;
+  # extra blocks are tolerated, so only under-provisioning may fail.
+  times <- tempfile(fileext = ".txt")
+  writeLines(c("1.5", "3", "5"), times)
+
+  too_few <- write_blocks(2L, square_rows())
+  v <- validate_constraints(list(times_file = times, dispersal_multipliers_file = too_few))
+  expect_false(v$ok[v$check == "advanced_constraint_strata_cover_times"])
+
+  enough <- write_blocks(3L, square_rows())
+  v_ok <- validate_constraints(list(times_file = times, dispersal_multipliers_file = enough))
+  expect_true(v_ok$ok[v_ok$check == "advanced_constraint_strata_cover_times"])
+
+  extra <- write_blocks(4L, square_rows())
+  v_extra <- validate_constraints(list(times_file = times, dispersal_multipliers_file = extra))
+  expect_true(v_extra$ok[v_extra$check == "advanced_constraint_strata_cover_times"])
+})
+
+test_that("the oldest time bin must be older than the tree root", {
+  # Example tree root age is 2.
+  too_young <- tempfile(fileext = ".txt")
+  writeLines(c("0.75", "1.5"), too_young)
+  v <- validate_constraints(list(times_file = too_young))
+  expect_false(v$ok[v$check == "advanced_constraint_times_cover_root"])
+
+  covers <- tempfile(fileext = ".txt")
+  writeLines(c("1.5", "5"), covers)
+  v_ok <- validate_constraints(list(times_file = covers))
+  expect_true(v_ok$ok[v_ok$check == "advanced_constraint_times_cover_root"])
+})
+
+test_that("a time bin landing on a tree node is rejected", {
+  # section_the_tree() aborts with "your tree has 2 nodes with date 1".
+  on_node <- tempfile(fileext = ".txt")
+  writeLines(c("1", "5"), on_node)
+  v <- validate_constraints(list(times_file = on_node))
+  expect_false(v$ok[v$check == "advanced_constraint_times_avoid_nodes"])
+
+  off_node <- tempfile(fileext = ".txt")
+  writeLines(c("1.5", "5"), off_node)
+  v_ok <- validate_constraints(list(times_file = off_node))
+  expect_true(v_ok$ok[v_ok$check == "advanced_constraint_times_avoid_nodes"])
+})
+
 test_that("a constrained run completes, preserves its constraint, and frees x", {
   testthat::skip_if_not_installed("BioGeoBEARS")
 
@@ -180,4 +262,28 @@ test_that("a constrained run completes, preserves its constraint, and frees x", 
   # Preserved constraints reach the result bundle via the workflow manifest.
   manifest <- create_workflow_manifest(result$project_paths$root, write = FALSE)
   expect_true(any(grepl("dists_file.txt", manifest$relative_path, fixed = TRUE)))
+})
+
+test_that("a time-stratified run completes", {
+  testthat::skip_if_not_installed("BioGeoBEARS")
+
+  # A times file makes BioGeoBEARS demand a sectioned tree; without
+  # section_the_tree() every stratified run aborted with "You have time slices,
+  # but you do not have 'inputs$tree_sections_list'". Bins avoid the example
+  # tree's node dates (0.5, 1, 2) and the oldest bin clears its root age (2).
+  times <- tempfile(fileext = ".txt")
+  writeLines(c("1.5", "5"), times)
+  multipliers <- write_blocks(2L, square_rows())
+
+  out_dir <- tempfile("stratified-run-")
+  cfg <- constraint_config(
+    list(times_file = times, dispersal_multipliers_file = multipliers),
+    out_dir
+  )
+  cfg_path <- tempfile(fileext = ".yml")
+  yaml::write_yaml(cfg, cfg_path)
+
+  result <- run_workflow(cfg_path, dry_run = FALSE, require_biogeobears = TRUE, force = TRUE)
+  expect_equal(result$model_run_status$status[[1L]], "completed")
+  expect_true(file.exists(file.path(result$project_paths$inputs, "times_file.txt")))
 })
