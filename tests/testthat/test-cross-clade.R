@@ -256,6 +256,34 @@ test_that("plot_region_process_rates_across_clades facets by region and filters"
   expect_true(all(filtered$data$region == "Southern Asia"))
 })
 
+test_that("plot_process_rates_across_clades pools clades when asked", {
+  data <- rbind(
+    data.frame(clade = "A", process_label = "Range expansion",
+               bin_start = c(0, 5), bin_end = c(5, 10), bin_midpoint = c(2.5, 7.5), mean_count = c(3, 1)),
+    data.frame(clade = "B", process_label = "Range expansion",
+               bin_start = c(0, 4), bin_end = c(4, 8), bin_midpoint = c(2, 6), mean_count = c(2, 2))
+  )
+  # Per-clade default colours by clade; pooled colours by process (one curve).
+  per_clade <- plot_process_rates_across_clades(data)
+  expect_identical(rlang::quo_get_expr(per_clade$mapping$colour), quote(clade))
+
+  pooled <- plot_process_rates_across_clades(data, pooled = TRUE, bin_width = 5)
+  expect_s3_class(pooled, "ggplot")
+  expect_identical(rlang::quo_get_expr(pooled$mapping$colour), quote(process_label))
+  # Pooling conserves the grand total (3+1+2+2 = 8).
+  expect_equal(sum(pooled$data$mean_count), 8)
+})
+
+test_that("plot_region_process_rates_across_clades honours a log y-axis", {
+  data <- data.frame(clade = "A", region = "Southern Asia", process_label = "Immigration",
+                     bin_start = c(0, 5), bin_end = c(5, 10), bin_midpoint = c(2.5, 7.5),
+                     mean_count = c(4, 0))
+  # Log scale must tolerate the zero bin (pseudo-log) and still build.
+  p <- plot_region_process_rates_across_clades(data, bin_width = 5, log_y = TRUE)
+  expect_s3_class(p, "ggplot")
+  expect_true(any(vapply(p$scales$scales, function(s) "y" %in% s$aesthetics, logical(1))))
+})
+
 test_that("dispersal_routes_from_event_times slices by period and partitions the total", {
   # Two dispersal events at 40 Ma (Paleogene) and 10 Ma (Neogene), plus a
   # non-dispersal (empty target) that must be ignored.

@@ -18,6 +18,14 @@ as the analytical centerpiece for reporting and publication.
   counts per process, coloured by process class.
 - Surfaced the process synthesis as the headline of the report's stochastic
   mapping section and documented the new table and figure.
+- Reworked the cross-clade tab. The overall process-rates figure now pools all
+  clades onto a shared time grid (one curve per process) instead of drawing one
+  curve per clade; `plot_process_rates_across_clades(pooled = TRUE)` exposes this,
+  and the per-clade view remains the default of that function. The region-resolved
+  figure gained an optional log y-axis (`log_y`), the dispersal network gained a
+  region selector and is shown beside the per-area budget, and the exchange matrix
+  and event-statistics tables moved out of the tab into the report and bundle
+  (where they were already written) to keep the tab focused on figures.
 - Fixed the cross-clade region-resolved rates figure, which collapsed into
   vertical spikes instead of curves. Each clade's own time bins differ (trees
   have different root ages), so pooling by raw bin midpoint mixed non-aligned

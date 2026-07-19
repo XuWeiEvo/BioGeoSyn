@@ -479,15 +479,23 @@ test_that("Cross-clade step takes bundle uploads and shows integrated panels", {
   expect_match(ui, "Multi-clade synthesis", fixed = TRUE)
   # One result-bundle zip per clade drives everything.
   expect_match(ui, "cross_clade_bundles", fixed = TRUE)
-  # Integrated panels: synthesis, rates (overall + region), exchange matrix,
-  # network, budget, event stats.
+  # Interactive panels: synthesis, overall rates (pooled), region rates (with a
+  # log toggle and a region selector), and the dispersal network (with a period
+  # and region selector) shown beside the per-area budget.
   expect_match(ui, "cc_synth_plot", fixed = TRUE)
   expect_match(ui, "cross_clade_plot", fixed = TRUE)
   expect_match(ui, "cross_clade_region_plot", fixed = TRUE)
-  expect_match(ui, "cc_exchange_table", fixed = TRUE)
+  expect_match(ui, "cc_bin_width", fixed = TRUE)
+  expect_match(ui, "cc_region_log", fixed = TRUE)
+  expect_match(ui, "cc_regions", fixed = TRUE)
+  expect_match(ui, "cc_network_period", fixed = TRUE)
+  expect_match(ui, "cc_network_regions", fixed = TRUE)
   expect_match(ui, "cc_network_plot", fixed = TRUE)
   expect_match(ui, "cc_budget_plot", fixed = TRUE)
-  expect_match(ui, "cc_esum_table", fixed = TRUE)
+  # The exchange matrix and event-statistics tables moved out of the tab into
+  # the report and bundle, so they are no longer previewed here.
+  expect_false(grepl("cc_exchange_table", ui, fixed = TRUE))
+  expect_false(grepl("cc_esum_table", ui, fixed = TRUE))
   # The redundant BSM event-times ECDF and dispersal-route heatmap panels were
   # removed from the cross-clade tab.
   expect_false(grepl("cc_etimes_plot", ui, fixed = TRUE))

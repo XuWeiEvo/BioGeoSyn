@@ -292,16 +292,22 @@ combine_exchange_matrix_across_clades <- function(zip_paths, clade_names = NULL)
 
 #' Plot process rates through time across clades
 #'
-#' Draw process rates through time with one panel per biogeographic process and
-#' one coloured curve per clade, from a table produced by
-#' [combine_process_rates_across_clades()].
+#' Draw process rates through time with one panel per biogeographic process. By
+#' default each clade is a separate curve; with `pooled = TRUE` the clades are
+#' summed onto a shared time grid and each process is shown as a single pooled
+#' curve, from a table produced by [combine_process_rates_across_clades()].
 #'
 #' @param combined_rates A data frame from
 #'   [combine_process_rates_across_clades()].
 #' @param process Optional process key(s) or label(s) to restrict the plot to.
+#' @param pooled Logical. If `TRUE`, pool clades onto a shared time grid and draw
+#'   one curve per process instead of one per clade. Defaults to `FALSE`.
+#' @param bin_width Width of the shared time bins (millions of years) used when
+#'   `pooled = TRUE`. Defaults to 5.
 #' @return A ggplot object.
 #' @export
-plot_process_rates_across_clades <- function(combined_rates, process = NULL) {
+plot_process_rates_across_clades <- function(combined_rates, process = NULL,
+                                             pooled = FALSE, bin_width = 5) {
   required <- c("clade", "process_label", "bin_midpoint", "mean_count")
   missing <- setdiff(required, names(combined_rates))
   if (length(missing) > 0L) {
@@ -317,6 +323,30 @@ plot_process_rates_across_clades <- function(combined_rates, process = NULL) {
   }
   if (nrow(data) == 0L) {
     stop("combined_rates has no rows to plot.", call. = FALSE)
+  }
+
+  if (isTRUE(pooled)) {
+    pooled_df <- rebin_rates_to_common_grid(data, bin_width = bin_width,
+                                            group_cols = c("process_label"))
+    if (nrow(pooled_df) == 0L) {
+      stop("combined_rates has no rows to plot.", call. = FALSE)
+    }
+    return(
+      ggplot2::ggplot(pooled_df, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = process_label)) +
+        ggplot2::geom_line(linewidth = 0.8) +
+        ggplot2::geom_point(size = 1.1) +
+        ggplot2::scale_x_reverse() +
+        scale_colour_bgs() +
+        ggplot2::facet_wrap(stats::as.formula("~ process_label"), scales = "free_y") +
+        ggplot2::guides(colour = "none") +
+        ggplot2::labs(
+          x = "Time before present (Ma)",
+          y = "Mean events per stochastic map (summed across clades)",
+          title = "Cross-clade process rates through time",
+          subtitle = sprintf("One panel per process; all clades pooled on %g-Ma bins", bin_width)
+        ) +
+        theme_bgs()
+    )
   }
 
   plot <- ggplot2::ggplot(data, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = clade))
@@ -500,10 +530,13 @@ rebin_rates_to_common_grid <- function(data, bin_width = 5,
 #'   continents).
 #' @param bin_width Width, in time units (millions of years), of the shared
 #'   time bins clades are pooled into. Defaults to 5.
+#' @param log_y Logical. If `TRUE`, draw the event-count axis on a log scale
+#'   (a signed pseudo-log that keeps zeros), as in the source literature.
+#'   Defaults to `FALSE`.
 #' @return A ggplot object.
 #' @export
 plot_region_process_rates_across_clades <- function(combined_region_rates, process = NULL,
-                                                     regions = NULL, bin_width = 5) {
+                                                     regions = NULL, bin_width = 5, log_y = FALSE) {
   required <- c("clade", "region", "process_label", "bin_midpoint", "mean_count")
   missing <- setdiff(required, names(combined_region_rates))
   if (length(missing) > 0L) {
@@ -530,18 +563,27 @@ plot_region_process_rates_across_clades <- function(combined_region_rates, proce
     stop("combined_region_rates has no rows to plot.", call. = FALSE)
   }
 
-  ggplot2::ggplot(pooled, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = process_label)) +
+  y_lab <- "Mean events per stochastic map (summed across clades)"
+  plot <- ggplot2::ggplot(pooled, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = process_label)) +
     ggplot2::geom_line(linewidth = 0.8) +
     ggplot2::geom_point(size = 1.1) +
-    ggplot2::scale_x_reverse() +
+    ggplot2::scale_x_reverse()
+  if (isTRUE(log_y)) {
+    # Signed pseudo-log keeps the many zero bins (log(0) is undefined) while
+    # compressing the recent spike, as in the source literature's log axis.
+    plot <- plot + ggplot2::scale_y_continuous(trans = scales::pseudo_log_trans(base = 10))
+    y_lab <- paste0(y_lab, ", log scale")
+  }
+  plot +
     scale_colour_bgs() +
     ggplot2::facet_wrap(stats::as.formula("~ region"), scales = "free_y") +
     ggplot2::labs(
       x = "Time before present (Ma)",
-      y = "Mean events per stochastic map (summed across clades)",
+      y = y_lab,
       colour = "Process",
       title = "Cross-clade region-resolved process rates through time",
-      subtitle = sprintf("One panel per region; each process a curve, pooled across clades on %g-Ma bins", bin_width)
+      subtitle = sprintf("One panel per region; each process a curve, pooled across clades on %g-Ma bins%s",
+                         bin_width, if (isTRUE(log_y)) ", log y-axis" else "")
     ) +
     theme_bgs()
 }
@@ -775,7 +817,7 @@ render_cross_clade_report <- function(x, file = NULL) {
   }
   if (has("rates")) {
     parts <- c(parts, "<h2>Process rates through time (overall)</h2>",
-      figure(plot_process_rates_across_clades(x$rates), 8.6, 5.2),
+      figure(plot_process_rates_across_clades(x$rates, pooled = TRUE), 8.6, 5.2),
       "<h3>Combined rates per clade and time bin</h3>",
       html_table(xclade_long_table(x$rates,
         c("clade", "process_group", "process_label", "bin_midpoint", "mean_count", "ci_lower", "ci_upper"))),
@@ -784,7 +826,7 @@ render_cross_clade_report <- function(x, file = NULL) {
   }
   if (has("region_rates")) {
     parts <- c(parts, "<h2>Process rates through time (by region)</h2>",
-      figure(plot_region_process_rates_across_clades(x$region_rates), 9, 4.8),
+      figure(plot_region_process_rates_across_clades(x$region_rates, log_y = TRUE), 9, 4.8),
       "<h3>Combined rates per clade, region and time bin</h3>",
       html_table(xclade_long_table(x$region_rates,
         c("clade", "region", "process_label", "bin_midpoint", "mean_count", "ci_lower", "ci_upper"))),
@@ -866,8 +908,8 @@ write_cross_clade_full_bundle <- function(file, x) {
   }
 
   if (ok_df(x$synthesis)) save_fig(plot_biogeographic_process_synthesis(x$synthesis), "process_synthesis", 8, 4.8)
-  if (ok_df(x$rates)) save_fig(plot_process_rates_across_clades(x$rates), "process_rates_through_time", 8.6, 5.2)
-  if (ok_df(x$region_rates)) save_fig(plot_region_process_rates_across_clades(x$region_rates), "region_process_rates_through_time", 9, 4.8)
+  if (ok_df(x$rates)) save_fig(plot_process_rates_across_clades(x$rates, pooled = TRUE), "process_rates_through_time", 8.6, 5.2)
+  if (ok_df(x$region_rates)) save_fig(plot_region_process_rates_across_clades(x$region_rates, log_y = TRUE), "region_process_rates_through_time", 9, 4.8)
   if (ok_df(x$event_times)) {
     # One network per geological period, plus the all-time total.
     for (period in geological_period_choices()) {

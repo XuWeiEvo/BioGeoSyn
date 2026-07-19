@@ -4,19 +4,31 @@
 \alias{plot_process_rates_across_clades}
 \title{Plot process rates through time across clades}
 \usage{
-plot_process_rates_across_clades(combined_rates, process = NULL)
+plot_process_rates_across_clades(
+  combined_rates,
+  process = NULL,
+  pooled = FALSE,
+  bin_width = 5
+)
 }
 \arguments{
 \item{combined_rates}{A data frame from
 \code{\link[=combine_process_rates_across_clades]{combine_process_rates_across_clades()}}.}
 
 \item{process}{Optional process key(s) or label(s) to restrict the plot to.}
+
+\item{pooled}{Logical. If \code{TRUE}, pool clades onto a shared time grid and draw
+one curve per process instead of one per clade. Defaults to \code{FALSE}.}
+
+\item{bin_width}{Width of the shared time bins (millions of years) used when
+\code{pooled = TRUE}. Defaults to 5.}
 }
 \value{
 A ggplot object.
 }
 \description{
-Draw process rates through time with one panel per biogeographic process and
-one coloured curve per clade, from a table produced by
-\code{\link[=combine_process_rates_across_clades]{combine_process_rates_across_clades()}}.
+Draw process rates through time with one panel per biogeographic process. By
+default each clade is a separate curve; with \code{pooled = TRUE} the clades are
+summed onto a shared time grid and each process is shown as a single pooled
+curve, from a table produced by \code{\link[=combine_process_rates_across_clades]{combine_process_rates_across_clades()}}.
 }

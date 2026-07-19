@@ -669,18 +669,40 @@ bgs_shiny_server <- function(input, output, session) {
         }, deleteFile = TRUE)
       }
       output$cc_synth_plot <- cc_image(cc_synth, plot_biogeographic_process_synthesis, 8, 4.8)
-      output$cross_clade_plot <- cc_image(cc_rates, plot_process_rates_across_clades, 8.6, 5.2)
       output$cc_budget_plot <- cc_image(cc_budgets, plot_region_process_budget, 7.5, 4.5)
 
-      # Keep the region selector in sync with whatever regions the uploaded
+      cc_shared_bin_width <- function() {
+        bw <- suppressWarnings(as.numeric(input$cc_bin_width))
+        if (length(bw) != 1L || !is.finite(bw) || bw <= 0) 5 else bw
+      }
+
+      # Overall process rates: clades pooled onto a shared time grid, one curve
+      # per process (no per-clade split).
+      output$cross_clade_plot <- shiny::renderImage({
+        d <- cc_rates()
+        shiny::req(d)
+        shiny::validate(shiny::need(nrow(d) > 0, "No data to plot."))
+        plot <- tryCatch(
+          plot_process_rates_across_clades(d, pooled = TRUE, bin_width = cc_shared_bin_width()),
+          error = function(e) NULL
+        )
+        shiny::validate(shiny::need(!is.null(plot), "The figure could not be produced."))
+        path <- tempfile(fileext = ".png")
+        ggplot2::ggsave(path, plot, width = 8.6, height = 5.2, dpi = 150)
+        list(src = path, contentType = "image/png", width = "100%")
+      }, deleteFile = TRUE)
+
+      # Keep the region selectors in sync with whatever regions the uploaded
       # bundles actually contain; default to all of them selected.
       shiny::observeEvent(cc_rrates(), {
         d <- cc_rrates()
         regions <- if (is.null(d) || !"region" %in% names(d)) character() else sort(unique(d$region))
-        shiny::updateCheckboxGroupInput(
-          session, "cc_regions", choices = regions,
-          selected = if (is.null(input$cc_regions)) regions else intersect(input$cc_regions, regions)
-        )
+        for (id in c("cc_regions", "cc_network_regions")) {
+          shiny::updateCheckboxGroupInput(
+            session, id, choices = regions,
+            selected = if (is.null(input[[id]])) regions else intersect(input[[id]], regions)
+          )
+        }
       })
 
       # By-region rates: one panel per region, three process curves, pooled onto
@@ -693,12 +715,11 @@ bgs_shiny_server <- function(input, output, session) {
         if (is.null(regions) || length(regions) == 0L) {
           regions <- NULL
         }
-        bin_width <- suppressWarnings(as.numeric(input$cc_bin_width))
-        if (length(bin_width) != 1L || !is.finite(bin_width) || bin_width <= 0) {
-          bin_width <- 5
-        }
         plot <- tryCatch(
-          plot_region_process_rates_across_clades(d, regions = regions, bin_width = bin_width),
+          plot_region_process_rates_across_clades(
+            d, regions = regions, bin_width = cc_shared_bin_width(),
+            log_y = isTRUE(input$cc_region_log)
+          ),
           error = function(e) NULL
         )
         shiny::validate(shiny::need(!is.null(plot), "The figure could not be produced (no rows for the chosen regions)."))
@@ -715,8 +736,12 @@ bgs_shiny_server <- function(input, output, session) {
         period <- input$cc_network_period %||% "Total"
         window <- bgs_period_window(period)
         routes <- dispersal_routes_from_event_times(et, window$from, window$to)
+        regions <- input$cc_network_regions
+        if (!is.null(regions) && length(regions) > 0L && !is.null(routes)) {
+          routes <- routes[routes$source_region %in% regions & routes$target_region %in% regions, , drop = FALSE]
+        }
         shiny::validate(shiny::need(!is.null(routes) && nrow(routes) > 0,
-          "No between-region dispersal events fall in this period."))
+          "No between-region dispersal events among the chosen regions in this period."))
         plot <- tryCatch(
           plot_bsm_dispersal_network(routes, subtitle = period_network_subtitle(period)),
           error = function(e) NULL
@@ -727,22 +752,9 @@ bgs_shiny_server <- function(input, output, session) {
         list(src = path, contentType = "image/png", width = "100%")
       }, deleteFile = TRUE)
 
-      output$cc_exchange_table <- shiny::renderTable({
-        d <- cc_exlong()
-        if (is.null(d) || nrow(d) == 0L) {
-          return(data.frame())
-        }
-        format_region_exchange_matrix(d)
-      }, striped = TRUE, bordered = TRUE, na = "")
-
-      output$cc_esum_table <- shiny::renderTable({
-        d <- cc_esum()
-        if (is.null(d) || nrow(d) == 0L) {
-          return(data.frame())
-        }
-        cols <- intersect(c("event_type", "event_label", "mean_count"), names(d))
-        d[, cols, drop = FALSE]
-      }, striped = TRUE, bordered = TRUE, na = "")
+      # The exchange matrix and event statistics are not previewed in the tab
+      # (they are wide/long tables best read in the report and bundle); the
+      # cc_exlong() / cc_esum() reactives still feed the report and download.
 
       output$download_cross_clade <- shiny::downloadHandler(
         filename = function() "cross_clade_results.zip",
@@ -4000,31 +4012,38 @@ wizard_step_cross_clade <- function() {
       shiny::uiOutput("cross_clade_status")
     ),
     card("2 \u00b7 Biogeographic process synthesis (summed across clades)", preview("cc_synth_plot")),
-    card("3 \u00b7 Process rates through time \u00b7 overall (one curve per clade)", preview("cross_clade_plot", "520px")),
-    card("4 \u00b7 Process rates through time \u00b7 by region (one panel per region; in-situ / immigration / emigration)",
+    card("3 \u00b7 Process rates through time \u00b7 overall (all clades pooled)",
       shiny::tags$div(
         class = "bgs-inline-controls",
         shiny::numericInput("cc_bin_width", "Time-bin width (Ma)", value = 5, min = 1, max = 25, step = 1, width = "170px")
       ),
-      shiny::tags$div(class = "bgs-home-note", "Uncheck regions to focus the figure (e.g. drop the non-Asian continents)."),
+      preview("cross_clade_plot", "520px")),
+    card("4 \u00b7 Process rates through time \u00b7 by region (one panel per region; in-situ / immigration / emigration)",
+      shiny::tags$div(
+        class = "bgs-inline-controls",
+        shiny::checkboxInput("cc_region_log", "Log y-axis", value = TRUE)
+      ),
+      shiny::tags$div(class = "bgs-home-note", "Shares the time-bin width above. Uncheck regions to focus the figure (e.g. drop the non-Asian continents)."),
       shiny::checkboxGroupInput("cc_regions", NULL, choices = character(), inline = TRUE),
       preview("cross_clade_region_plot", "620px")),
-    card("5 \u00b7 Source-to-recipient exchange matrix (diagonal = in-situ, off-diagonal = dispersal)", shiny::tableOutput("cc_exchange_table")),
-    card("6 \u00b7 Dispersal network between areas",
+    card("5 \u00b7 Dispersal between areas (network and per-area budget)",
       shiny::tags$div(
         class = "bgs-inline-controls",
         shiny::selectInput("cc_network_period", "Geological period",
-          choices = geological_period_choices(), selected = "Total", width = "220px")
+          choices = geological_period_choices(), selected = "Total", width = "200px")
       ),
-      preview("cc_network_plot", "520px")),
-    card("7 \u00b7 Immigration / emigration per area", preview("cc_budget_plot", "440px")),
-    card("8 \u00b7 Event statistics", shiny::tableOutput("cc_esum_table")),
+      shiny::tags$div(class = "bgs-home-note", "Uncheck regions to restrict the network to a subset of areas."),
+      shiny::checkboxGroupInput("cc_network_regions", NULL, choices = character(), inline = TRUE),
+      shiny::fluidRow(
+        shiny::column(7, shiny::tags$div(class = "bgs-control-title", "Dispersal network"), preview("cc_network_plot", "460px")),
+        shiny::column(5, shiny::tags$div(class = "bgs-control-title", "Immigration / emigration per area"), preview("cc_budget_plot", "460px"))
+      )),
     shiny::tags$div(
       class = "bgs-choice-card",
       shiny::tags$div(class = "bgs-control-title", "Export and report"),
       shiny::tags$div(
         class = "bgs-home-note",
-        "Download every integrated result (CSVs and figures), or build a shareable HTML report containing all of the panels above. Build the report first, then download it."
+        "The report and the downloadable bundle also include the source-to-recipient exchange matrix and the event statistics table. Download every integrated result (CSVs and figures), or build a shareable HTML report. Build the report first, then download it."
       ),
       shiny::tags$div(
         class = "bgs-downloads",
