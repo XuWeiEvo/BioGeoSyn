@@ -270,18 +270,33 @@ test_that("plot_process_rates_across_clades pools clades when asked", {
   pooled <- plot_process_rates_across_clades(data, pooled = TRUE, bin_width = 5)
   expect_s3_class(pooled, "ggplot")
   expect_identical(rlang::quo_get_expr(pooled$mapping$colour), quote(process_label))
-  # Pooling conserves the grand total (3+1+2+2 = 8).
-  expect_equal(sum(pooled$data$mean_count), 8)
+  # The pooled overall plot shows log10(count + 1), so its values are small
+  # (each <= log10 of the summed count) rather than the raw counts.
+  expect_true(all(pooled$data$mean_count <= 1))
+  # The underlying pooled counts still conserve the grand total (3+1+2+2 = 8).
+  raw <- rebin_rates_to_common_grid(data, bin_width = 5, group_cols = "process_label")
+  expect_equal(sum(raw$mean_count), 8)
 })
 
-test_that("plot_region_process_rates_across_clades honours a log y-axis", {
+test_that("to_log_counts maps counts to a small-number log axis", {
+  # log10(x + 1): zeros stay finite at 0, large counts become small numbers.
+  out <- to_log_counts(data.frame(mean_count = c(0, 9, 999)), "mean_count")
+  expect_equal(out$mean_count, c(0, 1, 3))
+})
+
+test_that("plot_region_process_rates_across_clades plots log10(count + 1)", {
   data <- data.frame(clade = "A", region = "Southern Asia", process_label = "Immigration",
                      bin_start = c(0, 5), bin_end = c(5, 10), bin_midpoint = c(2.5, 7.5),
-                     mean_count = c(4, 0))
-  # Log scale must tolerate the zero bin (pseudo-log) and still build.
+                     mean_count = c(999, 0), ci_lower = c(0, 0), ci_upper = c(999, 0))
+  # Log axis: the plotted values are the log10(count + 1), so the max is small
+  # (log10(1000) = 3) rather than the raw count (999). The zero bin stays finite.
   p <- plot_region_process_rates_across_clades(data, bin_width = 5, log_y = TRUE)
   expect_s3_class(p, "ggplot")
-  expect_true(any(vapply(p$scales$scales, function(s) "y" %in% s$aesthetics, logical(1))))
+  expect_equal(max(p$data$mean_count), 3)
+  expect_true(all(is.finite(p$data$mean_count)))
+  # Linear (log_y = FALSE) keeps the raw counts.
+  lin <- plot_region_process_rates_across_clades(data, bin_width = 5, log_y = FALSE)
+  expect_equal(max(lin$data$mean_count), 999)
 })
 
 test_that("dispersal_routes_from_event_times slices by period and partitions the total", {

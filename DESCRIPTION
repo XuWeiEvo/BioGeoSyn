@@ -29,7 +29,6 @@ Imports:
     ggraph,
     ape,
     zip,
-    scales,
     base64enc
 Suggests:
     devtools,

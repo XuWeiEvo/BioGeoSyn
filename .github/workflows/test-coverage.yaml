@@ -38,8 +38,8 @@ jobs:
       - name: Install package and coverage dependencies
         run: |
           install.packages(c(
-            "yaml", "ggplot2", "igraph", "ggraph", "ape", "zip",
-            "testthat", "pkgload", "scales", "covr", "xml2"
+            "yaml", "ggplot2", "ggforce", "igraph", "ggraph", "ape", "zip",
+            "testthat", "pkgload", "covr", "xml2"
           ))
         shell: Rscript {0}
 

@@ -18,6 +18,11 @@ as the analytical centerpiece for reporting and publication.
   counts per process, coloured by process class.
 - Surfaced the process synthesis as the headline of the report's stochastic
   mapping section and documented the new table and figure.
+- The log-scaled cross-clade rate axes now read in log units. They previously
+  used a log-spaced axis labelled with the raw counts (so a summed value near
+  2000 appeared as "2000" on a "log" axis); the plots now show log10(count + 1)
+  directly, so the axis carries small log-unit numbers as in the source
+  literature, with the zero bins staying finite at 0.
 - Further refined the cross-clade tab. The overall rates figure now shows all
   processes in one panel on a log axis; the region-resolved figure is log-scaled
   by default; both carry a summed 95% interval band (the confidence bounds are

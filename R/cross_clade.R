@@ -333,11 +333,14 @@ plot_process_rates_across_clades <- function(combined_rates, process = NULL,
     if (nrow(pooled_df) == 0L) {
       stop("combined_rates has no rows to plot.", call. = FALSE)
     }
-    # All processes in one panel, coloured by process, on a log axis (a signed
-    # pseudo-log that keeps zeros) so the very different-magnitude processes are
-    # comparable; a summed 95% band accompanies each curve when available.
-    plot <- ggplot2::ggplot(pooled_df, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = process_label))
+    # Plot log10(count + 1): all processes in one panel, coloured by process, on
+    # a small-number log axis (as in the source literature) so very
+    # different-magnitude processes are comparable; a summed 95% band
+    # accompanies each curve when available. Values are transformed directly so
+    # the axis reads in log units, not raw counts.
     has_ci <- all(c("ci_lower", "ci_upper") %in% names(pooled_df))
+    pooled_df <- to_log_counts(pooled_df, c("mean_count", "ci_lower", "ci_upper"))
+    plot <- ggplot2::ggplot(pooled_df, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = process_label))
     if (has_ci) {
       plot <- plot + ggplot2::geom_ribbon(
         ggplot2::aes(ymin = ci_lower, ymax = ci_upper, fill = process_label),
@@ -348,14 +351,13 @@ plot_process_rates_across_clades <- function(combined_rates, process = NULL,
       ggplot2::geom_line(linewidth = 0.8) +
       ggplot2::geom_point(size = 1.2) +
       ggplot2::scale_x_reverse() +
-      ggplot2::scale_y_continuous(trans = scales::pseudo_log_trans(base = 10)) +
       scale_colour_bgs()
     if (has_ci) plot <- plot + scale_fill_bgs() + ggplot2::guides(fill = "none")
     return(
       plot +
         ggplot2::labs(
           x = "Time before present (Ma)",
-          y = "Mean events per stochastic map (summed across clades), log scale",
+          y = expression(log[10](mean~events~summed~across~clades + 1)),
           colour = "Process",
           title = "Cross-clade process rates through time",
           subtitle = sprintf("All clades pooled on %g-Ma bins; log y-axis, band = summed 95%% interval", bin_width)
@@ -462,6 +464,16 @@ combine_clade_rate_files <- function(files, clade_names, required, empty) {
   out <- out[do.call(order, out[sort_cols]), , drop = FALSE]
   row.names(out) <- NULL
   out
+}
+
+# Transform count columns to log10(count + 1) for a small-number log axis (the
+# "+1" keeps the many zero bins finite: log10(0 + 1) = 0). Used so the y-axis
+# reads in log units, as in the source literature, rather than raw counts.
+to_log_counts <- function(df, cols) {
+  for (col in intersect(cols, names(df))) {
+    df[[col]] <- log10(pmax(0, suppressWarnings(as.numeric(df[[col]]))) + 1)
+  }
+  df
 }
 
 # Re-bin per-clade rate histograms onto a shared absolute-time grid before
@@ -591,9 +603,16 @@ plot_region_process_rates_across_clades <- function(combined_region_rates, proce
     stop("combined_region_rates has no rows to plot.", call. = FALSE)
   }
 
-  y_lab <- "Mean events per stochastic map (summed across clades)"
-  plot <- ggplot2::ggplot(pooled, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = process_label))
+  # On a log axis, plot log10(count + 1) directly so the axis reads in small log
+  # units (as in the source literature) rather than raw counts.
   has_ci <- all(c("ci_lower", "ci_upper") %in% names(pooled))
+  if (isTRUE(log_y)) {
+    pooled <- to_log_counts(pooled, c("mean_count", "ci_lower", "ci_upper"))
+    y_lab <- expression(log[10](mean~events~summed~across~clades + 1))
+  } else {
+    y_lab <- "Mean events per stochastic map (summed across clades)"
+  }
+  plot <- ggplot2::ggplot(pooled, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = process_label))
   if (has_ci) {
     plot <- plot + ggplot2::geom_ribbon(
       ggplot2::aes(ymin = ci_lower, ymax = ci_upper, fill = process_label),
@@ -603,14 +622,8 @@ plot_region_process_rates_across_clades <- function(combined_region_rates, proce
   plot <- plot +
     ggplot2::geom_line(linewidth = 0.8) +
     ggplot2::geom_point(size = 1.1) +
-    ggplot2::scale_x_reverse()
-  if (isTRUE(log_y)) {
-    # Signed pseudo-log keeps the many zero bins (log(0) is undefined) while
-    # compressing the recent spike, as in the source literature's log axis.
-    plot <- plot + ggplot2::scale_y_continuous(trans = scales::pseudo_log_trans(base = 10))
-    y_lab <- paste0(y_lab, ", log scale")
-  }
-  plot <- plot + scale_colour_bgs()
+    ggplot2::scale_x_reverse() +
+    scale_colour_bgs()
   if (has_ci) plot <- plot + scale_fill_bgs() + ggplot2::guides(fill = "none")
   plot +
     ggplot2::facet_wrap(stats::as.formula("~ region"), scales = "free_y") +

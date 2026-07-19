@@ -45,7 +45,6 @@ jobs:
           install.packages(c(
             "yaml",
             "ggplot2",
-            "scales",
             "igraph",
             "ggraph",
             "ape",
