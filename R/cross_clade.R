@@ -419,22 +419,91 @@ combine_clade_rate_files <- function(files, clade_names, required, empty) {
   out
 }
 
+# Re-bin per-clade rate histograms onto a shared absolute-time grid before
+# pooling. Every clade has its own time bins (each tree has a different root
+# age), so summing by raw bin_midpoint pools non-aligned points and the curves
+# degrade into vertical spikes. Distributing each clade bin's count across the
+# common grid bins it overlaps (proportional to overlap, so totals are
+# conserved) puts all clades on one axis and restores smooth curves - the same
+# fixed-bin approach used in the source literature (e.g. 5-Ma bins).
+rebin_rates_to_common_grid <- function(data, bin_width = 5,
+                                        group_cols = c("region", "process_label"),
+                                        value_col = "mean_count") {
+  bin_width <- suppressWarnings(as.numeric(bin_width))
+  if (length(bin_width) != 1L || !is.finite(bin_width) || bin_width <= 0) {
+    bin_width <- 5
+  }
+  if (!all(c("bin_start", "bin_end") %in% names(data))) {
+    data$bin_start <- data$bin_midpoint
+    data$bin_end <- data$bin_midpoint
+  }
+  data[[value_col]] <- suppressWarnings(as.numeric(data[[value_col]]))
+  data <- data[!is.na(data[[value_col]]) & !is.na(data$bin_start) & !is.na(data$bin_end), , drop = FALSE]
+  if (nrow(data) == 0L) {
+    return(data.frame())
+  }
+  max_age <- max(data$bin_end, data$bin_start, na.rm = TRUE)
+  n_bins <- max(1L, ceiling((max_age + 1e-9) / bin_width))
+  grid_starts <- seq(0, by = bin_width, length.out = n_bins)
+
+  pieces <- lapply(seq_len(nrow(data)), function(i) {
+    s <- min(data$bin_start[i], data$bin_end[i])
+    e <- max(data$bin_start[i], data$bin_end[i])
+    val <- data[[value_col]][i]
+    if (e > s) {
+      overlap <- pmax(0, pmin(e, grid_starts + bin_width) - pmax(s, grid_starts))
+      frac <- overlap / (e - s)
+    } else {
+      frac <- as.numeric(grid_starts <= s & s < grid_starts + bin_width)
+      if (sum(frac) == 0) frac[n_bins] <- 1
+    }
+    keep <- frac > 0
+    if (!any(keep)) {
+      return(NULL)
+    }
+    g <- data[i, group_cols, drop = FALSE]
+    cbind(
+      g[rep(1L, sum(keep)), , drop = FALSE],
+      data.frame(grid_bin = which(keep), value = val * frac[keep]),
+      row.names = NULL
+    )
+  })
+  pieces <- pieces[!vapply(pieces, is.null, logical(1))]
+  if (length(pieces) == 0L) {
+    return(data.frame())
+  }
+  long <- do.call(rbind, pieces)
+  agg <- stats::aggregate(
+    list(mean_count = long$value),
+    by = c(long[, group_cols, drop = FALSE], list(grid_bin = long$grid_bin)),
+    FUN = function(x) sum(x, na.rm = TRUE)
+  )
+  agg$bin_midpoint <- (agg$grid_bin - 0.5) * bin_width
+  agg
+}
+
 #' Plot region-resolved process rates through time across clades
 #'
-#' Draw region-resolved process rates through time with one panel per
-#' biogeographic process and one coloured curve per region, pooled across all
-#' clades, from a table produced by
-#' [combine_region_process_rates_across_clades()]. This is the region-resolved
-#' counterpart of [plot_process_rates_across_clades()]: clades are summed
-#' together (not shown separately), and within each process panel each region is
-#' a separate curve.
+#' Draw region-resolved process rates through time with one panel per region
+#' and, within each panel, one coloured curve per biogeographic process
+#' (in-situ speciation, immigration, emigration), pooled across all clades.
+#' Clades are placed on a shared absolute-time grid (`bin_width`-wide bins)
+#' before pooling, so heterogeneous trees combine into clean curves rather than
+#' spikes. This layout mirrors the region-through-time figures in the
+#' multi-clade literature.
 #'
 #' @param combined_region_rates A data frame from
 #'   [combine_region_process_rates_across_clades()].
 #' @param process Optional process key(s) or label(s) to restrict the plot to.
+#' @param regions Optional character vector of regions to include. When omitted,
+#'   every region is shown; pass a subset to focus (e.g. drop the non-Asian
+#'   continents).
+#' @param bin_width Width, in time units (millions of years), of the shared
+#'   time bins clades are pooled into. Defaults to 5.
 #' @return A ggplot object.
 #' @export
-plot_region_process_rates_across_clades <- function(combined_region_rates, process = NULL) {
+plot_region_process_rates_across_clades <- function(combined_region_rates, process = NULL,
+                                                     regions = NULL, bin_width = 5) {
   required <- c("clade", "region", "process_label", "bin_midpoint", "mean_count")
   missing <- setdiff(required, names(combined_region_rates))
   if (length(missing) > 0L) {
@@ -448,36 +517,117 @@ plot_region_process_rates_across_clades <- function(combined_region_rates, proce
     }
     data <- data[keep, , drop = FALSE]
   }
+  if (!is.null(regions)) {
+    data <- data[data$region %in% regions, , drop = FALSE]
+  }
   if (nrow(data) == 0L) {
     stop("combined_region_rates has no rows to plot.", call. = FALSE)
   }
 
-  # Pool across clades: one curve per region within each process panel.
-  data$mean_count <- suppressWarnings(as.numeric(data$mean_count))
-  pooled <- stats::aggregate(
-    list(mean_count = data$mean_count),
-    by = list(
-      process_label = data$process_label,
-      region = data$region,
-      bin_midpoint = data$bin_midpoint
-    ),
-    FUN = function(x) sum(x, na.rm = TRUE)
-  )
+  pooled <- rebin_rates_to_common_grid(data, bin_width = bin_width,
+                                       group_cols = c("region", "process_label"))
+  if (nrow(pooled) == 0L) {
+    stop("combined_region_rates has no rows to plot.", call. = FALSE)
+  }
 
-  ggplot2::ggplot(pooled, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = region)) +
+  ggplot2::ggplot(pooled, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = process_label)) +
     ggplot2::geom_line(linewidth = 0.8) +
-    ggplot2::geom_point(size = 1.3) +
+    ggplot2::geom_point(size = 1.1) +
     ggplot2::scale_x_reverse() +
     scale_colour_bgs() +
-    ggplot2::facet_wrap(stats::as.formula("~ process_label"), scales = "free_y") +
+    ggplot2::facet_wrap(stats::as.formula("~ region"), scales = "free_y") +
     ggplot2::labs(
-      x = "Time before present",
+      x = "Time before present (Ma)",
       y = "Mean events per stochastic map (summed across clades)",
-      colour = "Region",
+      colour = "Process",
       title = "Cross-clade region-resolved process rates through time",
-      subtitle = "One panel per process; each region a curve, pooled across all clades"
+      subtitle = sprintf("One panel per region; each process a curve, pooled across clades on %g-Ma bins", bin_width)
     ) +
     theme_bgs()
+}
+
+# Standard geological periods, oldest to youngest (Ma before present). Used to
+# slice the dispersal network by geological time.
+geological_periods <- function() {
+  data.frame(
+    period = c("Paleogene", "Neogene", "Quaternary"),
+    from = c(66, 23.03, 2.58),
+    to = c(23.03, 2.58, 0),
+    stringsAsFactors = FALSE
+  )
+}
+
+# Names offered in the network period selector; "Total" spans all time.
+geological_period_choices <- function() {
+  c("Total", geological_periods()$period)
+}
+
+# Figure subtitle describing a period's time span, e.g. "Neogene (23-2.58 Ma)".
+period_network_subtitle <- function(period) {
+  if (is.null(period) || identical(period, "Total")) {
+    return("All dispersals, all time")
+  }
+  w <- bgs_period_window(period)
+  if (!is.finite(w$from)) {
+    return(period)
+  }
+  sprintf("%s (%g-%g Ma)", period, w$from, w$to)
+}
+
+# Time window [to, from) in Ma for a named period; "Total" (or anything
+# unrecognised) means all time.
+bgs_period_window <- function(period) {
+  periods <- geological_periods()
+  if (is.null(period) || !is.character(period) || !(period %in% periods$period)) {
+    return(list(from = Inf, to = -Inf))
+  }
+  row <- periods[periods$period == period, , drop = FALSE]
+  list(from = row$from[[1L]], to = row$to[[1L]])
+}
+
+# Build a dispersal-route table (as consumed by plot_bsm_dispersal_network) from
+# the combined per-event table, optionally restricted to a time window
+# [to, from] in Ma before present. Counts are normalised to a mean per
+# stochastic map per clade (dividing by that clade's replicate count) and then
+# summed across clades, matching how bsm_dispersal_routes is scaled.
+dispersal_routes_from_event_times <- function(event_times, from = Inf, to = -Inf) {
+  cols <- c("source_region", "target_region", "event_time_before_present")
+  if (is.null(event_times) || nrow(event_times) == 0L || !all(cols %in% names(event_times))) {
+    return(NULL)
+  }
+  d <- event_times
+  d <- d[!is.na(d$source_region) & nzchar(d$source_region) &
+           !is.na(d$target_region) & nzchar(d$target_region) &
+           d$source_region != d$target_region, , drop = FALSE]
+  if (nrow(d) == 0L) {
+    return(NULL)
+  }
+  # Replicate count per clade must be taken over ALL of a clade's events, not
+  # just those in the time window - otherwise a clade with events in only some
+  # replicates within a window would be scaled up and periods would not sum to
+  # the total.
+  clade_all <- if ("clade" %in% names(d)) d$clade else rep("all", nrow(d))
+  rep_all <- if ("replicate" %in% names(d)) d$replicate else rep(1L, nrow(d))
+  n_rep <- tapply(rep_all, clade_all, function(x) length(unique(x)))
+
+  # Half-open [to, from) so an event on a period boundary is counted once: the
+  # older period is exclusive at its young edge, the younger inclusive.
+  t <- suppressWarnings(as.numeric(d$event_time_before_present))
+  keep <- !is.na(t) & t >= to & t < from
+  d <- d[keep, , drop = FALSE]
+  if (nrow(d) == 0L) {
+    return(NULL)
+  }
+  clade_col <- if ("clade" %in% names(d)) d$clade else rep("all", nrow(d))
+  d$per_map <- 1 / pmax(1L, n_rep[as.character(clade_col)])
+  routes <- stats::aggregate(
+    list(mean_count = d$per_map),
+    by = list(source_region = d$source_region, target_region = d$target_region),
+    FUN = function(x) sum(x, na.rm = TRUE)
+  )
+  routes$route_type <- "all_dispersal"
+  routes$model <- "All clades"
+  routes[, c("model", "route_type", "source_region", "target_region", "mean_count")]
 }
 
 empty_combined_rates_table <- function() {
@@ -646,7 +796,21 @@ render_cross_clade_report <- function(x, file = NULL) {
       "<p class=\"note\">Diagonal = in-situ speciation; off-diagonal = dispersal source (row) to recipient (column). Total (out) = emigration, Total (in) = immigration.</p>",
       html_table(format_region_exchange_matrix(x$exchange_long)))
   }
-  if (has("routes")) {
+  if (has("event_times")) {
+    # Per-period networks sliced from the event times, plus the all-time total.
+    parts <- c(parts, "<h2>Dispersal network by geological period</h2>",
+      "<p class=\"note\">Arrows run source to recipient; width is the mean number of dispersals per stochastic map, summed across clades. Periods partition the total (Paleogene 66-23, Neogene 23-2.58, Quaternary 2.58-0 Ma).</p>")
+    for (period in geological_period_choices()) {
+      w <- bgs_period_window(period)
+      routes <- dispersal_routes_from_event_times(x$event_times, w$from, w$to)
+      net_fig <- if (is.null(routes) || nrow(routes) == 0L) {
+        "<p class=\"note\">No between-region dispersals in this period.</p>"
+      } else {
+        figure(plot_bsm_dispersal_network(routes, subtitle = period_network_subtitle(period)), 6.5, 5.5)
+      }
+      parts <- c(parts, sprintf("<h3>%s</h3>", html_escape(period)), net_fig)
+    }
+  } else if (has("routes")) {
     parts <- c(parts, "<h2>Dispersal network</h2>",
       figure(plot_bsm_dispersal_network(all_dispersal(x$routes)), 6.5, 5.5))
   }
@@ -704,7 +868,17 @@ write_cross_clade_full_bundle <- function(file, x) {
   if (ok_df(x$synthesis)) save_fig(plot_biogeographic_process_synthesis(x$synthesis), "process_synthesis", 8, 4.8)
   if (ok_df(x$rates)) save_fig(plot_process_rates_across_clades(x$rates), "process_rates_through_time", 8.6, 5.2)
   if (ok_df(x$region_rates)) save_fig(plot_region_process_rates_across_clades(x$region_rates), "region_process_rates_through_time", 9, 4.8)
-  if (ok_df(x$routes)) {
+  if (ok_df(x$event_times)) {
+    # One network per geological period, plus the all-time total.
+    for (period in geological_period_choices()) {
+      w <- bgs_period_window(period)
+      routes <- dispersal_routes_from_event_times(x$event_times, w$from, w$to)
+      if (!is.null(routes) && nrow(routes) > 0L) {
+        save_fig(plot_bsm_dispersal_network(routes, subtitle = period_network_subtitle(period)),
+                 paste0("dispersal_network_", tolower(period)), 6.5, 5.5)
+      }
+    }
+  } else if (ok_df(x$routes)) {
     save_fig(plot_bsm_dispersal_network(all_dispersal(x$routes)), "dispersal_network", 6.5, 5.5)
   }
   if (ok_df(x$budgets)) save_fig(plot_region_process_budget(x$budgets), "region_dispersal_budget", 7.5, 4.5)

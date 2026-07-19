@@ -7,7 +7,8 @@
 plot_bsm_dispersal_network(
   bsm_dispersal_routes,
   route_type = "all_dispersal",
-  model = NULL
+  model = NULL,
+  subtitle = NULL
 )
 }
 \arguments{
@@ -16,6 +17,9 @@ plot_bsm_dispersal_network(
 \item{route_type}{Route type to plot; defaults to \code{"all_dispersal"}.}
 
 \item{model}{Optional model name; defaults to the first model present.}
+
+\item{subtitle}{Optional subtitle; defaults to \code{route_type}. Used to label a
+geological period when the network is sliced by time.}
 }
 \value{
 A ggraph/ggplot object.

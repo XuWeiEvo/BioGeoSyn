@@ -193,9 +193,11 @@ plot_bsm_dispersal_routes <- function(bsm_dispersal_routes, route_type = "all_di
 #' @param bsm_dispersal_routes Standardized BSM dispersal routes table.
 #' @param route_type Route type to plot; defaults to `"all_dispersal"`.
 #' @param model Optional model name; defaults to the first model present.
+#' @param subtitle Optional subtitle; defaults to `route_type`. Used to label a
+#'   geological period when the network is sliced by time.
 #' @return A ggraph/ggplot object.
 #' @export
-plot_bsm_dispersal_network <- function(bsm_dispersal_routes, route_type = "all_dispersal", model = NULL) {
+plot_bsm_dispersal_network <- function(bsm_dispersal_routes, route_type = "all_dispersal", model = NULL, subtitle = NULL) {
   required <- c("route_type", "source_region", "target_region", "mean_count")
   missing <- setdiff(required, names(bsm_dispersal_routes))
   if (length(missing) > 0L) {
@@ -229,7 +231,7 @@ plot_bsm_dispersal_network <- function(bsm_dispersal_routes, route_type = "all_d
     ggraph::geom_node_text(ggplot2::aes(label = name), repel = TRUE, size = 3.3, colour = bgs_palette()$ink) +
     ggraph::scale_edge_width(range = c(0.4, 3.2), name = "Mean count") +
     scale_colour_bgs() +
-    ggplot2::labs(title = "BSM dispersal network", subtitle = route_type) +
+    ggplot2::labs(title = "BSM dispersal network", subtitle = subtitle %||% route_type) +
     ggplot2::coord_fixed(clip = "off") +
     ggplot2::theme_void(base_size = 12) +
     ggplot2::theme(

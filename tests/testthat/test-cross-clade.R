@@ -221,6 +221,71 @@ test_that("render_cross_clade_report explains the BSM requirement when empty", {
   expect_error(render_cross_clade_report(list()), "BSM stochastic")
 })
 
+test_that("rebin_rates_to_common_grid conserves totals across a shared grid", {
+  # Two clades with DIFFERENT native bins (the exact case that used to spike):
+  # clade A in [0,4],[4,8]; clade B in [0,3],[3,6],[6,9].
+  data <- rbind(
+    data.frame(region = "R", process_label = "Immigration",
+               bin_start = c(0, 4), bin_end = c(4, 8), bin_midpoint = c(2, 6), mean_count = c(2, 4)),
+    data.frame(region = "R", process_label = "Immigration",
+               bin_start = c(0, 3, 6), bin_end = c(3, 6, 9), bin_midpoint = c(1.5, 4.5, 7.5), mean_count = c(3, 3, 3))
+  )
+  pooled <- rebin_rates_to_common_grid(data, bin_width = 5)
+
+  expect_true(all(c("region", "process_label", "grid_bin", "mean_count", "bin_midpoint") %in% names(pooled)))
+  # Proportional splitting conserves the grand total (6 + 9 = 15).
+  expect_equal(sum(pooled$mean_count), 15)
+  # Bins are the common 5-Ma grid, not the clades' native edges.
+  expect_setequal(round(pooled$bin_midpoint, 2), c(2.5, 7.5))
+})
+
+test_that("plot_region_process_rates_across_clades facets by region and filters", {
+  data <- rbind(
+    data.frame(clade = "A", region = "Southern Asia", process_label = "In-situ speciation",
+               bin_start = c(0, 5), bin_end = c(5, 10), bin_midpoint = c(2.5, 7.5), mean_count = c(3, 1)),
+    data.frame(clade = "B", region = "Africa", process_label = "Immigration",
+               bin_start = c(0, 5), bin_end = c(5, 10), bin_midpoint = c(2.5, 7.5), mean_count = c(2, 1))
+  )
+  p <- plot_region_process_rates_across_clades(data, bin_width = 5)
+  expect_s3_class(p, "ggplot")
+  # Colour now maps to process, and regions face out into panels.
+  expect_identical(rlang::quo_get_expr(p$mapping$colour), quote(process_label))
+
+  # Region filter keeps only requested regions.
+  filtered <- plot_region_process_rates_across_clades(data, regions = "Southern Asia", bin_width = 5)
+  expect_true(all(filtered$data$region == "Southern Asia"))
+})
+
+test_that("dispersal_routes_from_event_times slices by period and partitions the total", {
+  # Two dispersal events at 40 Ma (Paleogene) and 10 Ma (Neogene), plus a
+  # non-dispersal (empty target) that must be ignored.
+  et <- data.frame(
+    clade = "A", replicate = 1L,
+    source_region = c("S", "S", "H"),
+    target_region = c("H", "E", ""),
+    event_time_before_present = c(40, 10, 5),
+    stringsAsFactors = FALSE
+  )
+  total <- dispersal_routes_from_event_times(et, Inf, -Inf)
+  expect_equal(sum(total$mean_count), 2)                       # two dispersals, 1 replicate
+  expect_false(any(total$source_region == total$target_region))
+
+  paleo <- bgs_period_window("Paleogene")
+  neo <- bgs_period_window("Neogene")
+  quat <- bgs_period_window("Quaternary")
+  sp <- function(w) { r <- dispersal_routes_from_event_times(et, w$from, w$to); if (is.null(r)) 0 else sum(r$mean_count) }
+  # The three periods partition the total exactly (no double-counting).
+  expect_equal(sp(paleo) + sp(neo) + sp(quat), sum(total$mean_count))
+  expect_equal(sp(paleo), 1)  # the 40-Ma event
+  expect_equal(sp(neo), 1)    # the 10-Ma event
+})
+
+test_that("bgs_period_window maps names to half-open windows", {
+  expect_equal(bgs_period_window("Total"), list(from = Inf, to = -Inf))
+  expect_equal(bgs_period_window("Neogene"), list(from = 23.03, to = 2.58))
+  expect_equal(bgs_period_window("nonsense"), list(from = Inf, to = -Inf))
+})
+
 test_that("keep_first_model drops extra models so cross-clade curves are single", {
   root <- tempfile("bgs-multimodel-")
   tables <- file.path(root, "Anolis", "tables")

@@ -4,23 +4,35 @@
 \alias{plot_region_process_rates_across_clades}
 \title{Plot region-resolved process rates through time across clades}
 \usage{
-plot_region_process_rates_across_clades(combined_region_rates, process = NULL)
+plot_region_process_rates_across_clades(
+  combined_region_rates,
+  process = NULL,
+  regions = NULL,
+  bin_width = 5
+)
 }
 \arguments{
 \item{combined_region_rates}{A data frame from
 \code{\link[=combine_region_process_rates_across_clades]{combine_region_process_rates_across_clades()}}.}
 
 \item{process}{Optional process key(s) or label(s) to restrict the plot to.}
+
+\item{regions}{Optional character vector of regions to include. When omitted,
+every region is shown; pass a subset to focus (e.g. drop the non-Asian
+continents).}
+
+\item{bin_width}{Width, in time units (millions of years), of the shared
+time bins clades are pooled into. Defaults to 5.}
 }
 \value{
 A ggplot object.
 }
 \description{
-Draw region-resolved process rates through time with one panel per
-biogeographic process and one coloured curve per region, pooled across all
-clades, from a table produced by
-\code{\link[=combine_region_process_rates_across_clades]{combine_region_process_rates_across_clades()}}. This is the region-resolved
-counterpart of \code{\link[=plot_process_rates_across_clades]{plot_process_rates_across_clades()}}: clades are summed
-together (not shown separately), and within each process panel each region is
-a separate curve.
+Draw region-resolved process rates through time with one panel per region
+and, within each panel, one coloured curve per biogeographic process
+(in-situ speciation, immigration, emigration), pooled across all clades.
+Clades are placed on a shared absolute-time grid (\code{bin_width}-wide bins)
+before pooling, so heterogeneous trees combine into clean curves rather than
+spikes. This layout mirrors the region-through-time figures in the
+multi-clade literature.
 }

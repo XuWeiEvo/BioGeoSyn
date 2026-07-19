@@ -18,6 +18,18 @@ as the analytical centerpiece for reporting and publication.
   counts per process, coloured by process class.
 - Surfaced the process synthesis as the headline of the report's stochastic
   mapping section and documented the new table and figure.
+- Fixed the cross-clade region-resolved rates figure, which collapsed into
+  vertical spikes instead of curves. Each clade's own time bins differ (trees
+  have different root ages), so pooling by raw bin midpoint mixed non-aligned
+  points. Clades are now re-binned onto a shared time grid (overlap-weighted, so
+  totals are conserved) before pooling, and the figure faces one panel per
+  region with a curve per process (in-situ / immigration / emigration), mirroring
+  the region-through-time figures in the multi-clade literature. The cross-clade
+  tab gained a time-bin-width control and a region selector to focus the figure.
+- Added dispersal networks sliced by geological period (Paleogene / Neogene /
+  Quaternary / Total), built from the per-event times already in each bundle.
+  The cross-clade tab has a period selector, and the report and results bundle
+  include one network per period.
 - Fixed the single-clade result bundle download always returning the first
   clade's archive. The cached bundle, report and diagnostics paths were not
   invalidated when a new clade was run or loaded, so every download served the
