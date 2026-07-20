@@ -1,3 +1,17 @@
+# BioGeoSyn 1.2.0
+
+Makes every result bundle self-reproducing from the command line, so that an
+analysis driven through the graphical interface can be re-run and audited
+without it.
+
+- Added `write_reproducibility_script()`. Every `run_workflow()` call now writes
+  an executable `reproduce.R` into the output directory: it reads the saved
+  `config_used.yml`, repoints the input paths at the copies stored in `inputs/`,
+  and re-runs the analysis end to end. The script is inventoried in the manifest
+  under a new `script` category and therefore travels inside the result bundle.
+- `prepare_biogeobears_inputs()` now also copies the regions table into
+  `inputs/`, so a bundle carries every input needed to reproduce it.
+
 # BioGeoSyn 1.1.0
 
 Adds the biogeographic process synthesis: the interpretive layer that turns

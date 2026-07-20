@@ -213,7 +213,15 @@ collect_workflow_manifest <- function(root) {
 workflow_manifest_category <- function(relative_path) {
   first <- ifelse(grepl("/", relative_path, fixed = TRUE), sub("/.*$", "", relative_path), relative_path)
   known <- c("inputs", "raw_biogeobears", "tables", "figures", "reports", "logs")
-  ifelse(first %in% known, first, ifelse(relative_path == "config_used.yml", "config", "root"))
+  ifelse(
+    first %in% known,
+    first,
+    ifelse(
+      relative_path == "config_used.yml",
+      "config",
+      ifelse(relative_path == "reproduce.R", "script", "root")
+    )
+  )
 }
 
 workflow_root_path <- function(result_or_path) {

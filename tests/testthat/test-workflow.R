@@ -126,3 +126,31 @@ test_that("run_workflow exposes model comparison when BioGeoBEARS is available",
   expect_true("best_overall_is_plus_j" %in% sensitivity$summary_item)
   expect_true("auto_declare_best_model" %in% sensitivity$summary_item)
 })
+
+test_that("run_workflow exports an executable reproducibility script", {
+  config <- system.file("templates", "analysis.yml", package = "BioGeoSyn")
+  out <- tempfile("bgs-workflow-script-")
+
+  result <- run_workflow(config, output_dir = out, dry_run = TRUE, require_biogeobears = FALSE)
+
+  script <- file.path(out, "reproduce.R")
+  expect_true(file.exists(script))
+
+  lines <- readLines(script)
+  # It must be runnable R, not a note: it loads the package, reads the saved
+  # configuration and calls the workflow.
+  expect_true(any(grepl("library(BioGeoSyn)", lines, fixed = TRUE)))
+  expect_true(any(grepl('read_config("config_used.yml")', lines, fixed = TRUE)))
+  expect_true(any(grepl("run_workflow(config", lines, fixed = TRUE)))
+  # Inputs must be repointed at the copies that travel inside the bundle,
+  # otherwise the script cannot run on another machine.
+  expect_true(any(grepl('config$inputs$tree_file <- "inputs/', lines, fixed = TRUE)))
+  expect_true(any(grepl('config$project$output_dir <- "reproduced_run"', lines, fixed = TRUE)))
+  # The generated script must parse as valid R.
+  expect_silent(parse(script))
+
+  # The manifest inventories it under its own category, so it is bundled.
+  manifest <- result$workflow_manifest
+  expect_true("reproduce.R" %in% manifest$relative_path)
+  expect_equal(manifest$category[manifest$relative_path == "reproduce.R"], "script")
+})

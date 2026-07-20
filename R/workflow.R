@@ -71,6 +71,9 @@ run_workflow <- function(
 
   utils::write.csv(model_run_status, file.path(project_paths$tables, "model_run_plan.csv"), row.names = FALSE)
   writeLines(bgb_check$citation %||% "", file.path(project_paths$logs, "biogeobears_citation.txt"))
+  # Written before the manifest is built so that the script is inventoried and
+  # travels inside the result bundle.
+  write_reproducibility_script(cfg, project_paths, dry_run = dry_run)
   workflow_manifest <- create_workflow_manifest(project_paths$root, write = TRUE)
 
   result <- list(
@@ -97,6 +100,91 @@ run_workflow <- function(
   )
   class(result) <- c("bgs_workflow_result", "list")
   result
+}
+
+#' Write an executable script that reproduces a workflow run
+#'
+#' Writes `reproduce.R` into the workflow output directory, so that it travels
+#' with the result bundle. The script is self-contained: it reads the
+#' configuration saved beside it, repoints the input paths at the copies stored
+#' in `inputs/`, re-fits the same models and regenerates every standardized
+#' table, figure and report. A recipient of a bundle can therefore reproduce its
+#' outputs from the command line, without using the graphical interface.
+#'
+#' @param cfg Configuration list, as returned by [read_config()].
+#' @param project_paths Project paths, as returned by [create_project()].
+#' @param dry_run Logical. Recorded in the script header so a reader can tell
+#'   whether models were actually fitted in the run that produced the bundle.
+#' @return The path to the written script, invisibly.
+#' @export
+write_reproducibility_script <- function(cfg, project_paths, dry_run = FALSE) {
+  bundled <- function(path) {
+    if (is.null(path) || !nzchar(path)) NULL else paste0("inputs/", basename(path))
+  }
+  quoted <- function(path) paste0('"', path, '"')
+  version <- tryCatch(
+    as.character(utils::packageVersion("BioGeoSyn")),
+    error = function(e) "unknown"
+  )
+
+  repoint <- character()
+  tree <- bundled(cfg$inputs$tree_file)
+  geography <- bundled(cfg$inputs$geography_file)
+  regions <- bundled(cfg$inputs$regions_file)
+  if (!is.null(tree)) {
+    repoint <- c(repoint, paste0("config$inputs$tree_file <- ", quoted(tree)))
+  }
+  if (!is.null(geography)) {
+    repoint <- c(repoint, paste0("config$inputs$geography_file <- ", quoted(geography)))
+  }
+  if (!is.null(regions)) {
+    repoint <- c(repoint, paste0("config$inputs$regions_file <- ", quoted(regions)))
+  }
+
+  lines <- c(
+    "#!/usr/bin/env Rscript",
+    "# ---------------------------------------------------------------------",
+    "# BioGeoSyn reproducibility script",
+    "#",
+    paste0("# Project   : ", cfg$project$name %||% "unnamed"),
+    paste0("# Generated : ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+           " by BioGeoSyn ", version),
+    paste0("# Run type  : ", if (isTRUE(dry_run)) {
+      "dry run (inputs validated and models planned, nothing fitted)"
+    } else {
+      "full analysis"
+    }),
+    "#",
+    "# Sourcing this file re-fits the same models on the same inputs and",
+    "# regenerates every standardized table, figure and report. Run it from the",
+    "# directory that holds this script, config_used.yml and inputs/.",
+    "#",
+    "# Requires R (>= 4.1), the BioGeoSyn package, and BioGeoBEARS, which is",
+    "# installed separately; see the BioGeoSyn README.",
+    "# ---------------------------------------------------------------------",
+    "",
+    "library(BioGeoSyn)",
+    "",
+    "config <- read_config(\"config_used.yml\")",
+    "",
+    "# config_used.yml records the absolute paths of the machine that produced",
+    "# this bundle. Point the run at the input copies shipped in inputs/, and",
+    "# write the new results to a local directory.",
+    repoint,
+    "config$project$output_dir <- \"reproduced_run\"",
+    "",
+    "result <- run_workflow(config, dry_run = FALSE)",
+    "",
+    "# run_workflow() already writes the tables, figures and manifest. Uncomment",
+    "# to render the Quarto report and to repackage the results as a bundle.",
+    "# render_report(result)",
+    "# bundle_results(result, overwrite = TRUE)",
+    ""
+  )
+
+  script_path <- file.path(project_paths$root, "reproduce.R")
+  writeLines(lines, script_path)
+  invisible(script_path)
 }
 
 format_validation_failure_message <- function(validation, project_paths) {

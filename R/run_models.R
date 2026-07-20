@@ -209,6 +209,14 @@ prepare_biogeobears_inputs <- function(config, project_paths) {
   original_geography_out <- file.path(input_dir, basename(geography_file))
   file.copy(geography_file, original_geography_out, overwrite = TRUE)
 
+  # Keep the regions table with the run as well, so that a bundle carries every
+  # input needed to reproduce it (see write_reproducibility_script()).
+  regions_out <- NULL
+  if (!is.null(regions_file) && file.exists(regions_file)) {
+    regions_out <- file.path(input_dir, basename(regions_file))
+    file.copy(regions_file, regions_out, overwrite = TRUE)
+  }
+
   geography <- read_range_matrix(geography_file)
   geog_out <- file.path(input_dir, "geography.data")
   write_biogeobears_geography(geography, geog_out)
@@ -217,6 +225,7 @@ prepare_biogeobears_inputs <- function(config, project_paths) {
     tree_file = as_path(tree_out),
     geography_file = as_path(geog_out),
     original_geography_file = as_path(original_geography_out),
+    original_regions_file = if (is.null(regions_out)) NULL else as_path(regions_out),
     n_taxa = nrow(geography$matrix),
     areas = colnames(geography$matrix),
     max_range_size = as.integer(config$inputs$max_range_size),

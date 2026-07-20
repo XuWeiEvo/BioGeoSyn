@@ -1,7 +1,7 @@
 Package: BioGeoSyn
 Type: Package
 Title: Reproducible BioGeoBEARS Workflows, Synthesis, Visualization, and Reporting
-Version: 1.1.0
+Version: 1.2.0
 Authors@R:
     person("Wei", "Xu", role = c("aut", "cre"), email = "xuwei.evo@gmail.com")
 Description: Provides a reproducible workflow layer around BioGeoBEARS for
