@@ -196,3 +196,13 @@ write-up.
 
 Released under GPL (>= 2). BioGeoBEARS is by Nicholas J. Matzke — cite it
 directly with `citation("BioGeoBEARS")`.
+
+## Development and use of AI tools
+
+Parts of the code in this package were written with the assistance of Claude
+Opus 4.8 (Anthropic), a large language model, used to help write and debug the
+implementation. All conceptual and design decisions, including the
+analysis workflow, the event taxonomy, the cross-clade synthesis, and the user
+interface, were made by the author. The author reviewed and tested all
+generated code and takes full responsibility for it, including any
+implications for copyright and intellectual property.

@@ -11,7 +11,10 @@ Description: Provides a reproducible workflow layer around BioGeoBEARS for
     analysis artifacts, summarizes model comparisons with methodological
     cautions, and prepares publication-oriented tables, figures, and Quarto
     reports. BioGeoBEARS is not bundled and must be installed separately by
-    users.
+    users. Parts of the package code were written with the assistance of a
+    large language model (Claude Opus 4.8, Anthropic); all design decisions
+    were made by the author, who reviewed and tested the code and takes full
+    responsibility for it.
 License: GPL (>= 2)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
