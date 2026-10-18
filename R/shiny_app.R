@@ -649,8 +649,35 @@ bgs_shiny_server <- function(input, output, session) {
           tryCatch(pool_per_lineage_rates_from_bundles(b$paths, b$names, bin_width = cc_bin_width("cc_bin_width_region"), by_region = TRUE),
                    error = function(e) NULL))
       })
+      cc_compat <- shiny::reactive({
+        b <- clade_bundles()
+        if (is.null(b)) return(NULL)
+        tryCatch(check_bundle_compatibility(b$paths, b$names), error = function(e) NULL)
+      })
+      output$cross_clade_compat <- shiny::renderUI({
+        cc <- cc_compat()
+        if (is.null(cc) || is.null(cc$checks) || nrow(cc$checks) == 0L) return(NULL)
+        ch <- cc$checks[cc$checks$level != "ok", , drop = FALSE]
+        items <- lapply(seq_len(nrow(cc$checks)), function(i) {
+          lev <- cc$checks$level[[i]]
+          shiny::tags$li(shiny::tags$strong(c(ok = "OK", info = "Note", warning = "Warning")[[lev]]), ": ", cc$checks$message[[i]])
+        })
+        shiny::tags$div(
+          class = if (any(cc$checks$level == "warning")) "bgs-status error" else "bgs-status info",
+          shiny::tags$div(shiny::tags$strong("Compatibility of the uploaded clades"),
+                          if (nrow(ch) == 0L) " (no issues found)" else sprintf(" (%d to review)", nrow(ch))),
+          shiny::tags$ul(items),
+          shiny::tags$details(shiny::tags$summary("Settings recorded in each bundle"), shiny::tableOutput("cross_clade_compat_table"))
+        )
+      })
+      output$cross_clade_compat_table <- shiny::renderTable({
+        cc <- cc_compat()
+        shiny::req(cc, cc$clades)
+        cc$clades[, c("bundle", "bsm_model", "n_maps", "area_codes", "max_range_size", "constraints", "crown_age", "n_tips", "biogeobears_version")]
+      }, striped = TRUE, bordered = TRUE, na = "")
       cc_parts <- shiny::reactive({
         list(
+          compatibility = cc_compat(),
           pooled_rates = cc_pooled(), pooled_region_rates = cc_rpooled(),
           per_lineage_rates = cc_perlin(), per_lineage_region_rates = cc_rperlin(),
           rates = cc_rates(), region_rates = cc_rrates(), synthesis = cc_synth(),
@@ -4072,7 +4099,12 @@ wizard_step_cross_clade <- function() {
     card(
       "1 \u00b7 Upload the clades' result bundles",
       shiny::fileInput("cross_clade_bundles", "Upload result bundles (.zip; select several)", multiple = TRUE, accept = ".zip"),
-      shiny::uiOutput("cross_clade_status")
+      shiny::uiOutput("cross_clade_status"),
+      shiny::uiOutput("cross_clade_compat"),
+      shiny::tags$details(
+        shiny::tags$summary("What the synthesis inherits from each clade's analysis"),
+        shiny::tags$ul(lapply(inherited_assumptions(), shiny::tags$li))
+      )
     ),
     card("2 \u00b7 Biogeographic process synthesis (summed across clades)", preview("cc_synth_plot")),
     card("3 \u00b7 Process rates through time \u00b7 overall (all clades pooled, all processes)",

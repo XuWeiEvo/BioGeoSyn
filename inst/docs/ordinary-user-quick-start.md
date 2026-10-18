@@ -206,9 +206,25 @@ each area's immigration/emigration budget; and event statistics. Export every
 integrated table and figure, or build a shareable HTML report, from the bottom
 of the same tab.
 
-Clades must use comparable time units and the same area codes. Each clade's own
-inference is untouched: the synthesis re-presents the stochastic maps you
-already ran, it never re-estimates anything.
+Each clade's own inference is untouched: the synthesis re-presents the
+stochastic maps you already ran, it never re-estimates anything. It therefore
+inherits every assumption of those analyses, and clades are comparable only if
+their analyses are. As soon as bundles are uploaded, the tab runs
+`check_bundle_compatibility()` and lists what differs. Before interpreting a
+synthesis, check that the clades:
+
+1. share one area coding (the same code means the same region in every clade);
+2. were mapped under the same model, or that you interpret only processes all
+   their models allow (DEC has no founder-event speciation, DIVALIKE no subset
+   sympatry, BAYAREALIKE neither vicariance nor subset sympatry);
+3. used the same maximum range size, and comparable time stratification and
+   dispersal constraints;
+4. have trees in the same time unit (millions of years) and comparable
+   calibration;
+5. have comparable taxon sampling (missing species remove nodes and their
+   events);
+6. have enough stochastic maps (about 50 or more), and ideally several trees
+   each.
 
 Pooled curves can be shown as **event counts** or as **per-lineage rates**
 (events per lineage-Myr). Counts grow with the number of lineages alive, so a

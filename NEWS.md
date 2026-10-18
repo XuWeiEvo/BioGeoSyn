@@ -1,5 +1,24 @@
 # BioGeoSyn (development version, MER revision)
 
+## Compatibility checks and inherited assumptions
+
+Responds to Reviewer 3 (major comments 5 and 7) and Editor point 5.
+
+- Added `check_bundle_compatibility()`, which reads the settings recorded in
+  each result bundle (mapping model, maps, area coding, regions occupied,
+  maximum range size, constraints, crown age, tips, software versions) and
+  reports, as ok / info / warning, where the combined clades differ: mixed
+  model families or `+J`, processes impossible under some of the models,
+  conflicting area codes, different maximum range sizes or constraints, few
+  maps, wide crown-age spread, implausible time units, mixed BioGeoBEARS
+  versions, and whether tree uncertainty is included.
+- Added `processes_possible_under_model()` and `inherited_assumptions()`.
+- The cross-clade tab shows the checks as soon as bundles are uploaded,
+  together with the settings table and the inherited assumptions; the
+  cross-clade report and results bundle include them.
+- The quick-start guide replaces "comparable time units and area codes" with
+  an explicit list of comparability criteria.
+
 ## Simulation validation and bin-width sensitivity
 
 Responds to Reviewer 3 (major comment 4; minor comment 5).

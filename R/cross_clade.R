@@ -968,13 +968,21 @@ render_cross_clade_report <- function(x, file = NULL) {
         "BSM stochastic map, summed across clades. Pooled 95%% intervals are ",
         "quantiles of the pooled count over draws that add one randomly sampled ",
         "stochastic map from every clade. Each clade contributes a single ",
-        "(best) model; clades must share comparable time units and region ",
-        "definitions.</p>"
+        "model; see the compatibility section for how the clades' analyses ",
+        "differ.</p>"
       ),
       format(Sys.time(), "%Y-%m-%d %H:%M")
     )
   )
 
+  if (!is.null(x$compatibility) && is.data.frame(x$compatibility$checks)) {
+    parts <- c(parts, "<h2>Compatibility of the integrated clades</h2>",
+      html_table(x$compatibility$checks[, c("level", "message")]),
+      "<h3>Settings recorded in each bundle</h3>",
+      html_table(x$compatibility$clades[, intersect(c("bundle", "bsm_model", "n_maps", "area_codes", "max_range_size", "constraints", "crown_age", "n_tips", "biogeobears_version"), names(x$compatibility$clades))]),
+      "<h3>Assumptions inherited from the clade analyses</h3>",
+      paste0("<ul>", paste0("<li>", html_escape(inherited_assumptions()), "</li>", collapse = ""), "</ul>"))
+  }
   if (has("synthesis")) {
     parts <- c(parts, "<h2>Biogeographic process synthesis</h2>",
       figure(plot_biogeographic_process_synthesis(x$synthesis), 8, 4.8))
@@ -1069,6 +1077,10 @@ write_cross_clade_full_bundle <- function(file, x) {
   save_csv(x$region_rates, "region_process_rates_through_time_combined")
   save_csv(x$pooled_rates, "process_rates_through_time_pooled")
   save_csv(x$pooled_region_rates, "region_process_rates_through_time_pooled")
+  if (!is.null(x$compatibility)) {
+    save_csv(x$compatibility$clades, "compatibility_settings")
+    save_csv(x$compatibility$checks, "compatibility_checks")
+  }
   save_csv(x$per_lineage_rates, "per_lineage_rates_through_time")
   save_csv(x$per_lineage_region_rates, "region_per_lineage_rates_through_time")
   save_csv(x$synthesis, "process_synthesis_combined")
