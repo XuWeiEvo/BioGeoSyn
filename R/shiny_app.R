@@ -619,8 +619,23 @@ bgs_shiny_server <- function(input, output, session) {
       cc_esum <- shiny::reactive(cc_call(combine_event_summary_across_clades))
       cc_etimes <- shiny::reactive(cc_call(combine_event_times_across_clades))
       cc_exlong <- shiny::reactive(cc_call(combine_exchange_matrix_across_clades))
+      # Pooled curves with 95% intervals from resampling stochastic maps across
+      # clades, recomputed when the bin width changes.
+      cc_pooled <- shiny::reactive({
+        b <- clade_bundles()
+        if (is.null(b)) return(NULL)
+        tryCatch(pool_process_rates_from_bundles(b$paths, b$names, bin_width = cc_bin_width("cc_bin_width_overall")),
+                 error = function(e) NULL)
+      })
+      cc_rpooled <- shiny::reactive({
+        b <- clade_bundles()
+        if (is.null(b)) return(NULL)
+        tryCatch(pool_process_rates_from_bundles(b$paths, b$names, bin_width = cc_bin_width("cc_bin_width_region"), by_region = TRUE),
+                 error = function(e) NULL)
+      })
       cc_parts <- shiny::reactive({
         list(
+          pooled_rates = cc_pooled(), pooled_region_rates = cc_rpooled(),
           rates = cc_rates(), region_rates = cc_rrates(), synthesis = cc_synth(),
           routes = cc_routes(), budgets = cc_budgets(), event_summary = cc_esum(),
           event_times = cc_etimes(), exchange_long = cc_exlong()
@@ -682,7 +697,7 @@ bgs_shiny_server <- function(input, output, session) {
         shiny::req(d)
         shiny::validate(shiny::need(nrow(d) > 0, "No data to plot."))
         plot <- tryCatch(
-          plot_process_rates_across_clades(d, pooled = TRUE, bin_width = cc_bin_width("cc_bin_width_overall")),
+          plot_process_rates_across_clades(d, pooled = TRUE, bin_width = cc_bin_width("cc_bin_width_overall"), pooled_data = cc_pooled()),
           error = function(e) NULL
         )
         shiny::validate(shiny::need(!is.null(plot), "The figure could not be produced."))
@@ -715,7 +730,7 @@ bgs_shiny_server <- function(input, output, session) {
           regions <- NULL
         }
         plot <- tryCatch(
-          plot_region_process_rates_across_clades(d, regions = regions, bin_width = cc_bin_width("cc_bin_width_region")),
+          plot_region_process_rates_across_clades(d, regions = regions, bin_width = cc_bin_width("cc_bin_width_region"), pooled_data = cc_rpooled()),
           error = function(e) NULL
         )
         shiny::validate(shiny::need(!is.null(plot), "The figure could not be produced (no rows for the chosen regions)."))

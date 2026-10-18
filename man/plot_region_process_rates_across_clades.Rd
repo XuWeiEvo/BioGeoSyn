@@ -9,7 +9,8 @@ plot_region_process_rates_across_clades(
   process = NULL,
   regions = NULL,
   bin_width = 5,
-  log_y = TRUE
+  log_y = TRUE,
+  pooled_data = NULL
 )
 }
 \arguments{
@@ -28,6 +29,11 @@ time bins clades are pooled into. Defaults to 5.}
 \item{log_y}{Logical. If \code{TRUE} (the default), draw the event-count axis on a
 log scale (a signed pseudo-log that keeps zeros), as in the source
 literature.}
+
+\item{pooled_data}{Optional pooled table from
+\code{\link[=pool_process_rates_from_bundles]{pool_process_rates_from_bundles()}} with \code{by_region = TRUE}. When supplied,
+curves and 95\% intervals come from resampling stochastic maps across clades
+(see \code{\link[=plot_process_rates_across_clades]{plot_process_rates_across_clades()}}).}
 }
 \value{
 A ggplot object.

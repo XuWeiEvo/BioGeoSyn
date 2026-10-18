@@ -1,3 +1,33 @@
+# BioGeoSyn (development version, MER revision)
+
+Corrects how uncertainty is combined across clades in the cross-clade synthesis
+(Molecular Ecology Resources review 7209990, Reviewer 3 major comment 3).
+
+- The submitted version summed each clade's 2.5% and 97.5% limits to draw the
+  band around a pooled curve. That assumes every clade sits at its own extreme
+  in the same draw, so the band is wider than a 95% interval for the sum and
+  widens linearly with the number of clades.
+- Added `pool_rates_by_map_resampling()` and `pool_process_rates_from_bundles()`.
+  Each clade's individually timed BSM events (`bsm_events.csv`, already in every
+  result bundle) are binned directly onto the shared time grid. In each of
+  `n_draws` draws (default 1000) one stochastic map is sampled at random from
+  every clade and the per-bin counts are added; the band is the 2.5% and 97.5%
+  quantile of these pooled counts. The pooled mean is the exact sum of the
+  clades' per-map means. Maps without events count as zeros, the seed is
+  fixed for reproducibility and the caller's random-number stream is restored.
+- `plot_process_rates_across_clades()` and
+  `plot_region_process_rates_across_clades()` gain `pooled_data`; the Shiny
+  cross-clade tab, the cross-clade report and the cross-clade results bundle
+  now use the resampled interval and write the pooled tables
+  (`process_rates_through_time_pooled.csv`,
+  `region_process_rates_through_time_pooled.csv`). Without per-event tables the
+  old summed band is still drawn, but its caption now states that it is wider
+  than a 95% interval for the sum.
+- New tests check the pooled mean against the per-clade means, zero-event maps,
+  degenerate (identical) maps, a 21-clade known-answer case (pooled Poisson(105),
+  95% interval [85, 126]), recovery of a shared pulse among clades of different
+  ages, reproducibility, region pooling and reading from bundles.
+
 # BioGeoSyn 1.2.0
 
 Makes every result bundle self-reproducing from the command line, so that an

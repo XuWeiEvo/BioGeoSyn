@@ -304,10 +304,18 @@ combine_exchange_matrix_across_clades <- function(zip_paths, clade_names = NULL)
 #'   one curve per process instead of one per clade. Defaults to `FALSE`.
 #' @param bin_width Width of the shared time bins (millions of years) used when
 #'   `pooled = TRUE`. Defaults to 5.
+#' @param pooled_data Optional pooled table from
+#'   [pool_process_rates_from_bundles()] or [pool_rates_by_map_resampling()].
+#'   When supplied with `pooled = TRUE`, the curve and its 95% interval come from
+#'   resampling stochastic maps across clades. Without it, the clades' summary
+#'   tables are re-binned and summed, and the band is the sum of the clades'
+#'   marginal 95% limits, which is wider than a 95% interval for the sum and is
+#'   labelled as such.
 #' @return A ggplot object.
 #' @export
 plot_process_rates_across_clades <- function(combined_rates, process = NULL,
-                                             pooled = FALSE, bin_width = 5) {
+                                             pooled = FALSE, bin_width = 5,
+                                             pooled_data = NULL) {
   required <- c("clade", "process_label", "bin_midpoint", "mean_count")
   missing <- setdiff(required, names(combined_rates))
   if (length(missing) > 0L) {
@@ -326,17 +334,29 @@ plot_process_rates_across_clades <- function(combined_rates, process = NULL,
   }
 
   if (isTRUE(pooled)) {
-    pooled_df <- rebin_rates_to_common_grid(
-      data, bin_width = bin_width, group_cols = c("process_label"),
-      value_cols = c("mean_count", "ci_lower", "ci_upper")
-    )
+    resampled <- !is.null(pooled_data) && is.data.frame(pooled_data) && nrow(pooled_data) > 0L
+    if (resampled) {
+      pooled_df <- pooled_data
+      if (!is.null(process)) {
+        pooled_df <- pooled_df[pooled_df$process_label %in% process, , drop = FALSE]
+      }
+      if (all(c("bin_start", "bin_end") %in% names(pooled_df))) {
+        bin_width <- stats::median(pooled_df$bin_end - pooled_df$bin_start, na.rm = TRUE)
+      }
+    } else {
+      pooled_df <- rebin_rates_to_common_grid(
+        data, bin_width = bin_width, group_cols = c("process_label"),
+        value_cols = c("mean_count", "ci_lower", "ci_upper")
+      )
+    }
     if (nrow(pooled_df) == 0L) {
       stop("combined_rates has no rows to plot.", call. = FALSE)
     }
     # Plot log10(count + 1): all processes in one panel, coloured by process, on
     # a small-number log axis (as in the source literature) so very
-    # different-magnitude processes are comparable; a summed 95% band
-    # accompanies each curve when available. Values are transformed directly so
+    # different-magnitude processes are comparable; a 95% band accompanies each
+    # curve when available (resampled over stochastic maps when pooled_data is
+    # given, otherwise the sum of per-clade limits). Values are transformed directly so
     # the axis reads in log units, not raw counts.
     has_ci <- all(c("ci_lower", "ci_upper") %in% names(pooled_df))
     pooled_df <- to_log_counts(pooled_df, c("mean_count", "ci_lower", "ci_upper"))
@@ -360,7 +380,7 @@ plot_process_rates_across_clades <- function(combined_rates, process = NULL,
           y = expression(log[10](mean~events~summed~across~clades + 1)),
           colour = "Process",
           title = "Cross-clade process rates through time",
-          subtitle = sprintf("All clades pooled on %g-Ma bins; log y-axis, band = summed 95%% interval", bin_width)
+          subtitle = sprintf("All clades pooled on %g-Ma bins; log y-axis, %s", bin_width, pooled_band_label(resampled))
         ) +
         theme_bgs()
     )
@@ -490,8 +510,9 @@ rebin_rates_to_common_grid <- function(data, bin_width = 5,
   if (length(bin_width) != 1L || !is.finite(bin_width) || bin_width <= 0) {
     bin_width <- 5
   }
-  # Carry the confidence bounds through the same re-binning when present, so a
-  # pooled curve gets a summed 95% interval alongside its mean.
+  # Carry the confidence bounds through the same re-binning when present. Summed
+  # limits are only a fallback for bundles without per-event BSM tables; they are
+  # wider than a 95% interval for the sum (see pool_rates_by_map_resampling()).
   value_cols <- intersect(value_cols, names(data))
   if (length(value_cols) == 0L) {
     return(data.frame())
@@ -571,10 +592,15 @@ rebin_rates_to_common_grid <- function(data, bin_width = 5,
 #' @param log_y Logical. If `TRUE` (the default), draw the event-count axis on a
 #'   log scale (a signed pseudo-log that keeps zeros), as in the source
 #'   literature.
+#' @param pooled_data Optional pooled table from
+#'   [pool_process_rates_from_bundles()] with `by_region = TRUE`. When supplied,
+#'   curves and 95% intervals come from resampling stochastic maps across clades
+#'   (see [plot_process_rates_across_clades()]).
 #' @return A ggplot object.
 #' @export
 plot_region_process_rates_across_clades <- function(combined_region_rates, process = NULL,
-                                                     regions = NULL, bin_width = 5, log_y = TRUE) {
+                                                     regions = NULL, bin_width = 5, log_y = TRUE,
+                                                     pooled_data = NULL) {
   required <- c("clade", "region", "process_label", "bin_midpoint", "mean_count")
   missing <- setdiff(required, names(combined_region_rates))
   if (length(missing) > 0L) {
@@ -595,10 +621,24 @@ plot_region_process_rates_across_clades <- function(combined_region_rates, proce
     stop("combined_region_rates has no rows to plot.", call. = FALSE)
   }
 
-  pooled <- rebin_rates_to_common_grid(
-    data, bin_width = bin_width, group_cols = c("region", "process_label"),
-    value_cols = c("mean_count", "ci_lower", "ci_upper")
-  )
+  resampled <- !is.null(pooled_data) && is.data.frame(pooled_data) && nrow(pooled_data) > 0L
+  if (resampled) {
+    pooled <- pooled_data
+    if (!is.null(process)) {
+      pooled <- pooled[pooled$process_label %in% process, , drop = FALSE]
+    }
+    if (!is.null(regions)) {
+      pooled <- pooled[pooled$region %in% regions, , drop = FALSE]
+    }
+    if (all(c("bin_start", "bin_end") %in% names(pooled))) {
+      bin_width <- stats::median(pooled$bin_end - pooled$bin_start, na.rm = TRUE)
+    }
+  } else {
+    pooled <- rebin_rates_to_common_grid(
+      data, bin_width = bin_width, group_cols = c("region", "process_label"),
+      value_cols = c("mean_count", "ci_lower", "ci_upper")
+    )
+  }
   if (nrow(pooled) == 0L) {
     stop("combined_region_rates has no rows to plot.", call. = FALSE)
   }
@@ -634,9 +674,18 @@ plot_region_process_rates_across_clades <- function(combined_region_rates, proce
       title = "Cross-clade region-resolved process rates through time",
       subtitle = sprintf("One panel per region; each process a curve, pooled across clades on %g-Ma bins%s%s",
                          bin_width, if (isTRUE(log_y)) ", log y-axis" else "",
-                         if (has_ci) ", band = summed 95% interval" else "")
+                         if (has_ci) paste0(", ", pooled_band_label(resampled)) else "")
     ) +
     theme_bgs()
+}
+
+# Caption text for the pooled band, stating how the interval was obtained.
+pooled_band_label <- function(resampled) {
+  if (isTRUE(resampled)) {
+    "band = 95% interval of the pooled count over resampled stochastic maps"
+  } else {
+    "band = sum of per-clade 95% limits (wider than a 95% interval for the sum)"
+  }
 }
 
 # Standard geological periods, oldest to youngest (Ma before present). Used to
@@ -876,7 +925,9 @@ render_cross_clade_report <- function(x, file = NULL) {
     sprintf(
       paste0(
         "<p class=\"note\">Generated by BioGeoSyn on %s. Counts are means per ",
-        "BSM stochastic map, summed across clades. Each clade contributes a single ",
+        "BSM stochastic map, summed across clades. Pooled 95%% intervals are ",
+        "quantiles of the pooled count over draws that add one randomly sampled ",
+        "stochastic map from every clade. Each clade contributes a single ",
         "(best) model; clades must share comparable time units and region ",
         "definitions.</p>"
       ),
@@ -890,7 +941,7 @@ render_cross_clade_report <- function(x, file = NULL) {
   }
   if (has("rates")) {
     parts <- c(parts, "<h2>Process rates through time (overall)</h2>",
-      figure(plot_process_rates_across_clades(x$rates, pooled = TRUE), 8.6, 5.2),
+      figure(plot_process_rates_across_clades(x$rates, pooled = TRUE, pooled_data = x$pooled_rates), 8.6, 5.2),
       "<h3>Combined rates per clade and time bin</h3>",
       html_table(xclade_long_table(x$rates,
         c("clade", "process_group", "process_label", "bin_midpoint", "mean_count", "ci_lower", "ci_upper"))),
@@ -899,7 +950,7 @@ render_cross_clade_report <- function(x, file = NULL) {
   }
   if (has("region_rates")) {
     parts <- c(parts, "<h2>Process rates through time (by region)</h2>",
-      figure(plot_region_process_rates_across_clades(x$region_rates, log_y = TRUE), 9, 4.8),
+      figure(plot_region_process_rates_across_clades(x$region_rates, log_y = TRUE, pooled_data = x$pooled_region_rates), 9, 4.8),
       "<h3>Combined rates per clade, region and time bin</h3>",
       html_table(xclade_long_table(x$region_rates,
         c("clade", "region", "process_label", "bin_midpoint", "mean_count", "ci_lower", "ci_upper"))),
@@ -970,6 +1021,8 @@ write_cross_clade_full_bundle <- function(file, x) {
 
   save_csv(x$rates, "process_rates_through_time_combined")
   save_csv(x$region_rates, "region_process_rates_through_time_combined")
+  save_csv(x$pooled_rates, "process_rates_through_time_pooled")
+  save_csv(x$pooled_region_rates, "region_process_rates_through_time_pooled")
   save_csv(x$synthesis, "process_synthesis_combined")
   save_csv(x$routes, "dispersal_routes_combined")
   save_csv(x$budgets, "region_budgets_combined")
@@ -981,8 +1034,8 @@ write_cross_clade_full_bundle <- function(file, x) {
   }
 
   if (ok_df(x$synthesis)) save_fig(plot_biogeographic_process_synthesis(x$synthesis), "process_synthesis", 8, 4.8)
-  if (ok_df(x$rates)) save_fig(plot_process_rates_across_clades(x$rates, pooled = TRUE), "process_rates_through_time", 8.6, 5.2)
-  if (ok_df(x$region_rates)) save_fig(plot_region_process_rates_across_clades(x$region_rates, log_y = TRUE), "region_process_rates_through_time", 9, 4.8)
+  if (ok_df(x$rates)) save_fig(plot_process_rates_across_clades(x$rates, pooled = TRUE, pooled_data = x$pooled_rates), "process_rates_through_time", 8.6, 5.2)
+  if (ok_df(x$region_rates)) save_fig(plot_region_process_rates_across_clades(x$region_rates, log_y = TRUE, pooled_data = x$pooled_region_rates), "region_process_rates_through_time", 9, 4.8)
   if (ok_df(x$event_times)) {
     # One network per geological period, plus the all-time total.
     for (period in geological_period_choices()) {

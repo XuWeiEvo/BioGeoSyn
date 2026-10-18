@@ -8,7 +8,8 @@ plot_process_rates_across_clades(
   combined_rates,
   process = NULL,
   pooled = FALSE,
-  bin_width = 5
+  bin_width = 5,
+  pooled_data = NULL
 )
 }
 \arguments{
@@ -22,6 +23,14 @@ one curve per process instead of one per clade. Defaults to \code{FALSE}.}
 
 \item{bin_width}{Width of the shared time bins (millions of years) used when
 \code{pooled = TRUE}. Defaults to 5.}
+
+\item{pooled_data}{Optional pooled table from
+\code{\link[=pool_process_rates_from_bundles]{pool_process_rates_from_bundles()}} or \code{\link[=pool_rates_by_map_resampling]{pool_rates_by_map_resampling()}}.
+When supplied with \code{pooled = TRUE}, the curve and its 95\% interval come from
+resampling stochastic maps across clades. Without it, the clades' summary
+tables are re-binned and summed, and the band is the sum of the clades'
+marginal 95\% limits, which is wider than a 95\% interval for the sum and is
+labelled as such.}
 }
 \value{
 A ggplot object.
