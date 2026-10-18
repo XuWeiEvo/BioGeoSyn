@@ -29,12 +29,18 @@
 #' @param n_draws Number of resampling draws used for the interval.
 #' @param seed Optional integer seed so the interval is reproducible.
 #' @param by_region Logical. Pool by process and region instead of by process.
+#' @param groups Clade identity of each element of `clade_events`. Elements that
+#'   share a group are analyses of the same clade on different trees (for
+#'   example posterior trees). Within a group, each draw first samples a tree
+#'   uniformly and then one of its stochastic maps, so the interval includes
+#'   topological and age uncertainty, and the mean is the average over trees.
+#'   Defaults to the element names with any `__treeNNN` suffix removed.
 #' @return A data frame with one row per process (and region), and shared time
 #'   bin, with `bin_start`, `bin_end`, `bin_midpoint`, `mean_count`, `ci_lower`,
-#'   `ci_upper`, `n_clades`, `n_draws` and `ci_method`.
+#'   `ci_upper`, `n_clades`, `n_trees`, `n_draws` and `ci_method`.
 #' @export
 pool_rates_by_map_resampling <- function(clade_events, bin_width = 5, n_draws = 1000L,
-                                         seed = 1L, by_region = FALSE) {
+                                         seed = 1L, by_region = FALSE, groups = NULL) {
   empty <- empty_pooled_rates_table(by_region)
   clade_events <- clade_events[!vapply(clade_events, function(x) {
     is.null(x) || is.null(x$events) || nrow(x$events) == 0L
@@ -46,6 +52,7 @@ pool_rates_by_map_resampling <- function(clade_events, bin_width = 5, n_draws = 
     bin_width <- 5
   }
   n_draws <- max(1L, as.integer(n_draws))
+  tree_groups <- resolve_tree_groups(clade_events, groups)
 
   group_cols <- if (isTRUE(by_region)) c("process_label", "region") else "process_label"
   all_ev <- do.call(rbind, lapply(clade_events, function(x) x$events[, c(group_cols, "event_time_before_present"), drop = FALSE]))
@@ -59,10 +66,12 @@ pool_rates_by_map_resampling <- function(clade_events, bin_width = 5, n_draws = 
   group_key <- do.call(paste, c(groups, sep = "\r"))
   n_cells <- length(group_key) * n_bins
 
-  # One matrix per clade: rows = stochastic maps, columns = group x bin cells.
+  # One matrix per analysed tree: rows = stochastic maps, columns = group x bin
+  # cells; trees of the same clade are then stacked with sampling weights.
   map_matrices <- lapply(clade_events, function(x) {
     clade_map_count_matrix(x, group_cols, group_key, n_bins, bin_width)
   })
+  stacked <- stack_tree_replicates(map_matrices, tree_groups)
 
   if (!is.null(seed) && !is.na(seed)) {
     old_seed <- if (exists(".Random.seed", envir = globalenv())) get(".Random.seed", envir = globalenv()) else NULL
@@ -78,10 +87,10 @@ pool_rates_by_map_resampling <- function(clade_events, bin_width = 5, n_draws = 
 
   pooled_draws <- matrix(0, nrow = n_draws, ncol = n_cells)
   pooled_mean <- numeric(n_cells)
-  for (m in map_matrices) {
-    pick <- sample.int(nrow(m), n_draws, replace = TRUE)
-    pooled_draws <- pooled_draws + m[pick, , drop = FALSE]
-    pooled_mean <- pooled_mean + colMeans(m)
+  for (st in stacked) {
+    pick <- sample.int(nrow(st$m), n_draws, replace = TRUE, prob = st$w)
+    pooled_draws <- pooled_draws + st$m[pick, , drop = FALSE]
+    pooled_mean <- pooled_mean + colSums(st$m * st$w)
   }
   ci <- apply(pooled_draws, 2L, stats::quantile, probs = c(0.025, 0.975), names = FALSE, type = 7)
 
@@ -96,10 +105,53 @@ pool_rates_by_map_resampling <- function(clade_events, bin_width = 5, n_draws = 
   out$mean_count <- pooled_mean
   out$ci_lower <- ci[1L, ]
   out$ci_upper <- ci[2L, ]
-  out$n_clades <- length(map_matrices)
+  out$n_clades <- length(stacked)
+  out$n_trees <- length(map_matrices)
   out$n_draws <- n_draws
-  out$ci_method <- "map_resampling"
+  out$ci_method <- if (length(map_matrices) > length(stacked)) "tree_and_map_resampling" else "map_resampling"
   out
+}
+
+#' Clade name without a tree-replicate suffix
+#'
+#' Strip a trailing `_results` and a tree-replicate tag such as `__tree003`,
+#' `_tree3` or `-tree-12`, so analyses of one clade on several trees are
+#' recognised as the same clade.
+#'
+#' @param x Character vector of clade or bundle names.
+#' @return Character vector of clade names.
+#' @export
+clade_group_name <- function(x) {
+  x <- sub("_results$", "", as.character(x))
+  sub("[_ -]+tree[_ -]?[0-9]+$", "", x, ignore.case = TRUE)
+}
+
+resolve_tree_groups <- function(clade_events, groups) {
+  if (is.null(groups)) {
+    nm <- names(clade_events) %||% rep("", length(clade_events))
+    nm[!nzchar(nm)] <- paste0("clade", which(!nzchar(nm)))
+    return(clade_group_name(nm))
+  }
+  groups <- as.character(groups)
+  if (length(groups) != length(clade_events)) {
+    stop("`groups` must have one entry per clade analysis.", call. = FALSE)
+  }
+  groups
+}
+
+# Stack the per-tree matrices of each clade with sampling weights that give
+# every tree the same total weight (1 / number of trees) and every map within a
+# tree an equal share of it. A clade analysed on one tree reduces to equal
+# weights over its maps.
+stack_tree_replicates <- function(mats, groups, extra = NULL) {
+  idx <- split(seq_along(mats), factor(groups, levels = unique(groups)))
+  lapply(idx, function(ii) {
+    n_t <- length(ii)
+    w <- unlist(lapply(ii, function(i) rep(1 / (n_t * nrow(mats[[i]])), nrow(mats[[i]]))))
+    out <- list(m = do.call(rbind, mats[ii]), w = w)
+    if (!is.null(extra)) out$d <- do.call(rbind, extra[ii])
+    out
+  })
 }
 
 # Per-map count matrix for one clade on the shared grid. Maps that produced no

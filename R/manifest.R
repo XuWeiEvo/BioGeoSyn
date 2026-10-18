@@ -141,6 +141,9 @@ diagnostic_relative_paths <- function(root, paths) {
 }
 
 zip_relative_files <- function(root, bundle_file, files) {
+  # Resolve the archive path before changing into `root`, so a relative
+  # `bundle_file` refers to the caller's working directory.
+  bundle_file <- file.path(normalizePath(dirname(bundle_file), winslash = "/", mustWork = FALSE), basename(bundle_file))
   old_wd <- getwd()
   on.exit(setwd(old_wd), add = TRUE)
   setwd(root)

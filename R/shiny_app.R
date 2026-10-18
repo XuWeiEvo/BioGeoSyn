@@ -685,7 +685,14 @@ bgs_shiny_server <- function(input, output, session) {
             )
           ))
         }
-        shiny::tags$div(class = "bgs-status info", paste0("Integrated ", length(b$paths), " clades."))
+        groups <- clade_group_name(b$names)
+        n_clades <- length(unique(groups))
+        shiny::tags$div(class = "bgs-status info", if (n_clades < length(b$paths)) {
+          paste0("Integrated ", n_clades, " clades from ", length(b$paths), " bundles. Bundles named <clade>__treeNNN ",
+                 "are treated as one clade analysed on several trees: they are resampled jointly, so intervals include tree uncertainty.")
+        } else {
+          paste0("Integrated ", length(b$paths), " clades.")
+        })
       })
 
       cc_image <- function(react, plot_fun, width, height) {

@@ -187,13 +187,35 @@ read_clade_bundle_tables <- function(zip_paths, clade_names, table) {
     return(NULL)
   }
   labels <- make.unique(vapply(pieces, function(d) d$clade[[1L]], character(1)), sep = " ")
-  pieces <- Map(function(d, l) {
-    d$clade <- l
+  # Bundles named <clade>__treeNNN are analyses of one clade on different
+  # trees: they share the clade label and each carries weight 1 / n_trees, so
+  # sums across clades average over a clade's trees instead of adding them.
+  groups <- clade_group_name(labels)
+  n_trees <- table(groups)[groups]
+  pieces <- Map(function(d, l, g, n) {
+    d$clade <- g
+    d$tree_replicate <- l
+    d$tree_weight <- 1 / as.numeric(n)
     d
-  }, pieces, labels)
+  }, pieces, labels, groups, n_trees)
   common <- Reduce(intersect, lapply(pieces, names))
   common <- c("clade", setdiff(common, "clade"))
   do.call(rbind, lapply(pieces, function(d) d[, common, drop = FALSE]))
+}
+
+# Down-weight rows of tree replicates so that summing over a clade's rows
+# averages over its trees (see read_clade_bundle_tables()).
+weight_tree_replicates <- function(df, cols) {
+  if (is.null(df) || !"tree_weight" %in% names(df)) {
+    return(df)
+  }
+  w <- suppressWarnings(as.numeric(df$tree_weight))
+  w[is.na(w)] <- 1
+  for (col in intersect(cols, names(df))) {
+    df[[col]] <- suppressWarnings(as.numeric(df[[col]])) * w
+  }
+  df$tree_weight <- 1
+  df
 }
 
 # Sum a per-clade combined table across clades over grouping columns, giving one
@@ -207,6 +229,7 @@ aggregate_across_clades <- function(df, group_cols, sum_cols, label = "All clade
   if (length(group_cols) == 0L || length(sum_cols) == 0L) {
     return(NULL)
   }
+  df <- weight_tree_replicates(df, sum_cols)
   values <- df[, sum_cols, drop = FALSE]
   values[] <- lapply(values, function(x) suppressWarnings(as.numeric(x)))
   agg <- stats::aggregate(values, by = as.list(df[, group_cols, drop = FALSE]), FUN = function(x) sum(x, na.rm = TRUE))
@@ -256,6 +279,11 @@ combine_event_times_across_clades <- function(zip_paths, clade_names = NULL) {
   if (is.null(df) || nrow(df) == 0L) {
     return(NULL)
   }
+  # Map identifiers restart at 1 on every tree, so qualify them by tree; the
+  # per-map normalisation then averages over all maps of all of a clade's trees.
+  if (all(c("replicate", "tree_replicate") %in% names(df))) {
+    df$replicate <- paste(df$tree_replicate, df$replicate, sep = "#")
+  }
   df$model <- "All clades"
   df
 }
@@ -286,6 +314,14 @@ combine_exchange_matrix_across_clades <- function(zip_paths, clade_names = NULL)
   if (length(pieces) == 0L) {
     return(NULL)
   }
+  # Average a clade's trees (bundles named <clade>__treeNNN) before summing.
+  groups <- clade_group_name(make.unique(vapply(pieces, function(d) d$clade[[1L]], character(1)), sep = " "))
+  n_trees <- table(groups)[groups]
+  pieces <- Map(function(d, g, n) {
+    d$clade <- g
+    d$mean_count <- suppressWarnings(as.numeric(d$mean_count)) / as.numeric(n)
+    d
+  }, pieces, groups, n_trees)
   keep <- c("clade", "source_region", "recipient_region", "kind", "mean_count")
   do.call(rbind, lapply(pieces, function(d) d[, intersect(keep, names(d)), drop = FALSE]))
 }
@@ -345,7 +381,8 @@ plot_process_rates_across_clades <- function(combined_rates, process = NULL,
       }
     } else {
       pooled_df <- rebin_rates_to_common_grid(
-        data, bin_width = bin_width, group_cols = c("process_label"),
+        weight_tree_replicates(data, c("mean_count", "ci_lower", "ci_upper")),
+        bin_width = bin_width, group_cols = c("process_label"),
         value_cols = c("mean_count", "ci_lower", "ci_upper")
       )
     }
@@ -635,7 +672,8 @@ plot_region_process_rates_across_clades <- function(combined_region_rates, proce
     }
   } else {
     pooled <- rebin_rates_to_common_grid(
-      data, bin_width = bin_width, group_cols = c("region", "process_label"),
+      weight_tree_replicates(data, c("mean_count", "ci_lower", "ci_upper")),
+      bin_width = bin_width, group_cols = c("region", "process_label"),
       value_cols = c("mean_count", "ci_lower", "ci_upper")
     )
   }
@@ -810,6 +848,7 @@ xclade_process_summary <- function(df) {
   if (is.null(df) || !all(req %in% names(df)) || nrow(df) == 0L) {
     return(NULL)
   }
+  df <- weight_tree_replicates(df, "mean_count")
   agg <- stats::aggregate(
     list(events = suppressWarnings(as.numeric(df$mean_count))),
     by = list(Process = df$process_label),
@@ -827,6 +866,7 @@ xclade_region_summary <- function(df) {
   if (is.null(df) || !all(req %in% names(df)) || nrow(df) == 0L) {
     return(NULL)
   }
+  df <- weight_tree_replicates(df, "mean_count")
   agg <- stats::aggregate(
     list(events = suppressWarnings(as.numeric(df$mean_count))),
     by = list(Region = df$region, Process = df$process_label),

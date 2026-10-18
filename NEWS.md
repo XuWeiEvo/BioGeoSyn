@@ -1,5 +1,27 @@
 # BioGeoSyn (development version, MER revision)
 
+## Topological and age uncertainty
+
+Responds to Reviewer 2 (comment 2 of the suggested features) and the second
+half of Editor point 3. Intervals from stochastic maps on one tree ignore
+uncertainty in topology and node ages.
+
+- Added `run_workflow_over_trees()`, which runs the single-clade workflow once
+  per tree from a multi-tree file, a directory of tree files, a vector of
+  files or a `multiPhylo` object (optionally a random sample of `n_trees`),
+  with the stochastic-mapping model fixed across trees (`bsm_model`). Each tree
+  gets its own output directory and result bundle named `<clade>__treeNNN`,
+  and the runs are listed in `tree_runs.csv`.
+- The cross-clade synthesis treats bundles named `<clade>__treeNNN` as one
+  clade (`clade_group_name()`). Pooled counts and per-lineage rates resample a
+  tree first and then one of its maps, so intervals include tree uncertainty;
+  every tree carries equal weight whatever its number of maps, and per-lineage
+  rates use each tree's own lineage-Myr. Summed summaries (process synthesis,
+  event statistics, routes, budgets, period networks, exchange matrix) average
+  a clade's trees before summing clades.
+- Fixed `bundle_results()` failing when given a relative `bundle_file` (the
+  path was resolved after changing into the result directory).
+
 ## Per-lineage rates and clade weighting
 
 Responds to Editor point 2, Reviewer 1 and Reviewer 3 (major comment 2, minor

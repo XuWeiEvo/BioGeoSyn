@@ -9,7 +9,8 @@ pool_rates_by_map_resampling(
   bin_width = 5,
   n_draws = 1000L,
   seed = 1L,
-  by_region = FALSE
+  by_region = FALSE,
+  groups = NULL
 )
 }
 \arguments{
@@ -27,11 +28,18 @@ usually millions of years).}
 \item{seed}{Optional integer seed so the interval is reproducible.}
 
 \item{by_region}{Logical. Pool by process and region instead of by process.}
+
+\item{groups}{Clade identity of each element of \code{clade_events}. Elements that
+share a group are analyses of the same clade on different trees (for
+example posterior trees). Within a group, each draw first samples a tree
+uniformly and then one of its stochastic maps, so the interval includes
+topological and age uncertainty, and the mean is the average over trees.
+Defaults to the element names with any \verb{__treeNNN} suffix removed.}
 }
 \value{
 A data frame with one row per process (and region), and shared time
 bin, with \code{bin_start}, \code{bin_end}, \code{bin_midpoint}, \code{mean_count}, \code{ci_lower},
-\code{ci_upper}, \code{n_clades}, \code{n_draws} and \code{ci_method}.
+\code{ci_upper}, \code{n_clades}, \code{n_trees}, \code{n_draws} and \code{ci_method}.
 }
 \description{
 Bin every clade's individually timed BSM events directly onto one shared

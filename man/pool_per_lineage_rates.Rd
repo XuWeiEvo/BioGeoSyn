@@ -10,7 +10,8 @@ pool_per_lineage_rates(
   n_draws = 1000L,
   seed = 1L,
   by_region = FALSE,
-  min_lineage_myr = bin_width
+  min_lineage_myr = bin_width,
+  groups = NULL
 )
 }
 \arguments{
@@ -31,6 +32,11 @@ pool_per_lineage_rates(
 \item{min_lineage_myr}{Minimum lineage-Myr in a bin for a rate to be
 reported. Defaults to \code{bin_width}, i.e. on average one lineage through the
 whole bin.}
+
+\item{groups}{Clade identity of each element, as in
+\code{\link[=pool_rates_by_map_resampling]{pool_rates_by_map_resampling()}}. Trees of the same clade are resampled
+jointly (tree first, then map), and each tree contributes its own
+denominator.}
 }
 \value{
 A data frame with one row per process (and region) and time bin,

@@ -53,6 +53,10 @@
 #' @param min_lineage_myr Minimum lineage-Myr in a bin for a rate to be
 #'   reported. Defaults to `bin_width`, i.e. on average one lineage through the
 #'   whole bin.
+#' @param groups Clade identity of each element, as in
+#'   [pool_rates_by_map_resampling()]. Trees of the same clade are resampled
+#'   jointly (tree first, then map), and each tree contributes its own
+#'   denominator.
 #' @return A data frame with one row per process (and region) and time bin,
 #'   with `lineage_myr`, `rate`, `rate_ci_lower`, `rate_ci_upper`
 #'   (lineage-weighted), `clade_rate`, `clade_rate_ci_lower`,
@@ -60,7 +64,7 @@
 #'   `denominator`.
 #' @export
 pool_per_lineage_rates <- function(clade_data, bin_width = 5, n_draws = 1000L, seed = 1L,
-                                   by_region = FALSE, min_lineage_myr = bin_width) {
+                                   by_region = FALSE, min_lineage_myr = bin_width, groups = NULL) {
   clade_data <- clade_data[!vapply(clade_data, function(x) {
     is.null(x) || is.null(x$events) || nrow(x$events) == 0L || is.null(x$tree_nodes)
   }, logical(1))]
@@ -71,6 +75,7 @@ pool_per_lineage_rates <- function(clade_data, bin_width = 5, n_draws = 1000L, s
   n_draws <- max(1L, as.integer(n_draws))
   min_lineage_myr <- suppressWarnings(as.numeric(min_lineage_myr))
   if (length(min_lineage_myr) != 1L || !is.finite(min_lineage_myr)) min_lineage_myr <- bin_width
+  tree_groups <- resolve_tree_groups(clade_data, groups)
 
   group_cols <- if (isTRUE(by_region)) c("process_label", "region") else "process_label"
   all_ev <- do.call(rbind, lapply(clade_data, function(x) x$events[, c(group_cols, "event_time_before_present"), drop = FALSE]))
@@ -89,6 +94,8 @@ pool_per_lineage_rates <- function(clade_data, bin_width = 5, n_draws = 1000L, s
     denom <- clade_denominator_matrix(x, groups, n_bins, bin_width, by_region, nrow(counts))
     list(counts = counts, denom = denom)
   })
+  per_clade <- stack_tree_replicates(lapply(per_clade, `[[`, "counts"), tree_groups,
+                                     extra = lapply(per_clade, `[[`, "denom"))
 
   if (!is.null(seed) && !is.na(seed)) {
     old_seed <- if (exists(".Random.seed", envir = globalenv())) get(".Random.seed", envir = globalenv()) else NULL
@@ -105,9 +112,9 @@ pool_per_lineage_rates <- function(clade_data, bin_width = 5, n_draws = 1000L, s
   num_sum <- den_sum <- cw_sum <- cw_n <- matrix(0, nrow = n_draws, ncol = n_cells)
   mean_num <- mean_den <- cw_point_sum <- cw_point_n <- numeric(n_cells)
   for (pc in per_clade) {
-    pick <- sample.int(nrow(pc$counts), n_draws, replace = TRUE)
-    N <- pc$counts[pick, , drop = FALSE]
-    D <- pc$denom[pick, , drop = FALSE]
+    pick <- sample.int(nrow(pc$m), n_draws, replace = TRUE, prob = pc$w)
+    N <- pc$m[pick, , drop = FALSE]
+    D <- pc$d[pick, , drop = FALSE]
     D[is.na(D)] <- 0
     num_sum <- num_sum + N
     den_sum <- den_sum + D
@@ -116,9 +123,10 @@ pool_per_lineage_rates <- function(clade_data, bin_width = 5, n_draws = 1000L, s
     cw_sum <- cw_sum + r
     cw_n <- cw_n + ok
 
-    mn <- colMeans(pc$counts)
-    md <- colMeans(pc$denom, na.rm = TRUE)
-    md[!is.finite(md)] <- 0
+    mn <- colSums(pc$m * pc$w)
+    dd <- pc$d
+    dd[is.na(dd)] <- 0
+    md <- colSums(dd * pc$w)
     mean_num <- mean_num + mn
     mean_den <- mean_den + md
     okp <- md >= min_lineage_myr
@@ -151,6 +159,7 @@ pool_per_lineage_rates <- function(clade_data, bin_width = 5, n_draws = 1000L, s
   out$clade_rate_ci_upper <- ifelse(is.na(out$clade_rate), NA_real_, cw_ci[, 2L])
   out$n_clades_rate <- as.integer(cw_point_n)
   out$n_clades <- length(per_clade)
+  out$n_trees <- length(clade_data)
   out$n_draws <- n_draws
   out$denominator <- denominator_label(out$process_label, by_region)
   out$rate_unit <- "events per lineage-Myr"
