@@ -146,6 +146,8 @@ test_that("run_workflow exports an executable reproducibility script", {
   # otherwise the script cannot run on another machine.
   expect_true(any(grepl('config$inputs$tree_file <- "inputs/', lines, fixed = TRUE)))
   expect_true(any(grepl('config$project$output_dir <- "reproduced_run"', lines, fixed = TRUE)))
+  expect_true(any(grepl("check_environment(", lines, fixed = TRUE)))
+  expect_true(file.exists(file.path(out, "logs", "environment.csv")))
   # The generated script must parse as valid R.
   expect_silent(parse(script))
 

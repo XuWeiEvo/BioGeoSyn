@@ -44,6 +44,7 @@ run_workflow <- function(
   utils::write.csv(validation, file.path(project_paths$tables, "input_validation.csv"), row.names = FALSE)
   yaml::write_yaml(cfg, file.path(project_paths$root, "config_used.yml"))
   writeLines(utils::capture.output(utils::sessionInfo()), file.path(project_paths$logs, "session_info.txt"))
+  record_environment(file.path(project_paths$logs, "environment.csv"))
 
   if (!isTRUE(dry_run) && !isTRUE(force) && any(!validation$ok)) {
     stop(format_validation_failure_message(validation, project_paths), call. = FALSE)
@@ -163,7 +164,8 @@ write_reproducibility_script <- function(cfg, project_paths, dry_run = FALSE) {
     "# directory that holds this script, config_used.yml and inputs/.",
     "#",
     "# Requires R (>= 4.1), the BioGeoSyn package, and BioGeoBEARS, which is",
-    "# installed separately; see the BioGeoSyn README.",
+    "# installed separately; see the BioGeoSyn README. The versions used for",
+    "# the original run are listed in logs/environment.csv.",
     "# ---------------------------------------------------------------------",
     "",
     "library(BioGeoSyn)",
@@ -175,6 +177,12 @@ write_reproducibility_script <- function(cfg, project_paths, dry_run = FALSE) {
     "# write the new results to a local directory.",
     repoint,
     "config$project$output_dir <- \"reproduced_run\"",
+    "",
+    "# Compare the installed versions of R, BioGeoSyn, BioGeoBEARS and its main",
+    "# dependencies with those recorded for the original run, and print the",
+    "# command that installs each recorded version that differs. Nothing is",
+    "# installed automatically. Results can differ if versions differ.",
+    "if (file.exists(\"logs/environment.csv\")) check_environment(\"logs/environment.csv\")",
     "",
     "result <- run_workflow(config, dry_run = FALSE)",
     "",

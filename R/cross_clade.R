@@ -1124,3 +1124,53 @@ write_cross_clade_full_bundle <- function(file, x) {
   zip_relative_files(tmp, file, written)
   invisible(file)
 }
+
+#' Dispersal routes pooled across clades for any time window
+#'
+#' The period networks use the boundaries of the Paleogene, Neogene and
+#' Quaternary. This function builds the same pooled route table for any window,
+#' so that a network can be drawn for intervals that suit the question, or for
+#' shifted boundaries.
+#'
+#' @param zip_paths Result bundles, one per clade (or per tree of a clade).
+#' @param clade_names Optional clade names.
+#' @param from,to Older and younger edge of the window, in Ma before present
+#'   (events with `to <= t < from` are counted).
+#' @return A route table for [plot_bsm_dispersal_network()], or `NULL`.
+#' @export
+dispersal_routes_in_window <- function(zip_paths, clade_names = NULL, from = Inf, to = -Inf) {
+  et <- combine_event_times_across_clades(zip_paths, clade_names)
+  dispersal_routes_from_event_times(et, from = from, to = to)
+}
+
+#' How much a period boundary moves events between periods
+#'
+#' Geological period boundaries are conventions, and events dated close to one
+#' can fall on either side of it in different stochastic maps or trees. This
+#' function shifts a boundary and reports how the pooled number of dispersals
+#' (mean per stochastic map, summed across clades) on each side changes, and
+#' which share of all dispersals lies within `near` Myr of the boundary.
+#'
+#' @inheritParams dispersal_routes_in_window
+#' @param boundary Boundary age in Ma (default the Paleogene-Neogene boundary).
+#' @param shifts Offsets in Myr added to the boundary.
+#' @param near Half-width, in Myr, of the window around the boundary.
+#' @return A data frame with one row per shift.
+#' @export
+period_boundary_sensitivity <- function(zip_paths, clade_names = NULL, boundary = 23.03,
+                                        shifts = c(-2, -1, 0, 1, 2), near = 1) {
+  et <- combine_event_times_across_clades(zip_paths, clade_names)
+  total_in <- function(from, to) {
+    r <- dispersal_routes_from_event_times(et, from = from, to = to)
+    if (is.null(r)) 0 else sum(r$mean_count)
+  }
+  all_disp <- total_in(Inf, -Inf)
+  rows <- lapply(shifts, function(s) {
+    b <- boundary + s
+    data.frame(shift = s, boundary_age = b, dispersals_older = total_in(Inf, b),
+               dispersals_younger = total_in(b, -Inf), stringsAsFactors = FALSE)
+  })
+  out <- do.call(rbind, rows)
+  out$share_near_boundary <- if (all_disp > 0) total_in(boundary + near, boundary - near) / all_disp else NA_real_
+  out
+}

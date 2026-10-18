@@ -104,6 +104,7 @@ diagnostic_bundle_files <- function(root) {
     "tables/model_run_status.csv",
     "tables/workflow_manifest.csv",
     "logs/session_info.txt",
+    "logs/environment.csv",
     "logs/biogeobears_citation.txt"
   )
   files <- fixed[file.exists(file.path(root, fixed))]

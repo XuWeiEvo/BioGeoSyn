@@ -17,9 +17,20 @@ pooled <- pool_process_rates_from_bundles(zips, labs, bin_width = 5, n_draws = 2
 pa <- plot_process_rates_across_clades(rates, pooled = TRUE, pooled_data = pooled) +
   ggplot2::labs(title = "Cross-clade process counts through time",
                 subtitle = "All clades pooled on 5-Ma bins; log y-axis; band = 95% interval over resampled stochastic maps") +
+  ggplot2::theme(legend.position = "none")
+
+# (b) The same events as per-lineage rates (events per lineage-Myr), lineage-weighted, with
+#     intervals from the same resampling. Counts grow with the number of lineages; rates do not.
+#     Bins with fewer than 2 lineage-Myr per Myr (10 lineage-Myr in a 5-Ma bin) are not shown.
+per_lineage <- pool_per_lineage_rates_from_bundles(zips, labs, bin_width = 5, n_draws = 2000L, seed = 1L,
+                                                   min_lineage_myr = 10)
+pr <- plot_per_lineage_rates_across_clades(per_lineage, weighting = "lineage") +
+  ggplot2::labs(title = "Cross-clade per-lineage rates through time",
+                subtitle = "Summed events / summed lineage-Myr; 5-Ma bins; band = 95% interval over resampled stochastic maps") +
+  ggplot2::scale_x_reverse(limits = c(60, 0)) +
   ggplot2::theme(legend.position = "bottom")
 
-# (b, c) Directed dispersal networks for the Paleogene and the Neogene, 20 strongest routes.
+# (c, d) Directed dispersal networks for the Paleogene and the Neogene, 20 strongest routes.
 et <- BioGeoSyn:::combine_event_times_across_clades(zips, labs)
 net <- function(period) {
   w <- BioGeoSyn:::bgs_period_window(period)
@@ -31,10 +42,11 @@ net <- function(period) {
 pb <- net("Paleogene")
 pc <- net("Neogene")
 
-fig <- patchwork::wrap_plots(pa, patchwork::wrap_plots(pb, pc, ncol = 2), ncol = 1, heights = c(1, 1.05)) +
+fig <- patchwork::wrap_plots(pa, pr, patchwork::wrap_plots(pb, pc, ncol = 2), ncol = 1, heights = c(0.85, 0.85, 1.05)) +
   patchwork::plot_annotation(tag_levels = "a") &
   ggplot2::theme(plot.tag = ggplot2::element_text(face = "bold", size = 13))
-ggplot2::ggsave(paste0(out, ".pdf"), fig, width = 10, height = 11.2, device = grDevices::cairo_pdf)
-ggplot2::ggsave(paste0(out, ".png"), fig, width = 10, height = 11.2, dpi = 300, bg = "white")
+ggplot2::ggsave(paste0(out, ".pdf"), fig, width = 10, height = 14, device = grDevices::cairo_pdf)
+ggplot2::ggsave(paste0(out, ".png"), fig, width = 10, height = 14, dpi = 300, bg = "white")
 utils::write.csv(pooled, paste0(out, "_panel_a_data.csv"), row.names = FALSE)
+utils::write.csv(per_lineage, paste0(out, "_panel_b_data.csv"), row.names = FALSE)
 writeLines(utils::capture.output(utils::sessionInfo()), paste0(out, "_session.txt"))

@@ -396,3 +396,21 @@ test_that("keep_first_model drops extra models so cross-clade curves are single"
   expect_equal(unique(combined$model), "DEC")
   expect_equal(nrow(combined), 3L)
 })
+
+test_that("period_boundary_sensitivity shifts a boundary and reports events near it", {
+  et <- data.frame(
+    clade = "A", replicate = c(1L, 1L, 2L, 2L),
+    source_region = "S", target_region = "H",
+    event_time_before_present = c(23.5, 10, 22.5, 40),
+    stringsAsFactors = FALSE
+  )
+  local_mocked_bindings(combine_event_times_across_clades = function(...) et)
+  s <- period_boundary_sensitivity("x.zip", boundary = 23.03, shifts = c(-1, 0, 1), near = 1)
+  expect_equal(s$boundary_age, c(22.03, 23.03, 24.03))
+  # Two maps: 4 events / 2 maps = 2 dispersals per map in total.
+  expect_equal(s$dispersals_older + s$dispersals_younger, rep(2, 3))
+  expect_equal(s$dispersals_older, c(1.5, 1, 0.5))
+  expect_equal(s$share_near_boundary[[1]], 0.5)
+  w <- dispersal_routes_in_window("x.zip", from = 30, to = 20)
+  expect_equal(sum(w$mean_count), 1)
+})

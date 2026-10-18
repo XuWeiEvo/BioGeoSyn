@@ -1,5 +1,33 @@
 # BioGeoSyn (development version, MER revision)
 
+## Period boundaries of dispersal networks
+
+Responds to Reviewer 3 (minor comment on period slicing).
+
+- `dispersal_routes_in_window()` builds the pooled dispersal-route table for
+  any time window, so networks are not tied to the Paleogene, Neogene and
+  Quaternary boundaries.
+- `period_boundary_sensitivity()` shifts a boundary and reports how many
+  dispersals fall on each side, and which share of all dispersals lies close
+  to the boundary.
+- Manuscript figure scripts for Figures 1 and 2 (`tools/manuscript-figures/`)
+  draw both schematics with grid alone.
+
+## Recorded and checked computational environment
+
+Responds to Reviewer 3 (M8, dependency management).
+
+- Every run now writes `logs/environment.csv`, one row per loaded package plus
+  R, with the installed version and, for packages installed from GitHub such
+  as BioGeoBEARS, the repository and commit (`record_environment()`).
+- `reproduce.R` now calls `check_environment()` before re-running. It compares
+  the installed versions of R, BioGeoSyn, BioGeoBEARS and its main
+  dependencies with those recorded, and for each difference prints the command
+  that installs the recorded version (`remotes::install_github("owner/repo@commit")`
+  or `remotes::install_version()`). It installs nothing itself. Recreating an
+  environment exactly can also require the recorded R version and system
+  libraries, for which a container or an renv lockfile is the right tool.
+
 ## PHYLIP geography input and progress messages
 
 Responds to Reviewer 2 (PHYLIP input; progress messages).
