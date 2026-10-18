@@ -1,0 +1,40 @@
+# Figure 5 of the BioGeoSyn manuscript: cross-clade worked example (Feijo et al. 2022).
+# Usage: Rscript figure5.R <folder with clade1.zip ... clade21.zip> <output prefix>
+# Every panel is drawn by BioGeoSyn functions from the 21 result bundles; nothing is re-estimated.
+suppressPackageStartupMessages({
+  if (nzchar(Sys.getenv("BGS_DEV"))) pkgload::load_all(Sys.getenv("BGS_DEV"), quiet = TRUE) else library(BioGeoSyn)
+})
+args <- commandArgs(trailingOnly = TRUE)
+dir <- args[[1L]]
+out <- if (length(args) >= 2L) args[[2L]] else "figure5_cross_clade_results"
+zips <- file.path(dir, paste0("clade", 1:21, ".zip"))
+labs <- paste0("clade", 1:21)
+
+# (a) Pooled process counts through time, 5-Ma bins, 95% intervals from 2,000 draws of
+#     one stochastic map per clade.
+rates <- combine_process_rates_from_bundles(zips, labs)
+pooled <- pool_process_rates_from_bundles(zips, labs, bin_width = 5, n_draws = 2000L, seed = 1L)
+pa <- plot_process_rates_across_clades(rates, pooled = TRUE, pooled_data = pooled) +
+  ggplot2::labs(title = "Cross-clade process counts through time",
+                subtitle = "All clades pooled on 5-Ma bins; log y-axis; band = 95% interval over resampled stochastic maps") +
+  ggplot2::theme(legend.position = "bottom")
+
+# (b, c) Directed dispersal networks for the Paleogene and the Neogene, 20 strongest routes.
+et <- BioGeoSyn:::combine_event_times_across_clades(zips, labs)
+net <- function(period) {
+  w <- BioGeoSyn:::bgs_period_window(period)
+  routes <- BioGeoSyn:::dispersal_routes_from_event_times(et, w$from, w$to)
+  plot_bsm_dispersal_network(routes, max_edges = 20L) +
+    ggplot2::labs(title = BioGeoSyn:::period_network_subtitle(period), subtitle = "Dispersal network, 20 strongest routes") +
+    ggplot2::theme(plot.title = ggplot2::element_text(size = 13, face = "bold"), plot.subtitle = ggplot2::element_text(size = 10))
+}
+pb <- net("Paleogene")
+pc <- net("Neogene")
+
+fig <- patchwork::wrap_plots(pa, patchwork::wrap_plots(pb, pc, ncol = 2), ncol = 1, heights = c(1, 1.05)) +
+  patchwork::plot_annotation(tag_levels = "a") &
+  ggplot2::theme(plot.tag = ggplot2::element_text(face = "bold", size = 13))
+ggplot2::ggsave(paste0(out, ".pdf"), fig, width = 10, height = 11.2, device = grDevices::cairo_pdf)
+ggplot2::ggsave(paste0(out, ".png"), fig, width = 10, height = 11.2, dpi = 300, bg = "white")
+utils::write.csv(pooled, paste0(out, "_panel_a_data.csv"), row.names = FALSE)
+writeLines(utils::capture.output(utils::sessionInfo()), paste0(out, "_session.txt"))
