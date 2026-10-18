@@ -40,7 +40,9 @@ Suggests:
     shinytest2,
     quarto,
     knitr,
-    rmarkdown
+    rmarkdown,
+    phytools,
+    pkgload
 Enhances:
     BioGeoBEARS
 SystemRequirements: BioGeoBEARS R package installed separately for analysis

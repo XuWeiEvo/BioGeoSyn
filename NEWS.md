@@ -1,5 +1,20 @@
 # BioGeoSyn (development version, MER revision)
 
+## Simulation validation and bin-width sensitivity
+
+Responds to Reviewer 3 (major comment 4; minor comment 5).
+
+- Added `simulate_event_histories()` (events placed along branches with a known
+  per-lineage rate, one realisation per "stochastic map") and
+  `expected_event_counts()` (the truth on a shared grid), so the cross-clade
+  synthesis can be validated where the answer is known.
+- Added `bin_width_sensitivity()` and `plot_bin_width_sensitivity()`, which
+  recompute the pooled rates for several bin widths and report where each
+  peaks, so apparent pulses can be checked for stability.
+- Added the validation study `inst/validation/cross_clade_simulation.R`
+  (null, synchronous, asynchronous and single-clade pulses; interval coverage
+  against held-out maps; pulse recovery under each weighting; bin width).
+
 ## Topological and age uncertainty
 
 Responds to Reviewer 2 (comment 2 of the suggested features) and the second
