@@ -75,3 +75,20 @@ test_that("inherited assumptions are stated", {
   expect_true(length(a) >= 5L)
   expect_true(any(grepl("concordance", a)))
 })
+
+test_that("a larger range limit forced by the data is explained", {
+  z1 <- compat_bundle("lim3", max_range = 3L)
+  root <- tempfile("bgs-compat-lim4-")
+  dir.create(file.path(root, "inputs"), recursive = TRUE)
+  writeLines(c("2\t4 (A B C D)", "sp1\t1111", "sp2\t1000"), file.path(root, "inputs", "geography.data"))
+  base <- compat_bundle("lim4base", max_range = 4L)
+  utils::unzip(base, exdir = root)
+  z2 <- file.path(tempdir(), "lim4.zip")
+  unlink(z2)
+  zip_relative_files(root, z2, c("tables/bsm_events.csv", "tables/bsm_event_summary.csv", "tables/tree_nodes.csv",
+                                 "config_used.yml", "logs/session_info.txt", "inputs/geography.data"))
+  cc <- check_bundle_compatibility(c(z1, z2), c("lim3", "lim4"))
+  expect_equal(cc$clades$max_tip_range[[2L]], 4L)
+  msg <- cc$checks$message[cc$checks$check == "max_range_size"]
+  expect_match(msg, "minimum the data allow")
+})

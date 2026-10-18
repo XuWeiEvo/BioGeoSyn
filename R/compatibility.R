@@ -111,6 +111,7 @@ bundle_settings <- function(zip_path, label) {
   constraints <- (cfg$advanced %||% list())$constraints %||% list()
   used <- names(constraints)[vapply(constraints, function(v) !is.null(v) && length(v) > 0L && nzchar(as.character(v[[1L]])), logical(1))]
   tbp <- if (!is.null(tree)) suppressWarnings(as.numeric(tree$time_before_present)) else numeric()
+  max_tip_range <- bundle_max_tip_range(zip_path)
   version_of <- function(pkg) {
     hit <- regmatches(sess, regexpr(paste0(pkg, "_[0-9][0-9.\\-]*"), sess))
     if (length(hit) == 0L) NA_character_ else sub(paste0(pkg, "_"), "", hit[[1L]])
@@ -126,6 +127,7 @@ bundle_settings <- function(zip_path, label) {
     n_areas = length(codes),
     area_names = paste(sprintf("%s=%s", names(code_map), code_map)[order(names(code_map))], collapse = "; "),
     max_range_size = suppressWarnings(as.integer((cfg$inputs %||% list())$max_range_size %||% NA)),
+    max_tip_range = max_tip_range,
     constraints = if (length(used)) paste(sort(used), collapse = ", ") else "none",
     crown_age = if (length(tbp)) max(tbp, na.rm = TRUE) else NA_real_,
     n_tips = if (!is.null(tree) && "node_type" %in% names(tree)) sum(tree$node_type == "tip") else NA_integer_,
@@ -134,6 +136,30 @@ bundle_settings <- function(zip_path, label) {
     has_events = !is.null(events) && nrow(events) > 0L,
     stringsAsFactors = FALSE
   )
+}
+
+# Largest number of areas occupied by any tip, from the geography input stored
+# in the bundle (PHYLIP-style .data or CSV); NA when no input is stored.
+bundle_max_tip_range <- function(zip_path) {
+  entries <- tryCatch(utils::unzip(zip_path, list = TRUE)$Name, error = function(e) character())
+  inp <- entries[grepl("(^|/)inputs/", entries)]
+  phy <- inp[grepl("[.]data$", inp)]
+  if (length(phy)) {
+    lines <- read_bundle_lines(zip_path, basename(phy[[1L]]))
+    if (length(lines) > 1L) {
+      codes <- vapply(strsplit(trimws(lines[-1L]), "[[:space:]]+"), function(x) x[length(x)], character(1))
+      return(max(nchar(gsub("[^1]", "", codes))))
+    }
+  }
+  csv <- inp[grepl("[.]csv$", inp)]
+  for (f in csv) {
+    lines <- read_bundle_lines(zip_path, basename(f))
+    df <- tryCatch(utils::read.csv(text = paste(lines, collapse = "\n"), check.names = FALSE), error = function(e) NULL)
+    if (is.null(df) || ncol(df) < 2L) next
+    m <- suppressWarnings(as.matrix(df[, -1L, drop = FALSE]))
+    if (all(m %in% c(0, 1, NA))) return(max(rowSums(m == 1, na.rm = TRUE)))
+  }
+  NA_integer_
 }
 
 compatibility_checks <- function(cl, zip_paths) {
@@ -189,7 +215,15 @@ compatibility_checks <- function(cl, zip_paths) {
   }
   # Max range size and constraints.
   mrs <- unique(stats::na.omit(cl$max_range_size))
-  if (length(mrs) > 1L) add("max_range_size", "warning", paste0("Maximum range size differs among clades (", paste(sort(mrs), collapse = ", "), "). It limits widespread ranges and therefore the frequency of vicariance, subset sympatry and dispersal."))
+  if (length(mrs) > 1L) {
+    big <- per_clade[!is.na(per_clade$max_range_size) & per_clade$max_range_size > min(mrs), , drop = FALSE]
+    forced <- !is.na(big$max_tip_range) & big$max_tip_range >= big$max_range_size
+    why <- if (nrow(big) > 0L && all(forced)) {
+      paste0(" In ", paste(big$clade, collapse = ", "), " the larger value is the minimum the data allow, because some species occupy ",
+             paste(unique(big$max_tip_range), collapse = "/"), " areas; BioGeoBEARS cannot use a smaller limit for these clades.")
+    } else ""
+    add("max_range_size", "warning", paste0("Maximum range size differs among clades (", paste(sort(mrs), collapse = ", "), "). It limits widespread ranges and therefore the frequency of vicariance, subset sympatry and dispersal.", why))
+  }
   else if (length(mrs) == 1L) add("max_range_size", "ok", paste0("All clades used a maximum range size of ", mrs, "."))
   cons <- unique(cl$constraints)
   if (length(cons) > 1L) add("constraints", "warning", paste0("Clades differ in time stratification or dispersal constraints (", paste(cons, collapse = " | "), "). Constrained and unconstrained analyses imply different dispersal opportunities."))
