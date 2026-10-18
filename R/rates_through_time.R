@@ -14,8 +14,11 @@
 #' @return A data frame with one row per model, process, and time bin, including
 #'   `bin_start`, `bin_end`, `bin_midpoint`, `mean_count`, `sd_count`,
 #'   `ci_lower` and `ci_upper` (the 2.5% and 97.5% percentiles of the per-map
-#'   count across stochastic maps), and `rate`. Returns an empty table with the
-#'   same columns when no timed BSM events are available.
+#'   count across stochastic maps), and `rate`, the mean count divided by the
+#'   bin width (expected events per Myr in the bin, for the whole clade; it is
+#'   not divided by the number of lineages). For per-lineage rates (events per
+#'   lineage-Myr) see [pool_per_lineage_rates()]. Returns an empty table with
+#'   the same columns when no timed BSM events are available.
 #' @export
 summarize_process_rates_through_time <- function(bsm_tables, n_bins = 10L) {
   empty <- empty_process_rates_table()

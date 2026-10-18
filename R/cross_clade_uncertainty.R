@@ -108,7 +108,7 @@ pool_rates_by_map_resampling <- function(clade_events, bin_width = 5, n_draws = 
 clade_map_count_matrix <- function(x, group_cols, group_key, n_bins, bin_width) {
   ev <- x$events
   ev <- ev[!is.na(ev$event_time_before_present) & !is.na(ev$replicate), , drop = FALSE]
-  replicates <- sort(unique(ev$replicate))
+  replicates <- if (!is.null(x$replicates)) x$replicates else sort(unique(ev$replicate))
   n_maps <- suppressWarnings(as.integer(x$n_maps %||% NA_integer_))
   if (length(n_maps) != 1L || is.na(n_maps) || n_maps < length(replicates)) {
     n_maps <- max(1L, length(replicates))
@@ -129,13 +129,19 @@ clade_map_count_matrix <- function(x, group_cols, group_key, n_bins, bin_width) 
 
 # Read the per-event BSM table of each bundle (first model only, as elsewhere in
 # the cross-clade synthesis) and attach the process label each event maps to.
-read_clade_events_for_pooling <- function(zip_paths, clade_names = NULL, by_region = FALSE) {
+read_clade_events_for_pooling <- function(zip_paths, clade_names = NULL, by_region = FALSE,
+                                          with_tree = FALSE) {
   zip_paths <- as.character(zip_paths %||% character())
   if (length(zip_paths) == 0L) {
     return(list())
   }
   clade_names <- as.character(clade_names %||% rep(NA_character_, length(zip_paths)))
   taxonomy <- biogeographic_process_taxonomy()
+  # A clade whose events never move into or out of a region cannot name that
+  # region from its own dispersal records, so area codes are resolved against
+  # the names seen across all bundles (cross-clade synthesis already assumes a
+  # shared region coding).
+  global_codes <- if (isTRUE(by_region) || isTRUE(with_tree)) shared_region_code_map(zip_paths) else character()
   pieces <- lapply(seq_along(zip_paths), function(i) {
     events <- keep_first_model(read_bundle_table(zip_paths[[i]], "bsm_events"))
     if (is.null(events) || nrow(events) == 0L ||
@@ -152,6 +158,8 @@ read_clade_events_for_pooling <- function(zip_paths, clade_names = NULL, by_regi
         return(NULL)
       }
       ev$region <- ev$event_region
+      fill <- ev$region %in% names(global_codes)
+      ev$region[fill] <- unname(global_codes[ev$region[fill]])
       ev <- ev[!is.na(ev$region) & nzchar(ev$region), , drop = FALSE]
     } else {
       ev <- events[events$event_type %in% taxonomy$bsm_event_type, , drop = FALSE]
@@ -164,7 +172,18 @@ read_clade_events_for_pooling <- function(zip_paths, clade_names = NULL, by_regi
     } else {
       derive_clade_name(zip_paths[[i]])
     }
-    list(clade = lab, events = ev, n_maps = n_maps)
+    replicates <- sort(unique(events$replicate[!is.na(events$replicate)]))
+    if (length(replicates) < n_maps) {
+      replicates <- c(replicates, max(c(replicates, 0)) + seq_len(n_maps - length(replicates)))
+    }
+    out <- list(clade = lab, events = ev, n_maps = n_maps, replicates = replicates)
+    if (isTRUE(with_tree)) {
+      out$tree_nodes <- read_bundle_table(zip_paths[[i]], "tree_nodes")
+      out$all_events <- events
+      own <- region_code_name_map(events)
+      out$code_to_name <- c(own, global_codes[setdiff(names(global_codes), names(own))])
+    }
+    out
   })
   pieces <- pieces[!vapply(pieces, is.null, logical(1))]
   if (length(pieces) == 0L) {
@@ -172,6 +191,26 @@ read_clade_events_for_pooling <- function(zip_paths, clade_names = NULL, by_regi
   }
   labels <- make.unique(vapply(pieces, function(p) p$clade, character(1)), sep = " ")
   stats::setNames(pieces, labels)
+}
+
+# Area code -> region name pairs seen across all bundles' dispersal records.
+# Conflicting names for one code are reported and the first is kept.
+shared_region_code_map <- function(zip_paths) {
+  maps <- lapply(zip_paths, function(z) {
+    ev <- read_bundle_table(z, "bsm_events")
+    if (is.null(ev) || nrow(ev) == 0L) character() else region_code_name_map(ev)
+  })
+  all <- unlist(maps)
+  if (length(all) == 0L) {
+    return(character())
+  }
+  conflicts <- tapply(all, names(all), function(v) length(unique(v)) > 1L)
+  if (any(conflicts)) {
+    warning("Area codes map to different region names across clades: ",
+            paste(names(conflicts)[conflicts], collapse = ", "),
+            ". Cross-clade region results assume a shared region coding.", call. = FALSE)
+  }
+  all[!duplicated(names(all))]
 }
 
 #' Pool cross-clade process rates from result bundles

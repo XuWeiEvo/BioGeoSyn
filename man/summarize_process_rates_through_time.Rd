@@ -18,8 +18,11 @@ oldest sampled event.}
 A data frame with one row per model, process, and time bin, including
 \code{bin_start}, \code{bin_end}, \code{bin_midpoint}, \code{mean_count}, \code{sd_count},
 \code{ci_lower} and \code{ci_upper} (the 2.5\% and 97.5\% percentiles of the per-map
-count across stochastic maps), and \code{rate}. Returns an empty table with the
-same columns when no timed BSM events are available.
+count across stochastic maps), and \code{rate}, the mean count divided by the
+bin width (expected events per Myr in the bin, for the whole clade; it is
+not divided by the number of lineages). For per-lineage rates (events per
+lineage-Myr) see \code{\link[=pool_per_lineage_rates]{pool_per_lineage_rates()}}. Returns an empty table with
+the same columns when no timed BSM events are available.
 }
 \description{
 Bin the sampled BioGeoBEARS stochastic mapping (BSM) events by time before

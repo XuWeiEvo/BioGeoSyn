@@ -948,6 +948,12 @@ render_cross_clade_report <- function(x, file = NULL) {
       "<h3>Summed mean events per process (all clades pooled)</h3>",
       html_table(xclade_process_summary(x$rates)))
   }
+  if (has("per_lineage_rates")) {
+    parts <- c(parts, "<h2>Per-lineage process rates through time</h2>",
+      "<p class=\"note\">Events per lineage-Myr (branch time in each bin). Lineage-weighted: summed events over summed lineage-Myr. Clade-weighted: mean of the clades' own rates. Bins with less than one lineage-Myr per Myr of bin width are not reported.</p>",
+      figure(plot_per_lineage_rates_across_clades(x$per_lineage_rates, "lineage"), 8.6, 5.2),
+      figure(plot_per_lineage_rates_across_clades(x$per_lineage_rates, "clade"), 8.6, 5.2))
+  }
   if (has("region_rates")) {
     parts <- c(parts, "<h2>Process rates through time (by region)</h2>",
       figure(plot_region_process_rates_across_clades(x$region_rates, log_y = TRUE, pooled_data = x$pooled_region_rates), 9, 4.8),
@@ -1023,6 +1029,8 @@ write_cross_clade_full_bundle <- function(file, x) {
   save_csv(x$region_rates, "region_process_rates_through_time_combined")
   save_csv(x$pooled_rates, "process_rates_through_time_pooled")
   save_csv(x$pooled_region_rates, "region_process_rates_through_time_pooled")
+  save_csv(x$per_lineage_rates, "per_lineage_rates_through_time")
+  save_csv(x$per_lineage_region_rates, "region_per_lineage_rates_through_time")
   save_csv(x$synthesis, "process_synthesis_combined")
   save_csv(x$routes, "dispersal_routes_combined")
   save_csv(x$budgets, "region_budgets_combined")
@@ -1036,6 +1044,13 @@ write_cross_clade_full_bundle <- function(file, x) {
   if (ok_df(x$synthesis)) save_fig(plot_biogeographic_process_synthesis(x$synthesis), "process_synthesis", 8, 4.8)
   if (ok_df(x$rates)) save_fig(plot_process_rates_across_clades(x$rates, pooled = TRUE, pooled_data = x$pooled_rates), "process_rates_through_time", 8.6, 5.2)
   if (ok_df(x$region_rates)) save_fig(plot_region_process_rates_across_clades(x$region_rates, log_y = TRUE, pooled_data = x$pooled_region_rates), "region_process_rates_through_time", 9, 4.8)
+  if (ok_df(x$per_lineage_rates)) {
+    save_fig(plot_per_lineage_rates_across_clades(x$per_lineage_rates, "lineage"), "per_lineage_rates_lineage_weighted", 8.6, 5.2)
+    save_fig(plot_per_lineage_rates_across_clades(x$per_lineage_rates, "clade"), "per_lineage_rates_clade_weighted", 8.6, 5.2)
+  }
+  if (ok_df(x$per_lineage_region_rates)) {
+    save_fig(plot_per_lineage_rates_across_clades(x$per_lineage_region_rates, "lineage"), "region_per_lineage_rates_lineage_weighted", 10, 8)
+  }
   if (ok_df(x$event_times)) {
     # One network per geological period, plus the all-time total.
     for (period in geological_period_choices()) {

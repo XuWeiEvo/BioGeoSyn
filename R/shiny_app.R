@@ -633,9 +633,26 @@ bgs_shiny_server <- function(input, output, session) {
         tryCatch(pool_process_rates_from_bundles(b$paths, b$names, bin_width = cc_bin_width("cc_bin_width_region"), by_region = TRUE),
                  error = function(e) NULL)
       })
+      # Per-lineage rates are computed only when asked for (region-resolved
+      # occupancy is reconstructed from every stochastic map).
+      cc_perlin <- shiny::reactive({
+        b <- clade_bundles()
+        if (is.null(b)) return(NULL)
+        shiny::withProgress(message = "Computing per-lineage rates", value = 0.5,
+          tryCatch(pool_per_lineage_rates_from_bundles(b$paths, b$names, bin_width = cc_bin_width("cc_bin_width_overall")),
+                   error = function(e) NULL))
+      })
+      cc_rperlin <- shiny::reactive({
+        b <- clade_bundles()
+        if (is.null(b)) return(NULL)
+        shiny::withProgress(message = "Computing region-resolved per-lineage rates", value = 0.5,
+          tryCatch(pool_per_lineage_rates_from_bundles(b$paths, b$names, bin_width = cc_bin_width("cc_bin_width_region"), by_region = TRUE),
+                   error = function(e) NULL))
+      })
       cc_parts <- shiny::reactive({
         list(
           pooled_rates = cc_pooled(), pooled_region_rates = cc_rpooled(),
+          per_lineage_rates = cc_perlin(), per_lineage_region_rates = cc_rperlin(),
           rates = cc_rates(), region_rates = cc_rrates(), synthesis = cc_synth(),
           routes = cc_routes(), budgets = cc_budgets(), event_summary = cc_esum(),
           event_times = cc_etimes(), exchange_long = cc_exlong()
@@ -696,8 +713,13 @@ bgs_shiny_server <- function(input, output, session) {
         d <- cc_rates()
         shiny::req(d)
         shiny::validate(shiny::need(nrow(d) > 0, "No data to plot."))
+        measure <- input$cc_measure_overall %||% "count"
         plot <- tryCatch(
-          plot_process_rates_across_clades(d, pooled = TRUE, bin_width = cc_bin_width("cc_bin_width_overall"), pooled_data = cc_pooled()),
+          if (identical(measure, "count")) {
+            plot_process_rates_across_clades(d, pooled = TRUE, bin_width = cc_bin_width("cc_bin_width_overall"), pooled_data = cc_pooled())
+          } else {
+            plot_per_lineage_rates_across_clades(cc_perlin(), weighting = measure)
+          },
           error = function(e) NULL
         )
         shiny::validate(shiny::need(!is.null(plot), "The figure could not be produced."))
@@ -729,8 +751,13 @@ bgs_shiny_server <- function(input, output, session) {
         if (is.null(regions) || length(regions) == 0L) {
           regions <- NULL
         }
+        measure <- input$cc_measure_region %||% "count"
         plot <- tryCatch(
-          plot_region_process_rates_across_clades(d, regions = regions, bin_width = cc_bin_width("cc_bin_width_region"), pooled_data = cc_rpooled()),
+          if (identical(measure, "count")) {
+            plot_region_process_rates_across_clades(d, regions = regions, bin_width = cc_bin_width("cc_bin_width_region"), pooled_data = cc_rpooled())
+          } else {
+            plot_per_lineage_rates_across_clades(cc_rperlin(), weighting = measure, regions = regions)
+          },
           error = function(e) NULL
         )
         shiny::validate(shiny::need(!is.null(plot), "The figure could not be produced (no rows for the chosen regions)."))
@@ -4041,17 +4068,29 @@ wizard_step_cross_clade <- function() {
       shiny::uiOutput("cross_clade_status")
     ),
     card("2 \u00b7 Biogeographic process synthesis (summed across clades)", preview("cc_synth_plot")),
-    card("3 \u00b7 Process rates through time \u00b7 overall (all clades pooled, all processes, log y-axis)",
+    card("3 \u00b7 Process rates through time \u00b7 overall (all clades pooled, all processes)",
       shiny::tags$div(
         class = "bgs-inline-controls",
-        shiny::numericInput("cc_bin_width_overall", "Time-bin width (Ma)", value = 5, min = 1, max = 25, step = 1, width = "170px")
+        shiny::numericInput("cc_bin_width_overall", "Time-bin width (Ma)", value = 5, min = 1, max = 25, step = 1, width = "170px"),
+        shiny::selectInput("cc_measure_overall", "Show",
+          choices = c("Event counts" = "count",
+                      "Per-lineage rate, lineage-weighted" = "lineage",
+                      "Per-lineage rate, clades weighted equally" = "clade"),
+          selected = "count", width = "300px")
       ),
+      shiny::tags$div(class = "bgs-home-note", "Per-lineage rates divide events by lineage-Myr (branch time in the bin; for regions, time spent in the region, or outside it for immigration). Lineage-weighted pools all lineages; clade-weighted averages the clades' own rates so species-rich clades do not dominate."),
       preview("cross_clade_plot", "520px")),
-    card("4 \u00b7 Process rates through time \u00b7 by region (one panel per region; in-situ / immigration / emigration; log y-axis)",
+    card("4 \u00b7 Process rates through time \u00b7 by region (one panel per region; in-situ / immigration / emigration)",
       shiny::tags$div(
         class = "bgs-inline-controls",
-        shiny::numericInput("cc_bin_width_region", "Time-bin width (Ma)", value = 5, min = 1, max = 25, step = 1, width = "170px")
+        shiny::numericInput("cc_bin_width_region", "Time-bin width (Ma)", value = 5, min = 1, max = 25, step = 1, width = "170px"),
+        shiny::selectInput("cc_measure_region", "Show",
+          choices = c("Event counts" = "count",
+                      "Per-lineage rate, lineage-weighted" = "lineage",
+                      "Per-lineage rate, clades weighted equally" = "clade"),
+          selected = "count", width = "300px")
       ),
+      shiny::tags$div(class = "bgs-home-note", "Per-lineage rates divide events by lineage-Myr (branch time in the bin; for regions, time spent in the region, or outside it for immigration). Lineage-weighted pools all lineages; clade-weighted averages the clades' own rates so species-rich clades do not dominate."),
       shiny::tags$div(class = "bgs-home-note", "Uncheck regions to focus the figure (e.g. drop the non-Asian continents)."),
       shiny::checkboxGroupInput("cc_regions", NULL, choices = character(), inline = TRUE),
       preview("cross_clade_region_plot", "620px")),

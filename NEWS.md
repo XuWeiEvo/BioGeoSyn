@@ -1,5 +1,35 @@
 # BioGeoSyn (development version, MER revision)
 
+## Per-lineage rates and clade weighting
+
+Responds to Editor point 2, Reviewer 1 and Reviewer 3 (major comment 2, minor
+comments 3 and 4). Counts of events rise with the number of lineages alive, and
+pooled counts are dominated by species-rich clades.
+
+- Added `pool_per_lineage_rates()` and `pool_per_lineage_rates_from_bundles()`.
+  Event counts are divided by lineage-Myr, the branch time inside each bin
+  (events per lineage per Myr), the continuous-time analogue of the per-capita
+  rates of Xing & Ree (2017) and Ding et al. (2025). Whole-tree processes use
+  the tree's lineage-Myr (`tree_lineage_myr()`). Region-resolved in-situ
+  speciation and emigration use the lineage-Myr spent in the region and
+  immigration the lineage-Myr spent outside it, reconstructed for every
+  stochastic map from the sampled node states and anagenetic events
+  (`map_region_occupancy()`).
+- Two pooled versions are reported: lineage-weighted (summed events over summed
+  lineage-Myr) and clade-weighted (mean of the clades' own rates, so every
+  clade counts equally). Intervals use the stochastic-map resampling, with
+  numerator and denominator taken from the same map. Bins with less than
+  `min_lineage_myr` (default: the bin width) are not reported.
+- `plot_per_lineage_rates_across_clades()`; the Shiny cross-clade tab gains a
+  "Show" selector (event counts, lineage-weighted rate, clade-weighted rate)
+  for the overall and region panels; the cross-clade report and bundle include
+  the per-lineage tables and figures.
+- Area codes that a clade never disperses into or out of are now named from
+  the codes seen across all uploaded bundles (with a warning if clades
+  disagree), instead of appearing as bare codes.
+- The single-clade `rate` column is now documented as expected events per Myr
+  for the whole clade, not per lineage.
+
 Corrects how uncertainty is combined across clades in the cross-clade synthesis
 (Molecular Ecology Resources review 7209990, Reviewer 3 major comment 3).
 
