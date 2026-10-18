@@ -210,6 +210,35 @@ Clades must use comparable time units and the same area codes. Each clade's own
 inference is untouched: the synthesis re-presents the stochastic maps you
 already ran, it never re-estimates anything.
 
+Pooled curves can be shown as **event counts** or as **per-lineage rates**
+(events per lineage-Myr). Counts grow with the number of lineages alive, so a
+rise in counts towards the present need not mean that the process sped up;
+read rates for that. Rates are pooled either *lineage-weighted* (all lineages
+together, so species-rich clades weigh more) or *clades weighted equally* (the
+mean of the clades' own rates). Every band is a 95% interval over resampled
+stochastic maps.
+
+### Include tree uncertainty (recommended when posterior trees exist)
+
+Stochastic maps on one tree do not include uncertainty in topology or node
+ages. When a sample of trees is available (for example from a Bayesian
+posterior), analyse each clade on several trees and upload all the bundles:
+
+```r
+runs <- run_workflow_over_trees(
+  "my_clade/analysis.yml",
+  trees = "posterior_trees.nex",  # a multi-tree file, a folder, or a vector of files
+  n_trees = 20,                   # random sample; omit to use every tree
+  bsm_model = "DEC",              # keep the mapping model the same on every tree
+  dry_run = FALSE
+)
+```
+
+This writes one bundle per tree, named `my_clade__tree001_results.zip`, and so
+on. The multi-clade tab recognises the `__treeNNN` suffix, treats the bundles as
+one clade, and resamples a tree and then one of its maps in every draw, so the
+intervals include tree uncertainty. Each tree gets equal weight.
+
 ## 7. If Something Fails
 
 First inspect:
