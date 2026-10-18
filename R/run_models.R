@@ -54,6 +54,7 @@ run_models <- function(config, project_paths, execute = FALSE) {
   }
 
   for (model in models) {
+    model_i <- match(model, models)
     family <- model_family(model)
     raw_dir <- file.path(project_paths$raw_biogeobears, model)
     run_signature <- model_run_signature(config, prepared_inputs, model)
@@ -66,6 +67,8 @@ run_models <- function(config, project_paths, execute = FALSE) {
     }
 
     if (!is.null(reusable)) {
+      bgs_progress(sprintf("Model %d/%d %s: reusing the completed result", model_i, length(models), model),
+                   value = 0.6 * model_i / length(models))
       model_results[[model]] <- reusable
     } else if (retry_failed_only && !model_was_previously_failed(model, previous_status)) {
       model_results[[model]] <- skipped_model_result(
@@ -75,6 +78,9 @@ run_models <- function(config, project_paths, execute = FALSE) {
         "Model was not marked as failed in the previous run."
       )
     } else {
+      bgs_progress(sprintf("Model %d/%d: fitting %s ...", model_i, length(models), model),
+                   value = 0.6 * (model_i - 1) / length(models))
+      t_model <- Sys.time()
       model_results[[model]] <- run_one_biogeobears_model(
         config = config,
         prepared_inputs = prepared_inputs,
@@ -83,6 +89,12 @@ run_models <- function(config, project_paths, execute = FALSE) {
         no_j_seed = no_j_seed,
         run_signature = run_signature
       )
+      fit <- model_results[[model]]$summary
+      bgs_progress(sprintf("Model %d/%d %s %s in %s%s", model_i, length(models), model,
+                           model_results[[model]]$status %||% "finished", format_elapsed(t_model),
+                           if (!is.null(fit$logLik) && is.finite(suppressWarnings(as.numeric(fit$logLik[[1L]]))))
+                             sprintf(" (logLik %.2f)", as.numeric(fit$logLik[[1L]])) else ""),
+                   value = 0.6 * model_i / length(models))
     }
 
     if (!is_j_model(model) && identical(model_results[[model]]$status, "completed")) {
@@ -287,10 +299,63 @@ read_region_metadata <- function(path) {
   regions[, intersect(c("region", "label", "color"), names(regions)), drop = FALSE]
 }
 
+#' Read a geography file in BioGeoBEARS PHYLIP format
+#'
+#' Reads the PHYLIP-style geography file that BioGeoBEARS itself uses: a header
+#' line `n_taxa<tab>n_areas (A B C ...)` followed by one line per taxon with
+#' its name and a string of 0/1 presences, one per area. BioGeoSyn accepts
+#' this format wherever it accepts a geography CSV, so existing BioGeoBEARS
+#' inputs need no conversion.
+#'
+#' @param path Path to the geography file.
+#' @return A data frame with a `species` column and one 0/1 column per area,
+#'   in the layout of the geography CSV.
+#' @export
+read_phylip_geography <- function(path) {
+  lines <- readLines(path, warn = FALSE)
+  lines <- trimws(lines[nzchar(trimws(lines))])
+  if (length(lines) < 2L) stop("Geography file has no taxa: ", path, call. = FALSE)
+  header <- lines[[1L]]
+  m <- regmatches(header, regexec("^([0-9]+)[[:space:]]+([0-9]+)[[:space:]]*\\(([^)]*)\\)", header))[[1L]]
+  if (length(m) != 4L) stop("Not a BioGeoBEARS PHYLIP geography header: ", header, call. = FALSE)
+  n_taxa <- as.integer(m[[2L]])
+  n_areas <- as.integer(m[[3L]])
+  areas <- strsplit(trimws(m[[4L]]), "[[:space:],]+")[[1L]]
+  if (length(areas) != n_areas) {
+    stop("PHYLIP geography header declares ", n_areas, " areas but names ", length(areas), ".", call. = FALSE)
+  }
+  body <- strsplit(lines[-1L], "[[:space:]]+")
+  taxa <- vapply(body, `[[`, character(1), 1L)
+  codes <- vapply(body, function(x) paste(x[-1L], collapse = ""), character(1))
+  bad <- nchar(codes) != n_areas | grepl("[^01]", codes)
+  if (any(bad)) {
+    stop("PHYLIP geography rows must have one 0/1 per area; check: ", format_taxon_list(taxa[bad]), call. = FALSE)
+  }
+  if (length(taxa) != n_taxa) {
+    warning("PHYLIP geography header declares ", n_taxa, " taxa but the file lists ", length(taxa), ".", call. = FALSE)
+  }
+  mat <- do.call(rbind, lapply(strsplit(codes, ""), as.integer))
+  colnames(mat) <- areas
+  data.frame(species = taxa, mat, check.names = FALSE, stringsAsFactors = FALSE)
+}
+
+# TRUE when a geography file is in BioGeoBEARS PHYLIP format rather than CSV.
+is_phylip_geography <- function(path) {
+  first <- tryCatch(readLines(path, n = 5L, warn = FALSE), error = function(e) character())
+  first <- trimws(first[nzchar(trimws(first))])
+  length(first) > 0L && grepl("^[0-9]+[[:space:]]+[0-9]+[[:space:]]*\\(", first[[1L]])
+}
+
+# Geography as a data frame (species + 0/1 area columns) from CSV or PHYLIP.
+read_geography_table <- function(path) {
+  if (is_phylip_geography(path)) read_phylip_geography(path) else
+    utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
+}
+
 read_range_matrix <- function(path) {
-  ranges <- utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
+  ranges <- read_geography_table(path)
   if (ncol(ranges) < 2L) {
-    stop("Geography CSV must contain a taxon column and at least one area column.", call. = FALSE)
+    stop("The geography file must contain a taxon column and at least one area column.", call. = FALSE)
   }
 
   taxon_col <- if ("species" %in% names(ranges)) "species" else if ("taxon" %in% names(ranges)) "taxon" else names(ranges)[1L]

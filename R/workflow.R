@@ -39,6 +39,7 @@ run_workflow <- function(
   }
 
   project_paths <- create_project(cfg$project$output_dir)
+  bgs_progress("Validating inputs for ", cfg$project$name %||% "project", value = 0)
   validation <- validate_inputs(cfg)
   utils::write.csv(validation, file.path(project_paths$tables, "input_validation.csv"), row.names = FALSE)
   yaml::write_yaml(cfg, file.path(project_paths$root, "config_used.yml"))
@@ -58,6 +59,7 @@ run_workflow <- function(
   bsm_tables <- attr(model_result, "bsm_tables")
   standardized_tables <- attr(model_result, "standardized_tables")
   model_comparison <- if (isTRUE(dry_run)) NULL else model_result
+  if (!isTRUE(dry_run)) bgs_progress("Writing figures and tables ...", value = 0.92)
   figure_manifest <- if (!isTRUE(dry_run) && !is.null(model_comparison)) {
     generate_figures(
       model_comparison = model_comparison,
@@ -99,6 +101,7 @@ run_workflow <- function(
     validation_failed = any(!validation$ok)
   )
   class(result) <- c("bgs_workflow_result", "list")
+  bgs_progress(if (isTRUE(dry_run)) "Dry run finished" else "Workflow finished", ": ", project_paths$root, value = 1)
   result
 }
 

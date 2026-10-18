@@ -274,7 +274,7 @@ validation_check_catalog <- function() {
 }
 
 read_geography_for_validation <- function(path) {
-  ranges <- utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
+  ranges <- read_geography_table(path)
   if (ncol(ranges) < 2L) {
     stop("Geography CSV must contain a taxon column and at least one area column.", call. = FALSE)
   }

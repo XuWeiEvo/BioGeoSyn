@@ -300,7 +300,12 @@ bgs_shiny_server <- function(input, output, session) {
             if (isTRUE(input$dry_run)) "dry run started" else "real run started",
             current_output_dir() %||% "configured output directory"
           )
-          result <- run_workflow(
+          # Model fits and stochastic maps report progress to the bar and log.
+          old_cb <- options(BioGeoSyn.progress_callback = function(msg, value) {
+            shiny::setProgress(value = value, detail = msg)
+            append_app_message(state, msg)
+          })
+          result <- tryCatch(run_workflow(
             config = current_workflow_config_path(),
             output_dir = NULL,
             dry_run = isTRUE(input$dry_run),
@@ -308,7 +313,7 @@ bgs_shiny_server <- function(input, output, session) {
             force = isTRUE(input$force),
             resume_completed_models = isTRUE(input$resume_completed_models %||% TRUE),
             retry_failed_only = isTRUE(input$retry_failed_only)
-          )
+          ), finally = options(old_cb))
           state$result <- result
           # A new run (or a reload of a different project) supersedes any bundle,
           # report or diagnostics archive built from the previous result. Clear
@@ -1615,7 +1620,7 @@ shiny_summary_table <- function(state) {
 shiny_upload_preview_table <- function(input) {
   rows <- list(
     shiny_upload_preview_tree(input$wizard_tree %||% NULL),
-    shiny_upload_preview_csv(input$wizard_geography %||% NULL, "Geography matrix CSV", expected = "First column is the species name; the remaining columns are areas, usually coded 0/1."),
+    shiny_upload_preview_csv(input$wizard_geography %||% NULL, "Geography matrix", expected = "A CSV whose first column is the species name and whose remaining columns are areas coded 0/1, or a BioGeoBEARS PHYLIP geography file."),
     shiny_upload_preview_csv(input$wizard_regions %||% NULL, "Regions CSV", expected = "Must contain at least an area code or area name, used to label the geography columns.")
   )
   do.call(rbind, rows)
@@ -1668,7 +1673,8 @@ shiny_upload_preview_csv <- function(upload, label, expected) {
     return(shiny_upload_preview_missing(label, paste0("Upload ", label, ".")))
   }
   table <- tryCatch(
-    utils::read.csv(path, nrows = 5L, check.names = FALSE, stringsAsFactors = FALSE),
+    if (is_phylip_geography(path)) utils::head(read_phylip_geography(path), 5L) else
+      utils::read.csv(path, nrows = 5L, check.names = FALSE, stringsAsFactors = FALSE),
     error = function(e) e
   )
   if (inherits(table, "error")) {
@@ -3923,7 +3929,7 @@ wizard_step_data <- function(default_config, default_output, example_project_dir
       ),
       shiny::tags$div(
         class = "bgs-upload-row",
-        shiny::fileInput("wizard_geography", "Geography matrix CSV", accept = ".csv"),
+        shiny::fileInput("wizard_geography", "Geography matrix (CSV, or BioGeoBEARS PHYLIP .data/.txt)", accept = c(".csv", ".data", ".txt", ".phy")),
         shiny::downloadButton("download_geography_template", "Template")
       ),
       shiny::tags$div(

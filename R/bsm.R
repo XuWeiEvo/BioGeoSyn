@@ -12,7 +12,11 @@ run_bsm_stochastic_mapping <- function(config, project_paths, model_results, com
 
   options <- bsm_run_options(config)
   outputs <- lapply(seq_along(selected_models), function(i) {
-    run_one_bsm_model(
+    bgs_progress(sprintf("Stochastic mapping %d/%d under %s: %d maps requested ...", i, length(selected_models),
+                         selected_models[[i]], as.integer(options$replicates)),
+                 value = 0.6 + 0.3 * (i - 1) / length(selected_models))
+    t_bsm <- Sys.time()
+    out <- run_one_bsm_model(
       model = selected_models[[i]],
       model_result = model_results[[selected_models[[i]]]],
       project_paths = project_paths,
@@ -20,6 +24,12 @@ run_bsm_stochastic_mapping <- function(config, project_paths, model_results, com
       options = options,
       model_index = i
     )
+    st <- out$standardized$bsm_run_status
+    done <- if (!is.null(st) && nrow(st) > 0L) st$completed_maps[[1L]] else NA
+    bgs_progress(sprintf("Stochastic mapping %d/%d under %s: %s maps completed in %s", i, length(selected_models),
+                         selected_models[[i]], done, format_elapsed(t_bsm)),
+                 value = 0.6 + 0.3 * i / length(selected_models))
+    out
   })
 
   tables <- combine_bsm_outputs(outputs)

@@ -1,5 +1,21 @@
 # BioGeoSyn (development version, MER revision)
 
+## PHYLIP geography input and progress messages
+
+Responds to Reviewer 2 (PHYLIP input; progress messages).
+
+- Geography can now be supplied in the PHYLIP format that BioGeoBEARS uses
+  (`n_taxa<tab>n_areas (A B C ...)` followed by one 0/1 string per taxon),
+  wherever a geography CSV is accepted: configuration files, validation, the
+  data overview and the app's upload (`.data`, `.txt`, `.phy`). The format is
+  detected from the header line (`read_phylip_geography()`).
+- Runs now report progress: a timestamped line on the console for input
+  validation, each model fit (with its time and log-likelihood), each
+  stochastic-mapping run (maps requested and completed) and output writing.
+  In the app the same messages drive the progress bar during the run and are
+  added to the run log. Silence the console lines with
+  `options(BioGeoSyn.progress = FALSE)`.
+
 ## Compatibility checks and inherited assumptions
 
 Responds to Reviewer 3 (major comments 5 and 7) and Editor point 5.

@@ -302,7 +302,7 @@ test_that("Shiny project wizard helpers resolve uploads, previews, and defaults"
 
   expect_equal(names(preview), c("File", "Status", "Summary", "Next step"))
   expect_true(all(preview$Status == "Readable"))
-  expect_match(preview$Summary[preview$File == "Geography matrix CSV"], "species", fixed = TRUE)
+  expect_match(preview$Summary[preview$File == "Geography matrix"], "species", fixed = TRUE)
 })
 
 test_that("Shiny validation table and input templates are user-facing", {
