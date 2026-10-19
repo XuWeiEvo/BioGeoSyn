@@ -350,9 +350,16 @@ timing, and source-to-target dispersal directions.
 
 These automated checks confirm that the biogeographic process outputs faithfully
 re-present the underlying BioGeoBEARS stochastic mapping: per-process counts
-reconcile with BioGeoBEARS' class totals, regional net dispersal flux sums to
+reconcile with class totals recounted from sampled event rows, regional net dispersal flux sums to
 zero, rates reconstruct the synthesis mean across time bins and across regions,
 and the requested stochastic maps completed.
+
+Event summaries are recounted from the sampled event rows, including maps with
+zero events. Original BioGeoBEARS count objects are retained in the raw output.
+The `bsm_upstream_event_summary.csv` and `bsm_upstream_replicate_counts.csv`
+tables retain their exported values; `bsm_count_reconciliation.csv` records
+each comparison with the derived counts. An upstream discrepancy is reported
+as a warning even when the corrected derived counts pass the event-row checks.
 
 ```{r}
 if (!is.null(bsm_qc) && nrow(bsm_qc) > 0) {

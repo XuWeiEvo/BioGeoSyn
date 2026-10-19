@@ -138,6 +138,18 @@ bin_width_sensitivity <- function(clade_data, bin_widths = c(1, 2, 5, 10),
   list(rates = rates, peaks = peaks[do.call(order, peaks[c(key, "bin_width")]), , drop = FALSE])
 }
 
+#' @rdname bin_width_sensitivity
+#' @param zip_paths Result bundles, one per clade (or per tree of a clade).
+#' @param clade_names Optional clade names.
+#' @export
+bin_width_sensitivity_from_bundles <- function(zip_paths, clade_names = NULL, bin_widths = c(1, 2, 5, 10),
+                                               weighting = c("clade", "lineage"), ...) {
+  clade_data <- read_clade_events_for_pooling(zip_paths, clade_names, with_tree = TRUE)
+  clade_data <- clade_data[!vapply(clade_data, function(x) is.null(x$tree_nodes), logical(1))]
+  if (length(clade_data) == 0L) return(NULL)
+  bin_width_sensitivity(clade_data, bin_widths = bin_widths, weighting = weighting, ...)
+}
+
 #' Plot pooled rates for several bin widths
 #'
 #' @param sensitivity A result of [bin_width_sensitivity()].

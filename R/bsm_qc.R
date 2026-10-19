@@ -3,8 +3,9 @@
 #' Run the internal consistency checks that establish the biogeographic process
 #' outputs faithfully re-present the underlying BioGeoBEARS stochastic mapping,
 #' and report each as a pass/warning/fail row. The checks are: per-process
-#' counts reconcile with BioGeoBEARS' class totals (`all_clado`, `all_ana`,
-#' `total_events`); regional net dispersal flux sums to zero; process rates
+#' counts reconcile with class totals recounted from sampled event rows
+#' (`all_clado`, `all_ana`, `total_events`); differences from the preserved
+#' upstream summaries are reported separately; regional net dispersal flux sums to zero; process rates
 #' summed across time bins equal the per-process synthesis mean; region-resolved
 #' rates summed across regions equal the overall per-process rate in each bin;
 #' and the requested stochastic maps completed.
@@ -46,6 +47,34 @@ summarize_bsm_qc <- function(bsm_tables) {
   }
 
   for (m in models) {
+    events <- bsm_tables$bsm_events
+    replicates <- bsm_tables$bsm_replicate_counts
+    if (!is.null(events) && !is.null(replicates) && nrow(replicates) > 0L &&
+        all(c("model", "replicate", "event_type") %in% names(events))) {
+      n_maps <- region_n_maps(event_summary, events, m)
+      expected_replicates <- bsm_counts_from_events(m, events[events$model == m, , drop = FALSE], n_maps)
+      comparison <- bsm_compare_event_counts(
+        expected_replicates, replicates[replicates$model == m, , drop = FALSE],
+        bsm_summary_from_replicates(expected_replicates), event_summary[event_summary$model == m, , drop = FALSE])
+      ok <- nrow(comparison) > 0L && all(comparison$status == "Match")
+      add("Derived counts match sampled event rows", m, if (ok) "Pass" else "Fail",
+          if (ok) "matched" else "mismatch", "matched",
+          "Each map and its mean, SD and summed counts are checked, including maps with zero events.")
+    }
+    upstream <- bsm_tables$bsm_count_reconciliation
+    if (!is.null(upstream) && nrow(upstream) > 0L) {
+      check <- upstream[upstream$model == m, , drop = FALSE]
+      if (nrow(check) > 0L) {
+        changed <- unique(check$event_type[check$status != "Match"])
+        add("Derived counts compared with preserved upstream summaries", m,
+            if (length(changed)) "Warning" else "Pass",
+            if (length(changed)) paste(changed, collapse = ", ") else "matched", "matched",
+            if (length(changed)) paste(
+              "Derived counts use sampled event rows. Upstream discrepancies are retained in",
+              "bsm_count_reconciliation.csv; raw BioGeoBEARS objects are unchanged."
+            ) else "Upstream counts agree with the independently recounted event rows.")
+      }
+    }
     if (!is.null(process) && !is.null(event_summary)) {
       clado <- sum(process$mean_count[process$model == m & process$process_group == "cladogenetic"], na.rm = TRUE)
       ana <- sum(process$mean_count[process$model == m & process$process_group == "anagenetic"], na.rm = TRUE)
@@ -56,7 +85,7 @@ summarize_bsm_qc <- function(bsm_tables) {
         bsm_qc_equal(ana, all_ana, tol) &&
         bsm_qc_equal(clado + ana, total_events, tol)
       add(
-        "Process counts reconcile with BioGeoBEARS class totals", m,
+        "Process counts reconcile with event-row class totals", m,
         if (ok) "Pass" else "Fail",
         bsm_qc_round(clado + ana), bsm_qc_round(total_events),
         sprintf(
@@ -168,10 +197,14 @@ bsm_qc_region_rates <- function(region_rates, rates, model, tol) {
     return(NA)
   }
   agg <- stats::aggregate(mean_count ~ process_key + time_bin, data = rr, FUN = sum)
+  overall_process <- c(immigration = "range_expansion", emigration = "range_expansion",
+                       in_situ_speciation = "in_situ_speciation")
   for (i in seq_len(nrow(agg))) {
+    pk <- agg$process_key[[i]]
+    if (pk %in% names(overall_process)) pk <- overall_process[[pk]]
     overall <- rates$mean_count[
       rates$model == model &
-        rates$process_key == agg$process_key[[i]] &
+        rates$process_key == pk &
         rates$time_bin == agg$time_bin[[i]]
     ]
     if (length(overall) > 0L && !bsm_qc_equal(agg$mean_count[[i]], suppressWarnings(as.numeric(overall[[1L]])), tol)) {

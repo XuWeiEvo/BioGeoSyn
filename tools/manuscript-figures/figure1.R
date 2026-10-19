@@ -16,7 +16,7 @@ W <- 180; H <- 68
 draw_figure1 <- function() {
   open_page(W, H)
   box(2, 19, 178, 66, fill = COL$panel, col = "#E1E6EC", r = 2.5)
-  txt("REPRODUCIBLE WORKFLOW, IDENTICAL IN THE APP AND THROUGH run_workflow()", 5, 62.6,
+  txt("SHARED R BACKEND FOR GRAPHICAL AND SCRIPTED WORKFLOWS", 5, 62.6,
       size = 5.6, col = COL$faint, face = "bold", hjust = 0)
 
   cw <- 32.4; gap <- 2.5; y0 <- 22; y1 <- 59
@@ -26,7 +26,7 @@ draw_figure1 <- function() {
     "Six range-evolution\nmodels; AICc weights;\n+J interpretation caution",
     "BSM samples event\nhistories (optional);\none or several trees",
     "Seven named processes;\nrates, regions, routes;\ncount reconciliation",
-    "Tables, figures, report;\nbundle with manifest,\nreproduce.R and versions"
+    "Tables and figures;\noptional report and bundle;\nmanifest, script, versions"
   )
   for (i in 1:5) {
     x0 <- 4 + (i - 1) * (cw + gap); x1 <- x0 + cw

@@ -17,6 +17,13 @@ install.packages("remotes")
 remotes::install_github("XuWeiEvo/BioGeoSyn")
 ```
 
+To install the exact version described in the Molecular Ecology Resources
+revision, pin the release tag:
+
+```r
+remotes::install_github("XuWeiEvo/BioGeoSyn@v1.3.0")
+```
+
 Load the package and check the local setup:
 
 ```r
@@ -118,7 +125,8 @@ run writes.
 
 ### 1 · Data
 
-1. Upload your tree (Newick), geography CSV, and regions CSV. The **Template**
+1. Upload your tree (Newick), geography file (CSV, or the PHYLIP format used
+   by BioGeoBEARS), and regions CSV. The **Template**
    button beside each upload downloads a working example to edit.
 2. Set **Maximum range size**. It must be at least the largest range any taxon
    actually occupies, which the data overview reports.
@@ -146,8 +154,13 @@ large, raise **CPU cores** and fit fewer models.
    models and estimates ancestral ranges.
 4. Click **Start the analysis**.
 
-A large run prints no progress bar. If it seems stuck, check the state-space
-note and the number of models first — it is almost always compute, not a hang.
+The run reports its progress as it goes: input validation, each model fit with
+its running number, elapsed time and log-likelihood (for example
+`Model 2/6: fitting DEC+J ...`), each stochastic-mapping run with the maps
+completed, and the writing of outputs. The same time-stamped messages appear in
+the R console, update the progress bar in the app and are kept in the run log.
+If a model fit takes very long, check the state-space note and the number of
+models first; it is almost always compute, not a hang.
 
 ### 3. Single clade
 
@@ -164,8 +177,10 @@ See section 6.
 Required files:
 
 - Newick tree file.
-- Geography CSV with one row per taxon and one column per area. Area codes must
-  be single characters (`A`, `B`, `C`, …) for BSM.
+- Geography file, either a CSV with one row per taxon and one column per area,
+  or the PHYLIP-style geography file used by BioGeoBEARS. The format is
+  recognised from the file itself. Area codes must be single characters
+  (`A`, `B`, `C`, …) for BSM.
 - Regions CSV giving the full name of each area, used to label the output.
 
 Tip labels and geography taxon names must match exactly, including
@@ -234,6 +249,42 @@ together, so species-rich clades weigh more) or *clades weighted equally* (the
 mean of the clades' own rates). Every band is a 95% interval over resampled
 stochastic maps.
 
+The tab also draws **lineages through space and time**, the number of
+lineages in each region through time summed across clades, with the same
+resampled intervals and the region colours of the dispersal networks.
+
+Two checks guard against reading too much into a single figure:
+
+- **Time-bin width.** Narrow bins can produce spurious peaks where little
+  lineage time is available, and wide bins dilute brief pulses. Recompute the
+  synthesis for several widths and interpret only features that persist.
+- **Period boundaries.** Networks sliced at the Paleogene, Neogene and
+  Quaternary boundaries depend on where those boundaries fall. Draw a network
+  for any window, and see how counts change when a boundary is shifted.
+
+The same results are available from the console:
+
+```r
+bundles <- list.files("bundles", pattern = "\\.zip$", full.names = TRUE)
+
+check_bundle_compatibility(bundles)
+counts <- pool_process_rates_from_bundles(bundles, bin_width = 5)
+rates  <- pool_per_lineage_rates_from_bundles(bundles, bin_width = 5)
+plot_per_lineage_rates_across_clades(rates, weighting = "clade")
+
+ltst <- lineages_through_space_time_from_bundles(bundles, bin_width = 1)
+plot_lineages_through_space_time(ltst)
+
+sens <- bin_width_sensitivity_from_bundles(bundles, bin_widths = c(1, 2, 5, 10))
+plot_bin_width_sensitivity(sens)
+
+dispersal_routes_in_window(bundles, from = 23.03, to = 2.58)
+period_boundary_sensitivity(bundles, boundary = 23.03, shifts = c(-2, -1, 0, 1, 2))
+```
+
+Shared patterns found this way describe concordance among clades. They are
+candidates for testing, not evidence of a common driver by themselves.
+
 ### Include tree uncertainty (recommended when posterior trees exist)
 
 Stochastic maps on one tree do not include uncertainty in topology or node
@@ -255,7 +306,22 @@ on. The multi-clade tab recognises the `__treeNNN` suffix, treats the bundles as
 one clade, and resamples a tree and then one of its maps in every draw, so the
 intervals include tree uncertainty. Each tree gets equal weight.
 
-## 7. If Something Fails
+## 7. Re-run A Result Bundle
+
+Every run writes `reproduce.R` next to its configuration and a copy of its
+inputs, so a result bundle can be re-run from the command line without the
+app. Each run also records the versions of R and of every loaded package in
+`logs/environment.csv`. Before re-running, `reproduce.R` calls
+`check_environment()`, which compares the installed versions with the recorded
+ones and prints the command that installs each recorded version that differs.
+It installs nothing itself. Exact recreation can also need the recorded R
+version and system libraries; use a container or an renv lockfile for that.
+
+```r
+check_environment("results/my_clade/logs/environment.csv")
+```
+
+## 8. If Something Fails
 
 First inspect:
 
@@ -305,7 +371,7 @@ Common fixes:
   near-best statistical model includes founder-event jump dispersal and should
   be interpreted cautiously.
 
-## 8. Stable-Release Readiness Check
+## 9. Stable-Release Readiness Check
 
 Before sharing the package with ordinary users, maintainers should run:
 

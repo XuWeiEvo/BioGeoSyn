@@ -286,10 +286,23 @@ standardize_bsm_result <- function(model, raw_result, prepared_inputs) {
     area_labels = area_labels
   )
 
+  if (length(source_output$clado_events_tables) != replicate_count ||
+      length(source_output$ana_events_tables) != replicate_count) {
+    stop("Source event tables must retain every completed stochastic map.", call. = FALSE)
+  }
+  replicate_counts <- bsm_counts_from_events(model, events, replicate_count)
+  event_summary <- bsm_summary_from_replicates(replicate_counts)
+  upstream_summary <- standardize_bsm_count_summary(model, counts, replicate_count)
+  upstream_replicates <- standardize_bsm_replicate_counts(model, counts)
+
   list(
     bsm_run_status = empty_bsm_run_status_table(),
-    bsm_event_summary = standardize_bsm_count_summary(model, counts, replicate_count),
-    bsm_replicate_counts = standardize_bsm_replicate_counts(model, counts),
+    bsm_event_summary = event_summary,
+    bsm_replicate_counts = replicate_counts,
+    bsm_upstream_event_summary = upstream_summary,
+    bsm_upstream_replicate_counts = upstream_replicates,
+    bsm_count_reconciliation = bsm_compare_event_counts(
+      replicate_counts, upstream_replicates, event_summary, upstream_summary),
     bsm_dispersal_routes = standardize_bsm_dispersal_routes(model, counts),
     bsm_events = events,
     bsm_event_times = standardize_bsm_event_times(events)
@@ -591,6 +604,9 @@ combine_bsm_outputs <- function(outputs) {
     bsm_run_status = combine("bsm_run_status", empty_bsm_run_status_table()),
     bsm_event_summary = combine("bsm_event_summary", empty_bsm_event_summary_table()),
     bsm_replicate_counts = combine("bsm_replicate_counts", empty_bsm_replicate_counts_table()),
+    bsm_upstream_event_summary = combine("bsm_upstream_event_summary", empty_bsm_event_summary_table()),
+    bsm_upstream_replicate_counts = combine("bsm_upstream_replicate_counts", empty_bsm_replicate_counts_table()),
+    bsm_count_reconciliation = combine("bsm_count_reconciliation", empty_bsm_count_reconciliation_table()),
     bsm_dispersal_routes = combine("bsm_dispersal_routes", empty_bsm_dispersal_routes_table()),
     bsm_events = combine("bsm_events", empty_bsm_events_table()),
     bsm_event_times = combine("bsm_event_times", empty_bsm_event_times_table())
@@ -607,6 +623,9 @@ write_bsm_standardized_tables <- function(tables, project_paths) {
   write_csv_base(tables$bsm_run_status %||% empty_bsm_run_status_table(), file.path(project_paths$tables, "bsm_run_status.csv"))
   write_csv_base(tables$bsm_event_summary %||% empty_bsm_event_summary_table(), file.path(project_paths$tables, "bsm_event_summary.csv"))
   write_csv_base(tables$bsm_replicate_counts %||% empty_bsm_replicate_counts_table(), file.path(project_paths$tables, "bsm_replicate_counts.csv"))
+  write_csv_base(tables$bsm_upstream_event_summary %||% empty_bsm_event_summary_table(), file.path(project_paths$tables, "bsm_upstream_event_summary.csv"))
+  write_csv_base(tables$bsm_upstream_replicate_counts %||% empty_bsm_replicate_counts_table(), file.path(project_paths$tables, "bsm_upstream_replicate_counts.csv"))
+  write_csv_base(tables$bsm_count_reconciliation %||% empty_bsm_count_reconciliation_table(), file.path(project_paths$tables, "bsm_count_reconciliation.csv"))
   write_csv_base(tables$bsm_dispersal_routes %||% empty_bsm_dispersal_routes_table(), file.path(project_paths$tables, "bsm_dispersal_routes.csv"))
   write_csv_base(tables$bsm_events %||% empty_bsm_events_table(), file.path(project_paths$tables, "bsm_events.csv"))
   write_csv_base(tables$bsm_event_times %||% empty_bsm_event_times_table(), file.path(project_paths$tables, "bsm_event_times.csv"))
@@ -779,6 +798,9 @@ empty_bsm_standardized_tables <- function(status = empty_bsm_run_status_table())
     bsm_run_status = status,
     bsm_event_summary = empty_bsm_event_summary_table(),
     bsm_replicate_counts = empty_bsm_replicate_counts_table(),
+    bsm_upstream_event_summary = empty_bsm_event_summary_table(),
+    bsm_upstream_replicate_counts = empty_bsm_replicate_counts_table(),
+    bsm_count_reconciliation = empty_bsm_count_reconciliation_table(),
     bsm_dispersal_routes = empty_bsm_dispersal_routes_table(),
     bsm_events = empty_bsm_events_table(),
     bsm_event_times = empty_bsm_event_times_table(),

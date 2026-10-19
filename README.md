@@ -18,6 +18,13 @@ install.packages("remotes")
 remotes::install_github("XuWeiEvo/BioGeoSyn")
 ```
 
+Versions. v1.3.0 is the version described in the revised manuscript under
+review at *Molecular Ecology Resources*; the originally submitted version is
+v1.2.0. Each release is archived on Zenodo with its own DOI. To install a
+specific release, pin its tag, for example
+`remotes::install_github("XuWeiEvo/BioGeoSyn@v1.3.0")`. A step-by-step guide is
+in `inst/docs/ordinary-user-quick-start.md` (`open_user_guide()` opens it).
+
 BioGeoBEARS is not bundled and must be installed separately (Quarto is only
 needed to render reports):
 
@@ -200,8 +207,8 @@ directly with `citation("BioGeoBEARS")`.
 ## Development and use of AI tools
 
 Parts of the code in this package were written with the assistance of Claude
-Opus 4.8 (Anthropic), a large language model, used to help write and debug the
-implementation. All conceptual and design decisions, including the
+Opus 4.8 (Anthropic) and GPT-6 Astra (OpenAI), large language models, used to
+help write, debug and test the implementation. All conceptual and design decisions, including the
 analysis workflow, the event taxonomy, the cross-clade synthesis, and the user
 interface, were made by the author. The author reviewed and tested all
 generated code and takes full responsibility for it, including any

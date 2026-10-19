@@ -55,7 +55,7 @@ biogeographic_process_taxonomy <- function() {
       "a"
     ),
     definition = c(
-      "Both daughter lineages inherit the same single ancestral area (within-area speciation).",
+      "Both daughter lineages inherit the ancestral range; the allowed range size depends on the fitted model.",
       "One daughter inherits the full ancestral range; the other inherits a single-area subset.",
       "The ancestral range is divided between the two daughter lineages.",
       "One daughter lineage jumps to a new area outside the ancestral range.",

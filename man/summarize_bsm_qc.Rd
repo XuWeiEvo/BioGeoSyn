@@ -19,8 +19,9 @@ Returns an empty table when no BSM results are available.
 Run the internal consistency checks that establish the biogeographic process
 outputs faithfully re-present the underlying BioGeoBEARS stochastic mapping,
 and report each as a pass/warning/fail row. The checks are: per-process
-counts reconcile with BioGeoBEARS' class totals (\code{all_clado}, \code{all_ana},
-\code{total_events}); regional net dispersal flux sums to zero; process rates
+counts reconcile with class totals recounted from sampled event rows
+(\code{all_clado}, \code{all_ana}, \code{total_events}); differences from the preserved
+upstream summaries are reported separately; regional net dispersal flux sums to zero; process rates
 summed across time bins equal the per-process synthesis mean; region-resolved
 rates summed across regions equal the overall per-process rate in each bin;
 and the requested stochastic maps completed.

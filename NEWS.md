@@ -1,4 +1,59 @@
-# BioGeoSyn (development version, MER revision)
+# BioGeoSyn 1.3.0
+
+Revision for Molecular Ecology Resources (manuscript 7209990). The submitted
+version is archived as v1.2.0 and is unchanged. Every change below responds to
+a point raised in review.
+
+## Event counts recounted from the sampled event records
+
+Found during the final audit of the revision (reported under Reviewer 3,
+minor comment 3).
+
+- The count summaries saved by BioGeoBEARS 1.1.3 report no local extinction,
+  although the sampled histories contain these events (fixed upstream in
+  BioGeoBEARS 1.1.4). BioGeoSyn now derives all seven process counts from the
+  saved event rows of every stochastic map, including maps with zero events,
+  keeps the original BioGeoBEARS objects and summaries unchanged, and writes a
+  separate table of any differences (`R/bsm_recount.R`).
+- `tools/recount-bsm-bundles.R` rebuilds existing result bundles from their
+  saved event rows without refitting models or resampling histories.
+
+## Corrections from the final audit
+
+- `biogeographic_process_taxonomy()` now defines in-situ (sympatric)
+  speciation (`y`) as both daughters inheriting the ancestral range, with the
+  allowed range size set by the fitted model, rather than restricting it to a
+  single area.
+- `inst/validation/cross_clade_simulation.R` always simulates trees with
+  `ape::rlineage()`, the generator used for the reported validation run, instead
+  of switching to `phytools::pbtree()` when phytools is installed. The script's
+  description now states that 10 to 300 is the range of the growth parameter,
+  so tip counts vary stochastically.
+- Figure scripts: Figure 4 uses a page-friendly layout and larger text, and
+  Figure 5 uses the corrected scenario labels; the plotted data are unchanged.
+
+## Bin-width sensitivity from result bundles
+
+- Added `bin_width_sensitivity_from_bundles()`, which reads result bundles and
+  calls `bin_width_sensitivity()`, so the sensitivity check no longer needs
+  internal functions.
+
+## Manuscript figure scripts
+
+- `tools/manuscript-figures/` now draws Figures 1, 2, 4 and 5 of the revised
+  manuscript. The single-clade worked example was removed from the manuscript;
+  `figureS_amolops_dec_vs_decj.R` draws Fig. R6 of the response letter.
+
+## Lineages through space and time
+
+Responds to Reviewer 2 (lineages through space and time).
+
+- `lineages_through_space_time()` counts the lineages in each region through
+  time (Skeels 2019) from the ranges sampled in every stochastic map, adds them
+  across clades, and gives 95% intervals from the same resampling of maps and
+  trees as the other pooled outputs. `lineages_through_space_time_from_bundles()`
+  reads result bundles directly, and `plot_lineages_through_space_time()` draws
+  the curves with the region colours of the dispersal networks.
 
 ## Period boundaries of dispersal networks
 

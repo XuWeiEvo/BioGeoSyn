@@ -1488,6 +1488,9 @@ load_existing_workflow_result <- function(output_dir, refresh_manifest = TRUE) {
   bsm_run_status <- read_existing_output_table(project_paths, "bsm_run_status.csv")
   bsm_event_summary <- read_existing_output_table(project_paths, "bsm_event_summary.csv")
   bsm_replicate_counts <- read_existing_output_table(project_paths, "bsm_replicate_counts.csv")
+  bsm_upstream_event_summary <- read_existing_output_table(project_paths, "bsm_upstream_event_summary.csv")
+  bsm_upstream_replicate_counts <- read_existing_output_table(project_paths, "bsm_upstream_replicate_counts.csv")
+  bsm_count_reconciliation <- read_existing_output_table(project_paths, "bsm_count_reconciliation.csv")
   bsm_dispersal_routes <- read_existing_output_table(project_paths, "bsm_dispersal_routes.csv")
   bsm_events <- read_existing_output_table(project_paths, "bsm_events.csv")
   bsm_event_times <- read_existing_output_table(project_paths, "bsm_event_times.csv")
@@ -1507,6 +1510,9 @@ load_existing_workflow_result <- function(output_dir, refresh_manifest = TRUE) {
     bsm_run_status = bsm_run_status %||% data.frame(),
     bsm_event_summary = bsm_event_summary %||% data.frame(),
     bsm_replicate_counts = bsm_replicate_counts %||% data.frame(),
+    bsm_upstream_event_summary = bsm_upstream_event_summary %||% data.frame(),
+    bsm_upstream_replicate_counts = bsm_upstream_replicate_counts %||% data.frame(),
+    bsm_count_reconciliation = bsm_count_reconciliation %||% data.frame(),
     bsm_dispersal_routes = bsm_dispersal_routes %||% data.frame(),
     bsm_events = bsm_events %||% data.frame(),
     bsm_event_times = bsm_event_times %||% data.frame()
@@ -1528,6 +1534,9 @@ load_existing_workflow_result <- function(output_dir, refresh_manifest = TRUE) {
       bsm_run_status = bsm_run_status %||% data.frame(),
       bsm_event_summary = bsm_event_summary %||% data.frame(),
       bsm_replicate_counts = bsm_replicate_counts %||% data.frame(),
+      bsm_upstream_event_summary = bsm_upstream_event_summary %||% data.frame(),
+      bsm_upstream_replicate_counts = bsm_upstream_replicate_counts %||% data.frame(),
+      bsm_count_reconciliation = bsm_count_reconciliation %||% data.frame(),
       bsm_dispersal_routes = bsm_dispersal_routes %||% data.frame(),
       bsm_events = bsm_events %||% data.frame(),
       bsm_event_times = bsm_event_times %||% data.frame()

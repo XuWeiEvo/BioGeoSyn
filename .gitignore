@@ -13,3 +13,6 @@
 BioGeoSyn文章/
 example data/
 MEE-Applications-Checklist.docx
+
+# Local working files and large intermediate results
+tmp/

@@ -105,12 +105,14 @@ read_bundle_table <- function(zip_path, table) {
     return(NULL)
   }
   want <- paste0(table, ".csv")
-  cand <- entries[basename(entries) == want]
+  # Historical copies are provenance, never inputs to the current synthesis.
+  cand <- entries[basename(entries) == want & !grepl("(^|/)provenance/", entries)]
   if (length(cand) == 0L) {
     return(NULL)
   }
   pref <- cand[grepl("tables/", cand, fixed = TRUE)]
-  target <- if (length(pref) > 0L) pref[[1L]] else cand[[1L]]
+  active <- if (length(pref) > 0L) pref else cand
+  target <- active[order(nchar(active), active)][[1L]]
   tmp <- tempfile("bgs-bundle-")
   dir.create(tmp)
   on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
@@ -416,8 +418,9 @@ plot_process_rates_across_clades <- function(combined_rates, process = NULL,
           x = "Time before present (Ma)",
           y = expression(log[10](mean~events~summed~across~clades + 1)),
           colour = "Process",
-          title = "Cross-clade process rates through time",
-          subtitle = sprintf("All clades pooled on %g-Ma bins; log y-axis, %s", bin_width, pooled_band_label(resampled))
+          title = "Cross-clade process event counts through time",
+          subtitle = paste(strwrap(sprintf("All clades pooled on %g-Ma bins; log y-axis, %s",
+            bin_width, pooled_band_label(resampled)), width = 90), collapse = "\n")
         ) +
         theme_bgs()
     )
@@ -444,7 +447,7 @@ plot_process_rates_across_clades <- function(combined_rates, process = NULL,
       x = "Time before present",
       y = "Mean events per stochastic map",
       colour = "Clade", fill = "Clade",
-      title = "Cross-clade process rates through time",
+      title = "Cross-clade process event counts through time",
       subtitle = subtitle
     ) +
     theme_bgs()
@@ -709,10 +712,10 @@ plot_region_process_rates_across_clades <- function(combined_region_rates, proce
       x = "Time before present (Ma)",
       y = y_lab,
       colour = "Process",
-      title = "Cross-clade region-resolved process rates through time",
-      subtitle = sprintf("One panel per region; each process a curve, pooled across clades on %g-Ma bins%s%s",
+      title = "Regional process event counts through time",
+      subtitle = paste(strwrap(sprintf("One panel per region; each process a curve, pooled across clades on %g-Ma bins%s%s",
                          bin_width, if (isTRUE(log_y)) ", log y-axis" else "",
-                         if (has_ci) paste0(", ", pooled_band_label(resampled)) else "")
+                         if (has_ci) paste0(", ", pooled_band_label(resampled)) else ""), width = 90), collapse = "\n")
     ) +
     theme_bgs()
 }
@@ -988,9 +991,9 @@ render_cross_clade_report <- function(x, file = NULL) {
       figure(plot_biogeographic_process_synthesis(x$synthesis), 8, 4.8))
   }
   if (has("rates")) {
-    parts <- c(parts, "<h2>Process rates through time (overall)</h2>",
+    parts <- c(parts, "<h2>Process event counts through time (overall)</h2>",
       figure(plot_process_rates_across_clades(x$rates, pooled = TRUE, pooled_data = x$pooled_rates), 8.6, 5.2),
-      "<h3>Combined rates per clade and time bin</h3>",
+      "<h3>Combined event counts per clade and time bin</h3>",
       html_table(xclade_long_table(x$rates,
         c("clade", "process_group", "process_label", "bin_midpoint", "mean_count", "ci_lower", "ci_upper"))),
       "<h3>Summed mean events per process (all clades pooled)</h3>",
@@ -1003,9 +1006,9 @@ render_cross_clade_report <- function(x, file = NULL) {
       figure(plot_per_lineage_rates_across_clades(x$per_lineage_rates, "clade"), 8.6, 5.2))
   }
   if (has("region_rates")) {
-    parts <- c(parts, "<h2>Process rates through time (by region)</h2>",
+    parts <- c(parts, "<h2>Process event counts through time (by region)</h2>",
       figure(plot_region_process_rates_across_clades(x$region_rates, log_y = TRUE, pooled_data = x$pooled_region_rates), 9, 4.8),
-      "<h3>Combined rates per clade, region and time bin</h3>",
+      "<h3>Combined event counts per clade, region and time bin</h3>",
       html_table(xclade_long_table(x$region_rates,
         c("clade", "region", "process_label", "bin_midpoint", "mean_count", "ci_lower", "ci_upper"))),
       "<h3>Summed mean events per region and process (all clades pooled)</h3>",

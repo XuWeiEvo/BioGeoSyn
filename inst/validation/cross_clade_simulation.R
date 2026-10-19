@@ -3,13 +3,14 @@
 # Run with:  Rscript cross_clade_simulation.R <output_dir> [n_reps] [n_cores]
 #
 # Each replicate simulates 10 clades (pure-birth trees; crown ages 15-60 Ma;
-# 10-300 tips, log-uniform) and places range-expansion events along their
+# growth factors 10-300, log-uniform and rounded; stochastic tip counts)
+# and places range-expansion events along their
 # branches with a known per-lineage rate lambda(t), in 30 "stochastic maps"
 # per clade plus one held-out map. Scenarios:
 #   null    lambda = 0.05 everywhere
 #   sync    lambda = 0.05, rising to 0.40 in every clade at 10-12 Ma
 #   async   as sync, but each clade's 2-Myr pulse starts at its own random time
-#   single  only the most species-rich clade has the 10-12 Ma pulse
+#   single  only the clade with the largest growth factor has the 10-12 Ma pulse
 # The script reports interval coverage, pulse recovery, the effect of weighting,
 # and sensitivity to bin width, and writes tables and figures to <output_dir>.
 
@@ -40,14 +41,13 @@ N_DRAWS <- 1000L
 pulse_rate <- function(from, to) function(t) ifelse(t >= from & t < to, PULSE, BASE)
 const_rate <- function(t) rep(BASE, length(t))
 
-sim_tree <- function(n, age) {
-  if (requireNamespace("phytools", quietly = TRUE)) {
-    phytools::pbtree(n = n, scale = age)
-  } else {
-    tr <- ape::rlineage(log(n) / age, 0, Tmax = age)
-    tr$edge.length <- tr$edge.length * age / max(ape::node.depth.edgelength(tr))
-    tr
-  }
+sim_tree <- function(g, age) {
+  # Preserve the generator used for the reported validation run. rlineage()
+  # starts with two crown lineages, so expected tip count is 2 * g; the
+  # realized count is stochastic. Do not switch generators by package availability.
+  tr <- ape::rlineage(log(g) / age, 0, Tmax = age)
+  tr$edge.length <- tr$edge.length * age / max(ape::node.depth.edgelength(tr))
+  tr
 }
 
 tree_nodes_of <- function(tr) {
@@ -60,7 +60,7 @@ tree_nodes_of <- function(tr) {
 one_replicate <- function(rep_id, scenario) {
   set.seed(1000L * match(scenario, c("null", "sync", "async", "single")) + rep_id)
   ages <- stats::runif(N_CLADES, 15, 60)
-  sizes <- round(exp(stats::runif(N_CLADES, log(10), log(300))))
+  growth_factors <- round(exp(stats::runif(N_CLADES, log(10), log(300))))
   rate_funs <- switch(scenario,
     null = rep(list(const_rate), N_CLADES),
     sync = rep(list(pulse_rate(PULSE_FROM, PULSE_TO)), N_CLADES),
@@ -70,12 +70,12 @@ one_replicate <- function(rep_id, scenario) {
     }),
     single = {
       f <- rep(list(const_rate), N_CLADES)
-      f[[which.max(sizes)]] <- pulse_rate(PULSE_FROM, PULSE_TO)
+      f[[which.max(growth_factors)]] <- pulse_rate(PULSE_FROM, PULSE_TO)
       f
     }
   )
   clades <- lapply(seq_len(N_CLADES), function(i) {
-    tn <- tree_nodes_of(sim_tree(sizes[[i]], ages[[i]]))
+    tn <- tree_nodes_of(sim_tree(growth_factors[[i]], ages[[i]]))
     x <- simulate_event_histories(tn, rate_funs[[i]], n_maps = N_MAPS + 1L)
     held <- x$events[x$events$replicate == N_MAPS + 1L, , drop = FALSE]
     x$events <- x$events[x$events$replicate <= N_MAPS, , drop = FALSE]
@@ -154,9 +154,9 @@ one_replicate <- function(rep_id, scenario) {
 bin_width_replicate <- function(rep_id, widths = c(1, 2, 5, 10)) {
   set.seed(5000L + rep_id)
   ages <- stats::runif(N_CLADES, 15, 60)
-  sizes <- round(exp(stats::runif(N_CLADES, log(10), log(300))))
+  growth_factors <- round(exp(stats::runif(N_CLADES, log(10), log(300))))
   cd <- lapply(seq_len(N_CLADES), function(i) {
-    simulate_event_histories(tree_nodes_of(sim_tree(sizes[[i]], ages[[i]])), pulse_rate(PULSE_FROM, PULSE_TO), n_maps = N_MAPS)
+    simulate_event_histories(tree_nodes_of(sim_tree(growth_factors[[i]], ages[[i]])), pulse_rate(PULSE_FROM, PULSE_TO), n_maps = N_MAPS)
   })
   names(cd) <- paste0("c", seq_len(N_CLADES))
   s <- bin_width_sensitivity(cd, widths, weighting = "clade", n_draws = 200L, seed = rep_id)
@@ -214,13 +214,13 @@ print(bw_summ)
 example <- do.call(rbind, lapply(c("null", "sync", "async", "single"), function(sc) {
   set.seed(1000L * match(sc, c("null", "sync", "async", "single")) + 1L)
   ages <- stats::runif(N_CLADES, 15, 60)
-  sizes <- round(exp(stats::runif(N_CLADES, log(10), log(300))))
+  growth_factors <- round(exp(stats::runif(N_CLADES, log(10), log(300))))
   rf <- switch(sc,
     null = rep(list(const_rate), N_CLADES),
     sync = rep(list(pulse_rate(PULSE_FROM, PULSE_TO)), N_CLADES),
     async = lapply(ages, function(a) { s <- stats::runif(1, 2, a - 2); pulse_rate(s, s + 2) }),
-    single = { f <- rep(list(const_rate), N_CLADES); f[[which.max(sizes)]] <- pulse_rate(PULSE_FROM, PULSE_TO); f })
-  cd <- lapply(seq_len(N_CLADES), function(i) simulate_event_histories(tree_nodes_of(sim_tree(sizes[[i]], ages[[i]])), rf[[i]], n_maps = N_MAPS))
+    single = { f <- rep(list(const_rate), N_CLADES); f[[which.max(growth_factors)]] <- pulse_rate(PULSE_FROM, PULSE_TO); f })
+  cd <- lapply(seq_len(N_CLADES), function(i) simulate_event_histories(tree_nodes_of(sim_tree(growth_factors[[i]], ages[[i]])), rf[[i]], n_maps = N_MAPS))
   names(cd) <- paste0("c", seq_len(N_CLADES))
   co <- pool_rates_by_map_resampling(cd, bin_width = BIN, n_draws = N_DRAWS, seed = 1)
   ra <- pool_per_lineage_rates(cd, bin_width = BIN, n_draws = N_DRAWS, seed = 1, min_lineage_myr = BIN)
@@ -230,7 +230,7 @@ example <- do.call(rbind, lapply(c("null", "sync", "async", "single"), function(
     data.frame(scenario = sc, measure = "Rate, clades weighted equally", x = ra$bin_midpoint, y = ra$clade_rate, lo = ra$clade_rate_ci_lower, hi = ra$clade_rate_ci_upper)
   )
 }))
-labels <- c(null = "No pulse", sync = "Synchronous pulse (10-12 Ma)", async = "Asynchronous pulses", single = "Pulse in the largest clade only")
+labels <- c(null = "No pulse", sync = "Synchronous pulse (10-12 Ma)", async = "Asynchronous pulses", single = "Pulse in one clade")
 example$scenario <- factor(labels[example$scenario], levels = labels)
 example$measure <- factor(example$measure, levels = c("Event count (summed)", "Rate, lineage-weighted", "Rate, clades weighted equally"))
 example <- example[!is.na(example$y) & example$x <= 40, ]

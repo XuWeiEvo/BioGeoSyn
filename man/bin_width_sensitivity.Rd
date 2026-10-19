@@ -2,10 +2,19 @@
 % Please edit documentation in R/simulation.R
 \name{bin_width_sensitivity}
 \alias{bin_width_sensitivity}
+\alias{bin_width_sensitivity_from_bundles}
 \title{Sensitivity of pooled curves to the time-bin width}
 \usage{
 bin_width_sensitivity(
   clade_data,
+  bin_widths = c(1, 2, 5, 10),
+  weighting = c("clade", "lineage"),
+  ...
+)
+
+bin_width_sensitivity_from_bundles(
+  zip_paths,
+  clade_names = NULL,
   bin_widths = c(1, 2, 5, 10),
   weighting = c("clade", "lineage"),
   ...
@@ -19,6 +28,10 @@ bin_width_sensitivity(
 \item{weighting}{Which pooled rate to summarise for the peaks.}
 
 \item{...}{Passed to \code{\link[=pool_per_lineage_rates]{pool_per_lineage_rates()}} (e.g. \code{n_draws}, \code{by_region}).}
+
+\item{zip_paths}{Result bundles, one per clade (or per tree of a clade).}
+
+\item{clade_names}{Optional clade names.}
 }
 \value{
 A list with \code{rates} (all pooled tables, with a \code{bin_width} column)

@@ -160,12 +160,12 @@ test_that("render_cross_clade_report writes a self-contained HTML with figures",
   expect_true(file.exists(html))
   txt <- paste(readLines(html, warn = FALSE), collapse = "\n")
   expect_match(txt, "Cross-clade synthesis", fixed = TRUE)
-  expect_match(txt, "Process rates through time (overall)", fixed = TRUE)
-  expect_match(txt, "Process rates through time (by region)", fixed = TRUE)
+  expect_match(txt, "Process event counts through time (overall)", fixed = TRUE)
+  expect_match(txt, "Process event counts through time (by region)", fixed = TRUE)
   expect_match(txt, "data:image/png;base64", fixed = TRUE)
 
   # Both the full per-clade long table and the clade-pooled summary appear.
-  expect_match(txt, "Combined rates per clade", fixed = TRUE)
+  expect_match(txt, "Combined event counts per clade", fixed = TRUE)
   expect_match(txt, "all clades pooled", fixed = TRUE)
   expect_match(txt, "Summed mean events", fixed = TRUE)
   expect_error(render_cross_clade_report(list()), "No cross-clade results")

@@ -309,7 +309,11 @@ region_code_name_map <- function(events) {
 
 region_process_rates_for_model <- function(model_ev, event_summary, events, n_bins) {
   model <- as.character(model_ev$model[[1L]])
-  max_time <- max(model_ev$event_time_before_present, na.rm = TRUE)
+  # Use the same time grid as the overall process counts, even when the oldest
+  # event (e.g. root vicariance) has no single-region attribution.
+  timed <- events[events$model == model &
+    events$event_type %in% biogeographic_process_taxonomy()$bsm_event_type, , drop = FALSE]
+  max_time <- max(timed$event_time_before_present, na.rm = TRUE)
   if (!is.finite(max_time) || max_time <= 0) {
     return(NULL)
   }
