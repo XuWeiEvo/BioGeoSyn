@@ -208,7 +208,7 @@ directly with `citation("BioGeoBEARS")`.
 
 Parts of the code in this package were written with the assistance of Claude
 Opus 4.8 (Anthropic) and GPT-6 Astra (OpenAI), large language models, used to
-help write, debug and test the implementation. All conceptual and design decisions, including the
+help debug and test the implementation. All conceptual and design decisions, including the
 analysis workflow, the event taxonomy, the cross-clade synthesis, and the user
 interface, were made by the author. The author reviewed and tested all
 generated code and takes full responsibility for it, including any
